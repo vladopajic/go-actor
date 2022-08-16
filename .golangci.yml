@@ -1,0 +1,118 @@
+run:
+  deadline: 5m
+
+linters:
+  enable:
+    - deadcode
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - contextcheck
+    - cyclop
+    - depguard
+    - dogsled
+    - dupl
+    - durationcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    # - exhaustivestruct (too exhaustive)
+    - exportloopref
+    - forbidigo
+    - forcetypeassert
+    - funlen
+    # - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    # - godot (too nit picking)
+    - godox
+    - goerr113
+    - gofmt
+    - gofumpt
+    - goheader
+    - goimports
+    - gomnd
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - ifshort
+    - importas
+    # - ireturn  (we like when function returns interface)
+    - lll
+    - makezero
+    - misspell
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - nlreturn
+    - noctx
+    - nolintlint
+    - paralleltest
+    - prealloc
+    - predeclared
+    - promlinter
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - stylecheck
+    - tagliatelle
+    - testpackage
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    # - varnamelen  (we can handle this in code review step)
+    - wastedassign
+    - whitespace
+    - wrapcheck
+    - wsl
+
+
+    
+linters-settings:
+  lll:
+    line-length: 120
+    tab-width: 1
+  nlreturn:
+    block-size: 5
+  goimports:
+    local-prefixes: github.com/vladopajic/go-actor
+  wsl:
+    enforce-err-cuddling: true
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - funlen      ## Function lenght is okay due to many tests cases
+        - wrapcheck   ## No need to check wrapping errors in tests
+    - linters:
+        - paralleltest
+      text: "Range statement for test" ## Range is okay
+
+    - path: _export_test\.go
+      linters:
+        - revive      ## Disabling linter because we intentionally want to use unexpored types in tests
+
+      # Example rules are bit relaxed
+    - path: examples/*
+      linters:
+        - gosec
+        - gomnd
+        - forbidigo
