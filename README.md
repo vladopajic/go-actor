@@ -2,12 +2,11 @@
 [![Code check](https://github.com/vladopajic/go-actor/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/vladopajic/go-actor/actions/workflows/check.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/vladopajic/go-actor)](https://goreportcard.com/report/github.com/vladopajic/go-actor)
 
-`go-actor` is tiny library for writing concurent programs in Go using actor model.
+`go-actor` is tiny library for writing concurrent programs in Go using actor model.
 
 ## Motivation
 
-This library was published with intention to bring [actor model](https://en.wikipedia.org/wiki/Actor_model) closer to Go developers and to provide easy to understand 
-abstractions needed to build concurent programs.
+This library was published with intention to bring [actor model](https://en.wikipedia.org/wiki/Actor_model) closer to Go developers and to provide easy to understand abstractions needed to build concurrent programs.
 
 ## Examples
 
