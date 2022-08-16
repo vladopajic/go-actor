@@ -16,4 +16,9 @@ jobs:
       - name: test (race detector)
         run: go test -race ./...
       - name: test (verbose)
-        run: go test -v ./...
+        run: go test -v ./... -coverprofile=./cover.out -covermode=atomic
+      - name: upload code coverage
+        uses: codecov/codecov-action@v3.1.0
+        if: contains(github.ref, 'main')
+        with:
+          file: ./cover.out
