@@ -2,7 +2,6 @@
 
 [![lint](https://github.com/vladopajic/go-actor/actions/workflows/lint.yml/badge.svg)](https://github.com/vladopajic/go-actor/actions/workflows/lint.yml)
 [![test](https://github.com/vladopajic/go-actor/actions/workflows/test.yml/badge.svg)](https://github.com/vladopajic/go-actor/actions/workflows/test.yml)
-[![License](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/vladopajic/go-actor/blob/main/LICENSE)
 [![GoDoc](https://godoc.org/github.com/vladopajic/go-actor?status.svg)](https://godoc.org/github.com/vladopajic/go-actor)
 [![Release](https://img.shields.io/github/release/vladopajic/go-actor.svg?style=flat-square)](https://github.com/vladopajic/go-actor/releases/latest)
 
