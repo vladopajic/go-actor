@@ -1,7 +1,11 @@
 # go-actor
-[![GoDoc](http://img.shields.io/badge/GoDoc-Reference-blue.svg)](https://godoc.org/github.com/vladopajic/go-actor)
-[![Code check](https://github.com/vladopajic/go-actor/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/vladopajic/go-actor/actions/workflows/check.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/vladopajic/go-actor)](https://goreportcard.com/report/github.com/vladopajic/go-actor)
+
+[![lint](https://github.com/vladopajic/go-actor/actions/workflows/lint.yml/badge.svg)](https://github.com/vladopajic/go-actor/actions/workflows/lint.yml)
+[![test](https://github.com/vladopajic/go-actor/actions/workflows/test.yml/badge.svg)](https://github.com/vladopajic/go-actor/actions/workflows/test.yml)
+[![License](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/vladopajic/go-actor/blob/main/LICENSE)
+[![GoDoc](https://godoc.org/github.com/vladopajic/go-actor?status.svg)](https://godoc.org/github.com/vladopajic/go-actor)
+[![Release](https://img.shields.io/github/release/vladopajic/go-actor.svg?style=flat-square)](https://github.com/vladopajic/go-actor/releases/latest)
+
 
 `go-actor` is tiny library for writing concurrent programs in Go using actor model.
 
