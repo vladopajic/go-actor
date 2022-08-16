@@ -19,7 +19,7 @@ jobs:
                 go-version: 1.18
 
             - name: Run tests
-              run: go test ./... -v
+              run: go test ./... -v -cover
 
             - name: Go lint
               uses: golangci/golangci-lint-action@v2
