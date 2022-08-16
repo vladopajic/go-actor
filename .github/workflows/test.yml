@@ -1,13 +1,10 @@
 name: test
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
+on: [push]
 jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.17, 1.18]
+        go-version: [1.18]
     name: test
     runs-on: ubuntu-latest
     steps:
@@ -16,10 +13,7 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
-      - name: run tests
-        run: go test -json ./... > test.json
-      - name: Annotate tests
-        if: always()
-        uses: guyarb/golang-test-annotations@v0.6.0
-        with:
-          test-results: test.json
+      - name: test (race detector)
+        run: go test -race ./...
+      - name: test (verbose)
+        run: go test -v ./...
