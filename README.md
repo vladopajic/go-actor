@@ -19,26 +19,27 @@ This library was published with intention to bring [actor model](https://en.wiki
 Dive into [examples](./examples/) to see `go-actor` in action.
 
 ```go
-// This program will create producer and consumer actors, where
+// This program will demonstrate how to create actors for producer-consumer use case, where
 // producer will create incremented number on every 1 second interval and
 // consumer will print whaterver number it receives
 func main() {
-	numC := make(chan int)
+	mailbox := actor.NewMailbox[int]()
 
-	// Producer and consumer workers are created with same channel
+	// Producer and consumer workers are created with same mailbox
 	// so that producer worker can write directly to consumer worker
-	pw := &producerWorker{outC: numC}
-	cw1 := &consumerWorker{inC: numC, id: 1}
-	cw2 := &consumerWorker{inC: numC, id: 2}
+	pw := &producerWorker{outC: mailbox.SendC()}
+	cw1 := &consumerWorker{inC: mailbox.ReceiveC(), id: 1}
+	cw2 := &consumerWorker{inC: mailbox.ReceiveC(), id: 2}
 
 	// Create actors using these workers
 	a := actor.Combine(
+		mailbox,
 		actor.New(pw),
 
 		// Note: We don't need two consumer actors, but we create them anyway
 		// for the sake of demonstration since having one or more consumers
 		// will produce the same result. Message on stdout will be written by
-		// first consumer that reads from numC channel.
+		// first consumer that reads from mailbox.
 		actor.New(cw1),
 		actor.New(cw2),
 	)

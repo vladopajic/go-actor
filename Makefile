@@ -6,7 +6,7 @@ lint:
 # Runs tests on entire repo
 .PHONY: test
 test: 
-	go test ./...
+	go test --race ./...
 
 # Code tidy
 .PHONY: tidy
