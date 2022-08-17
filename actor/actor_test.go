@@ -62,7 +62,7 @@ func Test_NewActor_StopAfterNoWork(t *testing.T) {
 		assert.Equal(t, i, <-p)
 	}
 
-	go close(w.doWorkC)
+	close(w.doWorkC)
 }
 
 func Test_NewActor_OptOnStartStop(t *testing.T) {
@@ -73,12 +73,8 @@ func Test_NewActor_OptOnStartStop(t *testing.T) {
 
 	w := &worker{doWorkC: make(chan chan int, 1)}
 	a := New(w,
-		OptOnStart(func() {
-			onStartC <- struct{}{}
-		}),
-		OptOnStop(func() {
-			onStopC <- struct{}{}
-		}),
+		OptOnStart(func() { onStartC <- struct{}{} }),
+		OptOnStop(func() { onStopC <- struct{}{} }),
 	)
 
 	a.Start()
@@ -86,6 +82,48 @@ func Test_NewActor_OptOnStartStop(t *testing.T) {
 
 	a.Stop()
 	<-onStopC
+}
+
+func Test_Combine_StartAll_StopAll(t *testing.T) {
+	t.Parallel()
+
+	const actorsCount = 5
+
+	onStartC := make(chan struct{}, actorsCount)
+	onStopC := make(chan struct{}, actorsCount)
+	actors := make([]Actor, actorsCount)
+
+	w := &worker{doWorkC: make(chan chan int, 1)}
+	for i := 0; i < actorsCount; i++ {
+		actors[i] = New(w,
+			OptOnStart(func() { onStartC <- struct{}{} }),
+			OptOnStop(func() { onStopC <- struct{}{} }),
+		)
+	}
+
+	// Assert that starting and stopping combined actors
+	// will start and stop all individual actors
+	a := Combine(actors...)
+	a.Start()
+	a.Stop()
+	assert.Len(t, onStartC, actorsCount)
+	assert.Len(t, onStopC, actorsCount)
+
+	// Similar test but for StartAll and StopAll methods
+	drain(onStartC)
+	drain(onStopC)
+	assert.Len(t, onStartC, 0)
+	assert.Len(t, onStopC, 0)
+	StartAll(actors...)
+	StopAll(actors...)
+	assert.Len(t, onStartC, actorsCount)
+	assert.Len(t, onStopC, actorsCount)
+}
+
+func drain(c chan struct{}) {
+	for len(c) > 0 {
+		<-c
+	}
 }
 
 type worker struct {
