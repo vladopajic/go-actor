@@ -28,7 +28,7 @@ func Test_NewWorker(t *testing.T) {
 func Test_NewActor(t *testing.T) {
 	t.Parallel()
 
-	w := &worker{doWorkC: make(chan chan int)}
+	w := newWorker()
 	a := New(w)
 
 	a.Start()
@@ -44,7 +44,7 @@ func Test_NewActor(t *testing.T) {
 func Test_NewActor_StartStop(t *testing.T) {
 	t.Parallel()
 
-	w := &worker{doWorkC: make(chan chan int)}
+	w := newWorker()
 	a := New(w)
 
 	for i := 0; i < 20; i++ {
@@ -106,8 +106,7 @@ func Test_NewActor_OptOnStartStop(t *testing.T) {
 	onStartC := make(chan struct{}, 1)
 	onStopC := make(chan struct{}, 1)
 
-	w := &worker{doWorkC: make(chan chan int, 1)}
-	a := New(w,
+	a := New(newWorker(),
 		OptOnStart(func() { onStartC <- struct{}{} }),
 		OptOnStop(func() { onStopC <- struct{}{} }),
 	)
@@ -128,9 +127,8 @@ func Test_Combine_StartAll_StopAll(t *testing.T) {
 	onStopC := make(chan struct{}, actorsCount)
 	actors := make([]Actor, actorsCount)
 
-	w := &worker{doWorkC: make(chan chan int, 1)}
 	for i := 0; i < actorsCount; i++ {
-		actors[i] = New(w,
+		actors[i] = New(newWorker(),
 			OptOnStart(func() { onStartC <- struct{}{} }),
 			OptOnStop(func() { onStopC <- struct{}{} }),
 		)
@@ -159,6 +157,10 @@ func drain(c chan struct{}) {
 	for len(c) > 0 {
 		<-c
 	}
+}
+
+func newWorker() *worker {
+	return &worker{doWorkC: make(chan chan int, 1)}
 }
 
 type worker struct {
