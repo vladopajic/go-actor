@@ -1,5 +1,7 @@
 package actor
 
+import "sync"
+
 // Actor is computational entity that executes Worker in individual goroutine.
 type Actor interface {
 	// Start spawns new goroutine and begins Worker execution.
@@ -61,6 +63,23 @@ type Worker interface {
 	DoWork(c Context) WorkerStatus
 }
 
+// WorkerFunc is signature of Worker's DoWork function.
+type WorkerFunc = func(c Context) WorkerStatus
+
+// NewWorker returns basic Worker implementation which delegates
+// DoWork to supplied WorkerFunc.
+func NewWorker(fn WorkerFunc) Worker {
+	return &workerImpl{fn}
+}
+
+type workerImpl struct {
+	fn WorkerFunc
+}
+
+func (w *workerImpl) DoWork(c Context) WorkerStatus {
+	return w.fn(c)
+}
+
 // New returns new Actor with specified Worker and Options.
 func New(w Worker, opt ...Option) Actor {
 	return &actorImpl{
@@ -71,29 +90,38 @@ func New(w Worker, opt ...Option) Actor {
 }
 
 type actorImpl struct {
-	worker        Worker
-	options       options
-	ctx           *contextImpl
-	workEndedSigC chan struct{}
-	workerRunning bool
+	worker            Worker
+	options           options
+	ctx               *contextImpl
+	workEndedSigC     chan struct{}
+	workerRunning     bool
+	workerRunningLock sync.Mutex
 }
 
 func (a *actorImpl) Stop() {
+	a.workerRunningLock.Lock()
 	if !a.workerRunning {
+		defer a.workerRunningLock.Unlock()
 		return
 	}
 
 	a.workEndedSigC = make(chan struct{})
+	a.workerRunningLock.Unlock()
+
 	a.ctx.signalEnd()
+
 	<-a.workEndedSigC
 }
 
 func (a *actorImpl) Start() {
+	a.workerRunningLock.Lock()
 	if a.workerRunning {
+		a.workerRunningLock.Unlock()
 		return
 	}
 
 	a.workerRunning = true
+	a.workerRunningLock.Unlock()
 
 	go a.doWork()
 }
@@ -108,10 +136,14 @@ func (a *actorImpl) doWork() {
 		wStatus = a.worker.DoWork(a.ctx)
 	}
 
+	a.workerRunningLock.Lock()
+
 	a.workerRunning = false
 	if c := a.workEndedSigC; c != nil {
 		c <- struct{}{}
 	}
+
+	a.workerRunningLock.Unlock()
 }
 
 func executeFunc(fn func()) {

@@ -8,18 +8,33 @@ import (
 	. "github.com/vladopajic/go-actor/actor"
 )
 
+func Test_NewWorker(t *testing.T) {
+	t.Parallel()
+
+	sigC := make(chan struct{}, 1)
+	workerFunc := func(c Context) WorkerStatus {
+		sigC <- struct{}{}
+		return WorkerContinue
+	}
+
+	w := NewWorker(workerFunc)
+	assert.NotNil(t, w)
+
+	// We assert that worker will delgate call to supplied workerFunc
+	assert.Equal(t, WorkerContinue, w.DoWork(nil))
+	assert.Len(t, sigC, 1)
+}
+
 func Test_NewActor(t *testing.T) {
 	t.Parallel()
 
-	const count = 20
-
-	w := &worker{doWorkC: make(chan chan int, count)}
+	w := &worker{doWorkC: make(chan chan int)}
 	a := New(w)
 
 	a.Start()
 	defer a.Stop()
 
-	for i := 0; i < count; i++ {
+	for i := 0; i < 20; i++ {
 		p := make(chan int)
 		w.doWorkC <- p
 		assert.Equal(t, i, <-p)
@@ -29,12 +44,10 @@ func Test_NewActor(t *testing.T) {
 func Test_NewActor_StartStop(t *testing.T) {
 	t.Parallel()
 
-	const count = 20
-
-	w := &worker{doWorkC: make(chan chan int, count)}
+	w := &worker{doWorkC: make(chan chan int)}
 	a := New(w)
 
-	for i := 0; i < count; i++ {
+	for i := 0; i < 20; i++ {
 		a.Start()
 
 		p := make(chan int)
@@ -45,24 +58,46 @@ func Test_NewActor_StartStop(t *testing.T) {
 	}
 }
 
-func Test_NewActor_StopAfterNoWork(t *testing.T) {
+func Test_NewActor_StopAfterWorkerEnded(t *testing.T) {
 	t.Parallel()
 
-	const count = 20
+	doWorkC := make(chan chan int)
+	workEndedC := make(chan struct{})
 
-	w := &worker{doWorkC: make(chan chan int, count)}
-	a := New(w)
+	workerFunc := func(c Context) WorkerStatus {
+		select {
+		case p, ok := <-doWorkC:
+			if !ok {
+				workEndedC <- struct{}{}
+				return WorkerEnd
+			}
 
-	a.Start()
-	defer a.Stop()
+			p <- 1
 
-	for i := 0; i < count; i++ {
-		p := make(chan int)
-		w.doWorkC <- p
-		assert.Equal(t, i, <-p)
+			return WorkerContinue
+
+		case <-c.Done():
+			assert.FailNow(t, "worker should be ended")
+			return WorkerEnd
+		}
 	}
 
-	close(w.doWorkC)
+	a := New(NewWorker(workerFunc))
+
+	a.Start()
+
+	for i := 0; i < 20; i++ {
+		p := make(chan int)
+		doWorkC <- p
+		assert.Equal(t, 1, <-p)
+	}
+
+	// Closing doWorkC will cause worker to end
+	close(doWorkC)
+	<-workEndedC
+
+	// Stoping actor should produce no effect (since worker has ended)
+	a.Stop()
 }
 
 func Test_NewActor_OptOnStartStop(t *testing.T) {
