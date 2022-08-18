@@ -74,12 +74,13 @@ func (w *producerWorker) DoWork(c actor.Context) actor.WorkerStatus {
 // consumerWorker will consume numbers received on inC channel
 type consumerWorker struct {
 	inC <-chan int
+	id  int
 }
 
 func (w *consumerWorker) DoWork(c actor.Context) actor.WorkerStatus {
 	select {
 	case num := <-w.inC:
-		fmt.Printf("consumed %d\n", num)
+		fmt.Printf("consumed %d \t(worker %d)\n", num, w.id)
 
 		return actor.WorkerContinue
 
