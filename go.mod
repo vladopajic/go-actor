@@ -1,6 +1,6 @@
 module github.com/vladopajic/go-actor
 
-go 1.18
+go 1.19
 
 require (
 	github.com/golang-ds/queue v1.0.0
