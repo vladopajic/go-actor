@@ -23,15 +23,13 @@ func Test_Mailbox(t *testing.T) {
 	for i := 0; i < sendCount; i++ {
 		sendC <- i
 	}
-	sendC <- nil
-	assert.Len(t, sendC, 0)
-	assert.Len(t, receiveC, 0)
 
 	// Assert all values from receive channel
 	for i := 0; i < sendCount; i++ {
 		assert.Equal(t, <-receiveC, i)
 	}
+
+	// Send nil value and assert that it is received (test should't panic)
+	sendC <- nil
 	assert.Equal(t, <-receiveC, nil)
-	assert.Len(t, sendC, 0)
-	assert.Len(t, receiveC, 0)
 }

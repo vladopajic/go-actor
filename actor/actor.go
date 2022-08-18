@@ -101,7 +101,7 @@ type actorImpl struct {
 func (a *actorImpl) Stop() {
 	a.workerRunningLock.Lock()
 	if !a.workerRunning {
-		defer a.workerRunningLock.Unlock()
+		a.workerRunningLock.Unlock()
 		return
 	}
 
@@ -115,13 +115,13 @@ func (a *actorImpl) Stop() {
 
 func (a *actorImpl) Start() {
 	a.workerRunningLock.Lock()
+	defer a.workerRunningLock.Unlock()
+
 	if a.workerRunning {
-		a.workerRunningLock.Unlock()
 		return
 	}
 
 	a.workerRunning = true
-	a.workerRunningLock.Unlock()
 
 	go a.doWork()
 }
@@ -130,20 +130,21 @@ func (a *actorImpl) Start() {
 // Actor or Worker has signaled to stop.
 func (a *actorImpl) doWork() {
 	executeFunc(a.options.OnStartFunc)
-	defer executeFunc(a.options.OnStopFunc)
 
 	for wStatus := WorkerContinue; wStatus == WorkerContinue; {
 		wStatus = a.worker.DoWork(a.ctx)
 	}
 
-	a.workerRunningLock.Lock()
+	executeFunc(a.options.OnStopFunc)
 
-	a.workerRunning = false
-	if c := a.workEndedSigC; c != nil {
-		c <- struct{}{}
+	{ // Worker has finished
+		a.workerRunningLock.Lock()
+		a.workerRunning = false
+		if c := a.workEndedSigC; c != nil {
+			c <- struct{}{}
+		}
+		a.workerRunningLock.Unlock()
 	}
-
-	a.workerRunningLock.Unlock()
 }
 
 func executeFunc(fn func()) {
