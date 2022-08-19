@@ -20,20 +20,32 @@ func Test_Ticker(t *testing.T) {
 	ticker := NewTicker(interval)
 	assert.NotNil(t, ticker)
 
+	// Start Ticker and stop it after tickCount intervals
 	ticker.Start()
-	defer ticker.Stop()
 
 	go func() {
 		time.Sleep(interval * time.Duration(tickCount))
+		// Sleep little bit more to be sure to receive last tick
+		time.Sleep(interval / 2)
 		ticker.Stop()
 	}()
 
+	// Read ticks form C() channel while it's open.
+	// We should receive tickCount tick on this channel before it's closed.
+	// We leave possability for flaky test because last tick may not be received
+	// if Ticker finishes work before sending last tick.
+
 	ticks := 0
+	lastTick := time.Now()
+	acceptableDelta := time.Nanosecond * 10
 
 	for tickTime := range ticker.C() {
-		assert.NotEmpty(t, tickTime)
 		ticks++
+
+		assert.InDelta(t, lastTick.Add(interval).Unix(), tickTime.Unix(), float64(acceptableDelta))
+
+		lastTick = tickTime
 	}
 
-	assert.GreaterOrEqual(t, tickCount, ticks)
+	assert.Equal(t, tickCount, ticks)
 }
