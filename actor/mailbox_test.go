@@ -12,28 +12,33 @@ import (
 func Test_Mailbox(t *testing.T) {
 	t.Parallel()
 
+	const sendMessagesCount = 5000
+
 	m := NewMailbox[any]()
-	sendC, receiveC := m.SendC(), m.ReceiveC()
+	assert.NotNil(t, m)
 
 	m.Start()
-	defer m.Stop()
 
-	const sendCount = 5000
+	// Send values via SendC() channel, then assert that values are received
+	// on ReceiveC() channel.
+	// It is important to first send all data to SendC() channel to simulate excessive
+	// incoming messages on this Mailbox.
 
-	// Send values via sendC channel, then assert values from receive channel.
-	// It is important to first write to sendC channel to simulate excessive
-	// incoming messages.
-
-	for i := 0; i < sendCount; i++ {
-		sendC <- i
+	for i := 0; i < sendMessagesCount; i++ {
+		m.SendC() <- i
 	}
 
-	for i := 0; i < sendCount; i++ {
-		assert.Equal(t, <-receiveC, i)
+	for i := 0; i < sendMessagesCount; i++ {
+		assert.Equal(t, <-m.ReceiveC(), i)
 	}
 
-	// Send nil value and assert that it is received (test should't panic)
+	// Assert that sending nil value should't cause panic
 	assertSendReceive(t, m, nil)
+
+	m.Stop()
+
+	// After Mailbox is stopped assert that all channels are closed
+	assertMailboxChannelsClosed(t, m)
 }
 
 func Test_FromMailboxes(t *testing.T) {
@@ -49,10 +54,17 @@ func Test_FromMailboxes(t *testing.T) {
 	assert.NotNil(t, a)
 
 	a.Start()
-	defer a.Stop()
 
+	// After combined Agent is started all Mailboxes should be executing
 	for _, m := range mm {
 		assertSendReceive(t, m, "🌞")
+	}
+
+	a.Stop()
+
+	// After combined Agent is stopped all Mailboxes should stop executing
+	for _, m := range mm {
+		assertMailboxChannelsClosed(t, m)
 	}
 }
 
@@ -60,8 +72,8 @@ func Test_FanOut(t *testing.T) {
 	t.Parallel()
 
 	const (
-		testDataCount = 100
-		fanoutCount   = 5
+		sendMessagesCount = 100
+		fanoutCount       = 5
 	)
 
 	wg := sync.WaitGroup{}
@@ -80,7 +92,7 @@ func Test_FanOut(t *testing.T) {
 
 	// Produce data on inC channel
 	go func() {
-		for i := 0; i < testDataCount; i++ {
+		for i := 0; i < sendMessagesCount; i++ {
 			inC <- i
 		}
 		close(inC)
@@ -89,7 +101,7 @@ func Test_FanOut(t *testing.T) {
 	// Assert that correct data is received by Mailbox
 	for _, m := range fanOuts {
 		go func(m Mailbox[any]) {
-			for i := 0; i < testDataCount; i++ {
+			for i := 0; i < sendMessagesCount; i++ {
 				assert.Equal(t, i, <-m.ReceiveC())
 			}
 			wg.Done()
@@ -113,4 +125,15 @@ func assertSendReceive(t *testing.T, m Mailbox[any], val any) {
 
 	m.SendC() <- val
 	assert.Equal(t, val, <-m.ReceiveC())
+}
+
+func assertMailboxChannelsClosed(t *testing.T, m Mailbox[any]) {
+	t.Helper()
+
+	assert.Panics(t, func() {
+		m.SendC() <- "👹"
+	})
+
+	_, ok := <-m.ReceiveC()
+	assert.False(t, ok)
 }
