@@ -14,7 +14,7 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: test (race detector)
-        run: go test -race ./...
+        run: go test -race -count=10 ./...
       - name: test (verbose)
         run: go test -v ./... -coverprofile=./cover.out -covermode=atomic
       - name: upload code coverage
