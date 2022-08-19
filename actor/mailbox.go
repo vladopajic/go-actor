@@ -15,6 +15,36 @@ type Mailbox[T any] interface {
 	ReceiveC() <-chan T
 }
 
+// FromMailboxes crates single Actor combining actors of supplied Mailboxes.
+func FromMailboxes[T any](mm []Mailbox[T]) Actor {
+	a := make([]Actor, len(mm))
+	for i, m := range mm {
+		a[i] = m
+	}
+
+	return Combine(a...)
+}
+
+// FanOut crates new Mailbox actors whose receiving messages are driven by suppled receiveC channel.
+// FanOut spawns new goroutine in which messages received by receiveC channel are forwarded to created Mailboxes.
+// Spawned goroutine will be active while receiveC is open and it's up to user to start and stop all Mailbox actors.
+func FanOut[T any](receiveC <-chan T, count int) []Mailbox[T] {
+	mm := make([]Mailbox[T], count)
+	for i := 0; i < count; i++ {
+		mm[i] = NewMailbox[T]()
+	}
+
+	go func(receiveC <-chan T, mm []Mailbox[T]) {
+		for v := range receiveC {
+			for _, m := range mm {
+				m.SendC() <- v
+			}
+		}
+	}(receiveC, mm)
+
+	return mm
+}
+
 // NewMailbox returns new Mailbox.
 func NewMailbox[T any]() Mailbox[T] {
 	q := queue.New[T]()
