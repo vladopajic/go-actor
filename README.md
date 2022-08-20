@@ -27,12 +27,12 @@ func main() {
 	mailbox := actor.NewMailbox[int]()
 
 	// Producer and consumer workers are created with same mailbox
-	// so that producer worker can write directly to consumer worker
+	// so that producer worker can send messages directly to consumer worker
 	pw := &producerWorker{outC: mailbox.SendC()}
 	cw1 := &consumerWorker{inC: mailbox.ReceiveC(), id: 1}
 	cw2 := &consumerWorker{inC: mailbox.ReceiveC(), id: 2}
 
-	// Create actors using these workers
+	// Create actors using these workers and combine them to singe Actor
 	a := actor.Combine(
 		mailbox,
 		actor.New(pw),

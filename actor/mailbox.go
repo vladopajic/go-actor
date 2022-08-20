@@ -4,7 +4,11 @@ import (
 	queue "github.com/golang-ds/queue/linkedqueue"
 )
 
-// Mailbox is interface for channel which can receive infinite number of messages.
+// Mailbox is interface for message transport mechanism between Actors
+// which can receive infinite number of messages.
+// Mailbox is much like native go channel, except that writing to the Mailbox
+// will never block, all messages are going to be queued and Actors on
+// receiving end of the Mailbox will get all messages in FIFO order.
 type Mailbox[T any] interface {
 	Actor
 
@@ -15,7 +19,7 @@ type Mailbox[T any] interface {
 	ReceiveC() <-chan T
 }
 
-// FromMailboxes crates single Actor combining actors of supplied Mailboxes.
+// FromMailboxes creates single Actor combining actors of supplied Mailboxes.
 func FromMailboxes[T any](mm []Mailbox[T]) Actor {
 	a := make([]Actor, len(mm))
 	for i, m := range mm {
@@ -25,9 +29,10 @@ func FromMailboxes[T any](mm []Mailbox[T]) Actor {
 	return Combine(a...)
 }
 
-// FanOut crates new Mailbox actors whose receiving messages are driven by suppled receiveC channel.
-// FanOut spawns new goroutine in which messages received by receiveC channel are forwarded to created Mailboxes.
-// Spawned goroutine will be active while receiveC is open and it's up to user to start and stop all Mailbox actors.
+// FanOut crates new Mailboxes whose receiving messages are driven by suppled
+// receiveC channel. FanOut spawns new goroutine in which messages received by
+// receiveC channel are forwarded to created Mailboxes. Spawned goroutine will
+// be active while receiveC is open and it's up to user to start and stop Mailboxes.
 func FanOut[T any](receiveC <-chan T, count int) []Mailbox[T] {
 	mm := make([]Mailbox[T], count)
 	for i := 0; i < count; i++ {

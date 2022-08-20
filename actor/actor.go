@@ -39,8 +39,8 @@ func (c *contextImpl) signalEnd() {
 	c.endWorkC <- struct{}{}
 }
 
-// WorkerStatus is returned by Worker's DoWork function indicating if Actor should continue
-// executing Worker.
+// WorkerStatus is returned by Worker's DoWork function indicating if Actor should
+// continue executing Worker.
 type WorkerStatus int8
 
 const (
@@ -48,17 +48,17 @@ const (
 	WorkerEnd      WorkerStatus = 2
 )
 
-// Worker is entity which encapsulates Actor's single unit/iteration of it's executable logic.
+// Worker is entity which encapsulates Actor's executable logic.
 //
-// Worker's implementation should listen on messages sent via go channels and preform actions by
-// sending new messages or creating new actors.
+// Worker's implementation should listen on messages sent via Mailboxes and preform
+// actions by sending new messages or creating new actors.
 type Worker interface {
-	// DoWork function is Worker's single executable unit.
+	// DoWork function is encapsulating single executable unit of work for this Worker.
 	//
 	// Context is provided so Worker can listen and respond on stop signal sent from Actor.
 	//
-	// WorkerStatus is returned indicating if Actor should continue executing this worker.
-	// Actor will check this status and stop execution if Worker has no more work, or otherwise
+	// WorkerStatus is returned indicating if Actor should continue executing this Worker.
+	// Actor will check this status and stop execution if Worker has no more work, otherwise
 	// proceed execution.
 	DoWork(c Context) WorkerStatus
 }

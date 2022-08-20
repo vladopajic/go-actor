@@ -87,7 +87,7 @@ linters:
     
 linters-settings:
   lll:
-    line-length: 120
+    line-length: 96
     tab-width: 1
   nlreturn:
     block-size: 5
