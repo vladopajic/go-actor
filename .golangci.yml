@@ -3,42 +3,37 @@ run:
 
 linters:
   enable:
-    - deadcode
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - structcheck
-    - typecheck
-    - unused
-    - varcheck
+    # - exhaustivestruct (too exhaustive)
+    # - gci
+    # - godot (too nit picking)
+    # - ireturn  (we like when function returns interface)
+    # - varnamelen  (we can handle this in code review step)
+    - asasalint
     - asciicheck
     - bidichk
     - bodyclose
+    - containedctx
     - contextcheck
     - cyclop
     - depguard
     - dogsled
     - dupl
     - durationcheck
+    - errcheck
     - errchkjson
     - errname
     - errorlint
     - exhaustive
-    # - exhaustivestruct (too exhaustive)
     - exportloopref
     - forbidigo
     - forcetypeassert
     - funlen
-    # - gci
     - gochecknoglobals
     - gochecknoinits
     - gocognit
     - goconst
     - gocritic
     - gocyclo
-    # - godot (too nit picking)
     - godox
     - goerr113
     - gofmt
@@ -50,10 +45,12 @@ linters:
     - gomodguard
     - goprintffuncname
     - gosec
-    - ifshort
+    - gosimple
+    - govet
     - importas
-    # - ireturn  (we like when function returns interface)
+    - ineffassign
     - lll
+    - maintidx
     - makezero
     - misspell
     - nakedret
@@ -63,29 +60,38 @@ linters:
     - nlreturn
     - noctx
     - nolintlint
+    - nonamedreturns
     - paralleltest
     - prealloc
     - predeclared
     - promlinter
+    - reassign
     - revive
-    - rowserrcheck
-    - sqlclosecheck
+    - staticcheck
     - stylecheck
     - tagliatelle
+    - tenv
     - testpackage
     - thelper
     - tparallel
+    - typecheck
     - unconvert
     - unparam
-    # - varnamelen  (we can handle this in code review step)
-    - wastedassign
+    - unused
     - whitespace
     - wrapcheck
     - wsl
 
-
-    
 linters-settings:
+  maintidx:
+    under: 40
+  misspell:
+    locale: US
+  govet:
+    check-shadowing: true
+    enable-all: true
+    disable:
+      - fieldalignment
   lll:
     line-length: 96
     tab-width: 1
@@ -102,9 +108,6 @@ issues:
       linters:
         - funlen      ## Function lenght is okay due to many tests cases
         - wrapcheck   ## No need to check wrapping errors in tests
-    - linters:
-        - paralleltest
-      text: "Range statement for test" ## Range is okay
 
     - path: _export_test\.go
       linters:
