@@ -85,7 +85,6 @@ type mailboxWorker[T any] struct {
 	queue    *queue.LinkedQueue[T]
 }
 
-//nolint:revive // showing false error
 func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
 	if w.queue.IsEmpty() {
 		select {
@@ -117,7 +116,6 @@ func first[T any](queue *queue.LinkedQueue[T]) T {
 	return v
 }
 
-//nolint:revive // showing false error
 func (w *mailboxWorker[T]) onStop() {
 	close(w.sendC)
 	close(w.receiveC)
