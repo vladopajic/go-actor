@@ -83,6 +83,10 @@ linters:
     - wsl
 
 linters-settings:
+  forbidigo:
+      forbid:
+        - 'panic*(# Do not panic)?'
+        - 'os.Exit*(# Do not exit)?'
   maintidx:
     under: 40
   misspell:
