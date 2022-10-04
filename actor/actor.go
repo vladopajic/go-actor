@@ -1,6 +1,8 @@
 package actor
 
-import "sync"
+import (
+	"sync"
+)
 
 // Actor is computational entity that executes Worker in individual goroutine.
 type Actor interface {
@@ -13,30 +15,6 @@ type Actor interface {
 	// Stop sends signal to Worker to stop execution. Method will block
 	// until Worker finishes.
 	Stop()
-}
-
-// Context is provided so Worker can listen and respond on stop signal sent from Actor.
-type Context interface {
-	// Done returns channel which will receive signal that Worker should end execution.
-	Done() <-chan struct{}
-}
-
-type contextImpl struct {
-	endWorkC chan struct{}
-}
-
-func newContext() *contextImpl {
-	return &contextImpl{
-		endWorkC: make(chan struct{}, 1),
-	}
-}
-
-func (c *contextImpl) Done() <-chan struct{} {
-	return c.endWorkC
-}
-
-func (c *contextImpl) signalEnd() {
-	c.endWorkC <- struct{}{}
 }
 
 // WorkerStatus is returned by Worker's DoWork function indicating if Actor should
@@ -85,7 +63,6 @@ func New(w Worker, opt ...Option) Actor {
 	return &actorImpl{
 		worker:  w,
 		options: newOptions(opt),
-		ctx:     newContext(),
 	}
 }
 
@@ -121,6 +98,7 @@ func (a *actorImpl) Start() {
 		return
 	}
 
+	a.ctx = NewContext()
 	a.workerRunning = true
 
 	go a.doWork()

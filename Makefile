@@ -15,7 +15,7 @@ lint: get-golangcilint
 # Runs tests on entire repo
 .PHONY: test
 test: 
-	go test --race ./...
+	go test --race -count=10 -failfast ./...
 
 # Code tidy
 .PHONY: tidy

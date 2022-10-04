@@ -11,6 +11,7 @@ import (
 func Test_NewWorker(t *testing.T) {
 	t.Parallel()
 
+	ctx := NewContext()
 	sigC := make(chan struct{}, 1)
 	workerFunc := func(c Context) WorkerStatus {
 		sigC <- struct{}{}
@@ -21,7 +22,7 @@ func Test_NewWorker(t *testing.T) {
 	assert.NotNil(t, w)
 
 	// We assert that worker will delgate call to supplied workerFunc
-	assert.Equal(t, WorkerContinue, w.DoWork(nil))
+	assert.Equal(t, WorkerContinue, w.DoWork(ctx))
 	assert.Len(t, sigC, 1)
 }
 
@@ -183,16 +184,4 @@ func (w *worker) DoWork(c Context) WorkerStatus {
 	case <-c.Done():
 		return WorkerEnd
 	}
-}
-
-func Test_Context(t *testing.T) {
-	t.Parallel()
-
-	ctx := NewContext()
-
-	assert.NotNil(t, ctx.Done())
-	assert.Len(t, ctx.Done(), 0)
-
-	ctx.SignalEnd()
-	assert.Len(t, ctx.Done(), 1)
 }
