@@ -98,7 +98,7 @@ func (a *actorImpl) Start() {
 		return
 	}
 
-	a.ctx = NewContext()
+	a.ctx = newContext()
 	a.workerRunning = true
 
 	go a.doWork()

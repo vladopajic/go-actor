@@ -11,7 +11,7 @@ import (
 func Test_NewWorker(t *testing.T) {
 	t.Parallel()
 
-	ctx := NewContext()
+	ctx := ContextStarted()
 	sigC := make(chan struct{}, 1)
 	workerFunc := func(c Context) WorkerStatus {
 		sigC <- struct{}{}
