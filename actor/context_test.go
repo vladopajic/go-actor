@@ -12,7 +12,26 @@ func Test_Context(t *testing.T) {
 	t.Parallel()
 
 	ctx := NewContext()
-	assert.NotNil(t, ctx.Done())
+
+	assertContextStarted(t, ctx)
+
+	ctx.SignalEnd()
+
+	assertContextEnded(t, ctx)
+}
+
+func Test_Context_Predefined(t *testing.T) {
+	t.Parallel()
+
+	assertContextStarted(t, ContextStarted())
+
+	assertContextEnded(t, ContextEnded())
+}
+
+func assertContextStarted(t *testing.T, ctx Context) {
+	t.Helper()
+
+	assert.NotNil(t, ctx)
 
 	select {
 	case <-ctx.Done():
@@ -21,24 +40,12 @@ func Test_Context(t *testing.T) {
 	}
 
 	assert.NoError(t, ctx.Err())
-
-	ctx.SignalEnd()
-
-	select {
-	case _, ok := <-ctx.Done():
-		assert.False(t, ok)
-	default:
-		assert.FailNow(t, "should be able to read from Done channel")
-	}
-
-	assert.ErrorIs(t, ctx.Err(), ErrStopped)
 }
 
-func Test_Context_Ended(t *testing.T) {
-	t.Parallel()
+func assertContextEnded(t *testing.T, ctx Context) {
+	t.Helper()
 
-	ctx := NewContextEnded()
-	assert.NotNil(t, ctx.Done())
+	assert.NotNil(t, ctx)
 
 	select {
 	case _, ok := <-ctx.Done():
