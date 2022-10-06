@@ -112,10 +112,3 @@ issues:
     - path: _export_test\.go
       linters:
         - revive      ## Disabling linter because we intentionally want to use unexpored types in tests
-
-      # Example rules are bit relaxed
-    - path: examples/*
-      linters:
-        - gosec
-        - gomnd
-        - forbidigo

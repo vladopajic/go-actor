@@ -17,7 +17,7 @@ This library was published with intention to bring [actor model](https://en.wiki
 
 ## Examples
 
-Dive into [examples](./examples/) to see `go-actor` in action.
+Dive into [examples](https://github.com/vladopajic/go-actor-examples) to see `go-actor` in action.
 
 ```go
 // This program will demonstrate how to create actors for producer-consumer use case, where
