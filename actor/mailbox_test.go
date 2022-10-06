@@ -9,6 +9,24 @@ import (
 	. "github.com/vladopajic/go-actor/actor"
 )
 
+func Test_MailboxWorker_EndSignal(t *testing.T) {
+	t.Parallel()
+
+	sendC := make(chan any)
+	receiveC := make(chan any)
+	q := NewQueue[any]()
+
+	w := NewMailboxWorker(sendC, receiveC, q)
+	assert.NotNil(t, w)
+
+	// Worker should signal end with empty queue
+	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
+
+	// Worker should signal end with non-empty queue
+	q.Enqueue(`🌞`)
+	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
+}
+
 func Test_Mailbox(t *testing.T) {
 	t.Parallel()
 
@@ -57,7 +75,7 @@ func Test_FromMailboxes(t *testing.T) {
 
 	// After combined Agent is started all Mailboxes should be executing
 	for _, m := range mm {
-		assertSendReceive(t, m, "🌞")
+		assertSendReceive(t, m, `🌞`)
 	}
 
 	a.Stop()
@@ -116,7 +134,7 @@ func Test_FanOut(t *testing.T) {
 
 	// Assert that Mailbox actor is still working
 	for _, m := range fanOuts {
-		assertSendReceive(t, m, "🌞")
+		assertSendReceive(t, m, `🌞`)
 	}
 }
 
@@ -131,7 +149,7 @@ func assertMailboxChannelsClosed(t *testing.T, m Mailbox[any]) {
 	t.Helper()
 
 	assert.Panics(t, func() {
-		m.SendC() <- "👹"
+		m.SendC() <- `👹`
 	})
 
 	_, ok := <-m.ReceiveC()

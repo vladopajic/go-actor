@@ -1,9 +1,5 @@
 package actor
 
-import (
-	queue "github.com/golang-ds/queue/linkedqueue"
-)
-
 // Mailbox is interface for message transport mechanism between Actors
 // which can receive infinite number of messages.
 // Mailbox is much like native go channel, except that writing to the Mailbox
@@ -52,37 +48,41 @@ func FanOut[T any](receiveC <-chan T, count int) []Mailbox[T] {
 
 // NewMailbox returns new Mailbox.
 func NewMailbox[T any]() Mailbox[T] {
-	q := queue.New[T]()
-
-	w := &mailboxWorker[T]{
-		sendC:    make(chan T),
-		receiveC: make(chan T),
-		queue:    &q,
-	}
+	w := newMailboxWorker[T]()
 
 	return &mailboxImpl[T]{
-		Actor:  New(w, OptOnStop(w.onStop)),
-		worker: w,
+		Actor:    New(w, OptOnStop(w.onStop)),
+		sendC:    w.sendC,
+		receiveC: w.receiveC,
 	}
 }
 
 type mailboxImpl[T any] struct {
 	Actor
-	worker *mailboxWorker[T]
+	sendC    chan<- T
+	receiveC <-chan T
 }
 
 func (m *mailboxImpl[T]) SendC() chan<- T {
-	return m.worker.sendC
+	return m.sendC
 }
 
 func (m *mailboxImpl[T]) ReceiveC() <-chan T {
-	return m.worker.receiveC
+	return m.receiveC
 }
 
 type mailboxWorker[T any] struct {
 	receiveC chan T
 	sendC    chan T
-	queue    *queue.LinkedQueue[T]
+	queue    queue[T]
+}
+
+func newMailboxWorker[T any]() *mailboxWorker[T] {
+	return &mailboxWorker[T]{
+		sendC:    make(chan T),
+		receiveC: make(chan T),
+		queue:    newQueue[T](),
+	}
 }
 
 func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
@@ -111,7 +111,7 @@ func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
 	}
 }
 
-func first[T any](queue *queue.LinkedQueue[T]) T {
+func first[T any](queue queue[T]) T {
 	v, _ := queue.First()
 	return v
 }
