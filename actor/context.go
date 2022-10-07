@@ -15,7 +15,7 @@ var ErrStopped = errors.New("actor stopped")
 
 //nolint:gochecknoglobals
 var (
-	contextStarted = context.Background()
+	contextStarted = newContext()
 
 	contextEnded = func() *contextImpl {
 		doneC := make(chan struct{})
