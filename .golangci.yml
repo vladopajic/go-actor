@@ -109,6 +109,6 @@ issues:
         - funlen      ## Function lenght is okay due to many tests cases
         - wrapcheck   ## No need to check wrapping errors in tests
 
-    - path: _export_test\.go
+    - path: export_test\.go
       linters:
         - revive      ## Disabling linter because we intentionally want to use unexpored types in tests
