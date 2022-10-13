@@ -11,17 +11,50 @@ import (
 func TestOptions(t *testing.T) {
 	t.Parallel()
 
-	// NewOptions with no options should equal to zero options
-	opts := NewOptions(nil)
-	assert.Equal(t, NewZeroOptions(), opts)
+	{ // NewOptions with no options should equal to zero options
+		opts := NewOptions()
+		assert.Equal(t, NewZeroOptions(), opts)
+	}
 
-	// Assert that OnStartFunc will be set
-	opts = NewOptions([]Option{OptOnStart(func() {})})
-	assert.NotNil(t, opts.OnStartFunc)
-	assert.Nil(t, opts.OnStopFunc)
+	{ // Assert that OnStartFunc will be set
+		opts := NewOptions(OptOnStart(func() {}))
+		assert.NotNil(t, opts.Actor.OnStartFunc)
+		assert.Nil(t, opts.Actor.OnStopFunc)
+	}
 
-	// Assert that OnStopFunc will be set
-	opts = NewOptions([]Option{OptOnStop(func() {})})
-	assert.NotNil(t, opts.OnStopFunc)
-	assert.Nil(t, opts.OnStartFunc)
+	{ // Assert that OnStopFunc will be set
+		opts := NewOptions(OptOnStop(func() {}))
+		assert.NotNil(t, opts.Actor.OnStopFunc)
+		assert.Nil(t, opts.Actor.OnStartFunc)
+	}
+
+	{ // Assert that OnStartFunc and OnStopFunc will be set
+		opts := NewOptions(OptOnStart(func() {}), OptOnStop(func() {}))
+		assert.NotNil(t, opts.Actor.OnStartFunc)
+		assert.NotNil(t, opts.Actor.OnStopFunc)
+	}
+
+	{ // Assert that OptCapacity will be set
+		opts := NewOptions(OptCapacity(16))
+		assert.Equal(t, 16, opts.Mailbox.Capacity)
+		assert.Equal(t, 0, opts.Mailbox.MinCapacity)
+	}
+
+	{ // Assert that OptMinCapacity will be set
+		opts := NewOptions(OptMinCapacity(32))
+		assert.Equal(t, 0, opts.Mailbox.Capacity)
+		assert.Equal(t, 32, opts.Mailbox.MinCapacity)
+	}
+
+	{ // Assert that OptCapacity and OptMinCapacity will be set
+		opts := NewOptions(OptCapacity(16), OptMinCapacity(32))
+		assert.Equal(t, 16, opts.Mailbox.Capacity)
+		assert.Equal(t, 32, opts.Mailbox.MinCapacity)
+	}
+
+	{ // Assert that OptCapacity and OptMinCapacity will be set
+		opts := NewOptions(OptMailbox(16, 32))
+		assert.Equal(t, 16, opts.Mailbox.Capacity)
+		assert.Equal(t, 32, opts.Mailbox.MinCapacity)
+	}
 }

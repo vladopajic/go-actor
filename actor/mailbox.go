@@ -29,10 +29,10 @@ func FromMailboxes[T any](mm []Mailbox[T]) Actor {
 // receiveC channel. FanOut spawns new goroutine in which messages received by
 // receiveC channel are forwarded to created Mailboxes. Spawned goroutine will
 // be active while receiveC is open and it's up to user to start and stop Mailboxes.
-func FanOut[T any](receiveC <-chan T, count int) []Mailbox[T] {
+func FanOut[T any](receiveC <-chan T, count int, opt ...Option) []Mailbox[T] {
 	mm := make([]Mailbox[T], count)
 	for i := 0; i < count; i++ {
-		mm[i] = NewMailbox[T]()
+		mm[i] = NewMailbox[T](opt...)
 	}
 
 	go func(receiveC <-chan T, mm []Mailbox[T]) {
@@ -47,13 +47,20 @@ func FanOut[T any](receiveC <-chan T, count int) []Mailbox[T] {
 }
 
 // NewMailbox returns new Mailbox.
-func NewMailbox[T any]() Mailbox[T] {
-	w := newMailboxWorker[T]()
+func NewMailbox[T any](opt ...Option) Mailbox[T] {
+	var (
+		opts     = newOptions(opt)
+		mOpts    = opts.Mailbox
+		sendC    = make(chan T)
+		receiveC = make(chan T)
+		queue    = newQueue[T](mOpts.Capacity, mOpts.MinCapacity)
+		w        = newMailboxWorker(sendC, receiveC, queue)
+	)
 
 	return &mailboxImpl[T]{
 		Actor:    New(w, OptOnStop(w.onStop)),
-		sendC:    w.sendC,
-		receiveC: w.receiveC,
+		sendC:    sendC,
+		receiveC: receiveC,
 	}
 }
 
@@ -74,14 +81,18 @@ func (m *mailboxImpl[T]) ReceiveC() <-chan T {
 type mailboxWorker[T any] struct {
 	receiveC chan T
 	sendC    chan T
-	queue    queue[T]
+	queue    *queue[T]
 }
 
-func newMailboxWorker[T any]() *mailboxWorker[T] {
+func newMailboxWorker[T any](
+	sendC,
+	receiveC chan T,
+	queue *queue[T],
+) *mailboxWorker[T] {
 	return &mailboxWorker[T]{
-		sendC:    make(chan T),
-		receiveC: make(chan T),
-		queue:    newQueue[T](),
+		sendC:    sendC,
+		receiveC: receiveC,
+		queue:    queue,
 	}
 }
 
@@ -89,7 +100,7 @@ func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
 	if w.queue.IsEmpty() {
 		select {
 		case value := <-w.sendC:
-			w.queue.Enqueue(value)
+			w.queue.PushBack(value)
 			return WorkerContinue
 
 		case <-c.Done():
@@ -98,22 +109,17 @@ func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
 	}
 
 	select {
-	case w.receiveC <- first(w.queue):
-		w.queue.Dequeue()
+	case w.receiveC <- w.queue.Front():
+		w.queue.PopFront()
 		return WorkerContinue
 
 	case value := <-w.sendC:
-		w.queue.Enqueue(value)
+		w.queue.PushBack(value)
 		return WorkerContinue
 
 	case <-c.Done():
 		return WorkerEnd
 	}
-}
-
-func first[T any](queue queue[T]) T {
-	v, _ := queue.First()
-	return v
 }
 
 func (w *mailboxWorker[T]) onStop() {
