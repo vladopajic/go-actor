@@ -20,17 +20,17 @@ func OptOnStop(f func()) Option {
 
 // OptCapacity sets initial Mailbox queue capacity.
 // Value must be power of 2.
-func OptCapacity(cap int) Option {
+func OptCapacity(capacity int) Option {
 	return func(o *options) {
-		o.Mailbox.Capacity = cap
+		o.Mailbox.Capacity = capacity
 	}
 }
 
 // OptMinCapacity sets minimum Mailbox queue capacity.
 // Value must be power of 2.
-func OptMinCapacity(minCap int) Option {
+func OptMinCapacity(minCapacity int) Option {
 	return func(o *options) {
-		o.Mailbox.MinCapacity = minCap
+		o.Mailbox.MinCapacity = minCapacity
 	}
 }
 
