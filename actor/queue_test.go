@@ -50,6 +50,7 @@ func TestQueue_Basic(t *testing.T) {
 }
 
 func TestQueue_Cap(t *testing.T) {
+	t.Parallel()
 
 	{
 		q := NewQueue[any](0, 10)

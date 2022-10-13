@@ -34,6 +34,14 @@ func OptMinCapacity(minCapacity int) Option {
 	}
 }
 
+// OptMailbox sets all Mailbox options at once.
+func OptMailbox(capacity, minCapacity int) Option {
+	return func(o *options) {
+		o.Mailbox.Capacity = capacity
+		o.Mailbox.MinCapacity = minCapacity
+	}
+}
+
 type Option func(o *options)
 
 type options struct {
