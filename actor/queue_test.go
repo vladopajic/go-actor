@@ -8,11 +8,12 @@ import (
 	. "github.com/vladopajic/go-actor/actor"
 )
 
-func TestQueue(t *testing.T) {
+func TestQueue_Basic(t *testing.T) {
 	t.Parallel()
 
 	q := NewQueue[int](0, 0)
 
+	assert.Equal(t, 0, q.Cap())
 	assert.Equal(t, 0, q.Size())
 	assert.True(t, q.IsEmpty())
 
@@ -46,4 +47,41 @@ func TestQueue(t *testing.T) {
 	assert.Equal(t, 3, q.Front())
 	assert.Equal(t, 3, q.PopFront())
 	assert.Equal(t, 0, q.Size())
+}
+
+func TestQueue_Cap(t *testing.T) {
+
+	{
+		q := NewQueue[any](0, 10)
+		assert.Equal(t, 0, q.Cap())
+		assert.Equal(t, 0, q.Size())
+
+		q.PushBack(`🌊`)
+
+		assert.Equal(t, MinQueueCapacity, q.Cap())
+		assert.Equal(t, 1, q.Size())
+	}
+
+	{
+		q := NewQueue[any](10, 10)
+		assert.Equal(t, MinQueueCapacity, q.Cap())
+		assert.Equal(t, 0, q.Size())
+	}
+
+	{
+		q := NewQueue[int](MinQueueCapacity*2, 10)
+		assert.Equal(t, MinQueueCapacity*2, q.Cap())
+		assert.Equal(t, 0, q.Size())
+	}
+
+	{
+		q := NewQueue[any](0, MinQueueCapacity*2)
+		assert.Equal(t, 0, q.Cap())
+		assert.Equal(t, 0, q.Size())
+
+		q.PushBack(`🌊`)
+
+		assert.Equal(t, MinQueueCapacity*2, q.Cap())
+		assert.Equal(t, 1, q.Size())
+	}
 }

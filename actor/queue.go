@@ -1,49 +1,41 @@
 package actor
 
 import (
-	queue2 "github.com/gammazero/deque"
+	queueImpl "github.com/gammazero/deque"
 )
 
 const minQueueCapacity = 64
 
-type queue[T any] interface {
-	PushBack(val T)
-	Front() (val T)
-	PopFront() (val T)
-	Size() int
-	IsEmpty() bool
-}
-
-func newQueue[T any](capacity, minimum int) queue[T] {
+func newQueue[T any](capacity, minimum int) *queue[T] {
 	if minimum < minQueueCapacity {
 		minimum = minQueueCapacity
 	}
 
-	return &queueWrap[T]{
-		q: queue2.New[T](capacity, minimum),
+	return &queue[T]{
+		q: queueImpl.New[T](capacity, minimum),
 	}
 }
 
-type queueWrap[T any] struct {
-	q *queue2.Deque[T]
+type queue[T any] struct {
+	q *queueImpl.Deque[T]
 }
 
-func (w *queueWrap[T]) PushBack(val T) {
-	w.q.PushBack(val)
+func (q *queue[T]) PushBack(val T) {
+	q.q.PushBack(val)
 }
 
-func (w *queueWrap[T]) Front() T {
-	return w.q.Front()
+func (q *queue[T]) Front() T {
+	return q.q.Front()
 }
 
-func (w *queueWrap[T]) PopFront() T {
-	return w.q.PopFront()
+func (q *queue[T]) PopFront() T {
+	return q.q.PopFront()
 }
 
-func (w *queueWrap[T]) Size() int {
-	return w.q.Len()
+func (q *queue[T]) Size() int {
+	return q.q.Len()
 }
 
-func (w *queueWrap[T]) IsEmpty() bool {
-	return w.q.Len() == 0
+func (q *queue[T]) IsEmpty() bool {
+	return q.q.Len() == 0
 }

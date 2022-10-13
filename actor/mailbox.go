@@ -81,13 +81,13 @@ func (m *mailboxImpl[T]) ReceiveC() <-chan T {
 type mailboxWorker[T any] struct {
 	receiveC chan T
 	sendC    chan T
-	queue    queue[T]
+	queue    *queue[T]
 }
 
 func newMailboxWorker[T any](
 	sendC,
 	receiveC chan T,
-	queue queue[T],
+	queue *queue[T],
 ) *mailboxWorker[T] {
 	return &mailboxWorker[T]{
 		sendC:    sendC,
