@@ -14,7 +14,7 @@ func Test_MailboxWorker_EndSignal(t *testing.T) {
 
 	sendC := make(chan any)
 	receiveC := make(chan any)
-	q := NewQueue[any]()
+	q := NewQueue[any](0, 0)
 
 	w := NewMailboxWorker(sendC, receiveC, q)
 	assert.NotNil(t, w)
@@ -23,7 +23,7 @@ func Test_MailboxWorker_EndSignal(t *testing.T) {
 	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
 
 	// Worker should signal end with non-empty queue
-	q.Enqueue(`🌞`)
+	q.PushBack(`🌞`)
 	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
 }
 

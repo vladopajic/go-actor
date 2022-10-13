@@ -1,10 +1,8 @@
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/golang-ds/linkedlist v1.0.0 h1:MrbDfIhQ9SL1my/siW/2va52kKO3IRCFdOa9EfzFFjM=
-github.com/golang-ds/linkedlist v1.0.0/go.mod h1:oRpzIKkdhV7lom4F8dgjDgq+1LGWs37Lge55MwXwNi8=
-github.com/golang-ds/queue v1.0.0 h1:hqcXLnt7tAZLWv3t5Dfh6y1gIgy0KCW/viiKSUG55cM=
-github.com/golang-ds/queue v1.0.0/go.mod h1:0wfhzQPWD2kZRXcDIBwEe490RcBoXdcHuUiJVYgf3vU=
+github.com/gammazero/deque v0.2.0 h1:SkieyNB4bg2/uZZLxvya0Pq6diUlwx7m2TeT7GAIWaA=
+github.com/gammazero/deque v0.2.0/go.mod h1:LFroj8x4cMYCukHJDbxFCkT+r9AndaJnFMuZDV34tuU=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=

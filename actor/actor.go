@@ -107,13 +107,13 @@ func (a *actorImpl) Start() {
 // doWork executes Worker of this Actor until
 // Actor or Worker has signaled to stop.
 func (a *actorImpl) doWork() {
-	executeFunc(a.options.OnStartFunc)
+	executeFunc(a.options.Actor.OnStartFunc)
 
 	for wStatus := WorkerContinue; wStatus == WorkerContinue; {
 		wStatus = a.worker.DoWork(a.ctx)
 	}
 
-	executeFunc(a.options.OnStopFunc)
+	executeFunc(a.options.Actor.OnStopFunc)
 
 	{ // Worker has finished
 		a.workerRunningLock.Lock()

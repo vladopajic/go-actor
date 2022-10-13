@@ -1,40 +1,62 @@
 package actor
 
-// OptOnStart adds function to actor which will be executed
+// OptOnStart adds function to Actor which will be executed
 // before first worker's iteration.
 // This functions is executed in actor's gorutine.
 func OptOnStart(f func()) Option {
-	return func(o options) options {
-		o.OnStartFunc = f
-		return o
+	return func(o *options) {
+		o.Actor.OnStartFunc = f
 	}
 }
 
-// OptOnStop adds function to actor which will be executed
+// OptOnStop adds function to Actor which will be executed
 // after last worker's iteration.
 // This functions is executed in actor's gorutine.
 func OptOnStop(f func()) Option {
-	return func(o options) options {
-		o.OnStopFunc = f
-		return o
+	return func(o *options) {
+		o.Actor.OnStopFunc = f
 	}
 }
 
-type Option func(o options) options
+// OptCapacity sets initial Mailbox queue capacity.
+// Value must be power of 2.
+func OptCapacity(cap int) Option {
+	return func(o *options) {
+		o.Mailbox.Capacity = cap
+	}
+}
+
+// OptMinCapacity sets minimum Mailbox queue capacity.
+// Value must be power of 2.
+func OptMinCapacity(minCap int) Option {
+	return func(o *options) {
+		o.Mailbox.MinCapacity = minCap
+	}
+}
+
+type Option func(o *options)
 
 type options struct {
-	OnStartFunc func()
-	OnStopFunc  func()
+	Actor struct {
+		OnStartFunc func()
+		OnStopFunc  func()
+	}
+
+	Mailbox struct {
+		Capacity    int
+		MinCapacity int
+	}
+}
+
+func (o *options) apply(opts []Option) {
+	for _, opt := range opts {
+		opt(o)
+	}
 }
 
 func newOptions(opts []Option) options {
-	return applyOptions(options{}, opts)
-}
+	o := &options{}
+	o.apply(opts)
 
-func applyOptions(base options, opts []Option) options {
-	for _, opt := range opts {
-		base = opt(base)
-	}
-
-	return base
+	return *o
 }

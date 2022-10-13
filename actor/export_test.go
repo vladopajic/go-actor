@@ -8,7 +8,7 @@ func (c *contextImpl) SignalEnd() {
 	c.signalEnd()
 }
 
-func NewOptions(opts []Option) options {
+func NewOptions(opts ...Option) options {
 	return newOptions(opts)
 }
 
@@ -21,13 +21,9 @@ func NewMailboxWorker[T any](
 	receiveC chan T,
 	queue queue[T],
 ) *mailboxWorker[T] {
-	return &mailboxWorker[T]{
-		sendC:    sendC,
-		receiveC: receiveC,
-		queue:    queue,
-	}
+	return newMailboxWorker(sendC, receiveC, queue)
 }
 
-func NewQueue[T any]() queue[T] {
-	return newQueue[T]()
+func NewQueue[T any](capacity, minimum int) queue[T] {
+	return newQueue[T](capacity, minimum)
 }
