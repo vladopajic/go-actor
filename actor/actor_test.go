@@ -137,10 +137,14 @@ func Test_NewActor_Restart(t *testing.T) {
 func Test_NewActor_StopAfterWorkerEnded(t *testing.T) {
 	t.Parallel()
 
+	var ctx Context
+
 	doWorkC := make(chan chan int)
 	workEndedC := make(chan struct{})
 
 	workerFunc := func(c Context) WorkerStatus {
+		ctx = c // saving ref to context so we can assert that context has ended
+
 		select {
 		case p, ok := <-doWorkC:
 			if !ok {
@@ -175,6 +179,8 @@ func Test_NewActor_StopAfterWorkerEnded(t *testing.T) {
 
 	// Stoping actor should produce no effect (since worker has ended)
 	a.Stop()
+
+	assertContextEnded(t, ctx)
 }
 
 func Test_Combine_StartAll_StopAll(t *testing.T) {
