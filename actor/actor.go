@@ -85,7 +85,7 @@ func (a *actorImpl) Stop() {
 	a.workEndedSigC = make(chan struct{})
 	a.workerRunningLock.Unlock()
 
-	a.ctx.signalEnd()
+	a.ctx.end()
 
 	<-a.workEndedSigC
 }
@@ -114,6 +114,8 @@ func (a *actorImpl) doWork() {
 	}
 
 	executeFunc(a.options.Actor.OnStopFunc)
+
+	a.ctx.end()
 
 	{ // Worker has finished
 		a.workerRunningLock.Lock()

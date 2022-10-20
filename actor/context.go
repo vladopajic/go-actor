@@ -56,10 +56,12 @@ func (c *contextImpl) Deadline() (time.Time, bool) {
 	return time.Time{}, false
 }
 
-func (c *contextImpl) signalEnd() {
+func (c *contextImpl) end() {
 	c.mu.Lock()
-	c.err = ErrStopped
-	close(c.doneC)
+	if c.err == nil {
+		c.err = ErrStopped
+		close(c.doneC)
+	}
 	c.mu.Unlock()
 }
 

@@ -8,8 +8,8 @@ func NewContext() *contextImpl {
 	return newContext()
 }
 
-func (c *contextImpl) SignalEnd() {
-	c.signalEnd()
+func (c *contextImpl) End() {
+	c.end()
 }
 
 func NewOptions(opts ...Option) options {

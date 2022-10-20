@@ -15,12 +15,19 @@ func Test_Context_Stopping(t *testing.T) {
 
 	ctx := NewContext()
 
+	// Assert that new context is in started state
 	assertContextStarted(t, ctx)
 	assertContextStringer(t, ctx)
 	assertNoDeadline(t, ctx)
 
-	ctx.SignalEnd()
+	// End should end context
+	ctx.End()
+	assertContextEnded(t, ctx)
+	assertContextStringer(t, ctx)
+	assertNoDeadline(t, ctx)
 
+	// Ending context again should have no effect
+	ctx.End()
 	assertContextEnded(t, ctx)
 	assertContextStringer(t, ctx)
 	assertNoDeadline(t, ctx)
