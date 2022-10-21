@@ -57,4 +57,9 @@ func TestOptions(t *testing.T) {
 		assert.Equal(t, 16, opts.Mailbox.Capacity)
 		assert.Equal(t, 32, opts.Mailbox.MinCapacity)
 	}
+
+	{ // Assert that OptUsingChan will be set
+		opts := NewOptions(OptUsingChan(true))
+		assert.True(t, opts.Mailbox.UsingChan)
+	}
 }

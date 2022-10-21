@@ -49,8 +49,21 @@ func FanOut[T any](receiveC <-chan T, count int, opt ...Option) []Mailbox[T] {
 // NewMailbox returns new Mailbox.
 func NewMailbox[T any](opt ...Option) Mailbox[T] {
 	var (
-		opts     = newOptions(opt)
-		mOpts    = opts.Mailbox
+		opts  = newOptions(opt)
+		mOpts = opts.Mailbox
+	)
+
+	if mOpts.UsingChan {
+		srC := make(chan T, mOpts.Capacity)
+
+		return &mailboxImpl[T]{
+			Actor:    Idle(OptOnStop(func() { close(srC) })),
+			sendC:    srC,
+			receiveC: srC,
+		}
+	}
+
+	var (
 		sendC    = make(chan T)
 		receiveC = make(chan T)
 		queue    = newQueue[T](mOpts.Capacity, mOpts.MinCapacity)

@@ -34,11 +34,19 @@ func OptMinCapacity(minCapacity int) Option {
 	}
 }
 
-// OptMailbox sets all Mailbox options at once.
+// OptMailbox sets all Mailbox capacity options at once.
 func OptMailbox(capacity, minCapacity int) Option {
 	return func(o *options) {
 		o.Mailbox.Capacity = capacity
 		o.Mailbox.MinCapacity = minCapacity
+	}
+}
+
+// OptUsingChan makes Mailbox to function as wrapper for
+// native go channel.
+func OptUsingChan(usingChan bool) Option {
+	return func(o *options) {
+		o.Mailbox.UsingChan = usingChan
 	}
 }
 
@@ -51,6 +59,7 @@ type options struct {
 	}
 
 	Mailbox struct {
+		UsingChan   bool
 		Capacity    int
 		MinCapacity int
 	}
