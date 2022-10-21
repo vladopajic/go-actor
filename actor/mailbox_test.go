@@ -138,6 +138,45 @@ func Test_FanOut(t *testing.T) {
 	}
 }
 
+func Test_MailboxUsingChan(t *testing.T) {
+	t.Parallel()
+
+	t.Run("zero-cap", func(t *testing.T) {
+		t.Parallel()
+
+		m := NewMailbox[any](OptUsingChan(true))
+
+		// Assert sending is blocked when there is not receiver
+		select {
+		case m.SendC() <- `🌞`:
+			assert.FailNow(t, "should not be able to send")
+		default:
+		}
+
+		// Send when there is receiver
+		go func() {
+			m.SendC() <- `🌞`
+		}()
+		assert.Equal(t, `🌞`, <-m.ReceiveC())
+
+		m.Stop()
+
+		assertMailboxChannelsClosed(t, m)
+	})
+
+	t.Run("non-zero-cap", func(t *testing.T) {
+		t.Parallel()
+
+		m := NewMailbox[any](OptUsingChan(true), OptCapacity(1))
+
+		assertSendReceive(t, m, `🌞`)
+
+		m.Stop()
+
+		assertMailboxChannelsClosed(t, m)
+	})
+}
+
 func assertSendReceive(t *testing.T, m Mailbox[any], val any) {
 	t.Helper()
 
