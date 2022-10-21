@@ -133,20 +133,6 @@ func executeFunc(fn func()) {
 	}
 }
 
-// StartAll starts all specified actors.
-func StartAll(actors ...Actor) {
-	for _, a := range actors {
-		a.Start()
-	}
-}
-
-// StopAll starts all specified actors.
-func StopAll(actors ...Actor) {
-	for _, a := range actors {
-		a.Stop()
-	}
-}
-
 // Combine returns single Actor which combines all specified actors into one.
 // Calling Start or Stop function on this Actor will invoke respective function
 // on all Actors provided to this function.
@@ -159,11 +145,15 @@ type combinedActorImpl struct {
 }
 
 func (a *combinedActorImpl) Stop() {
-	StopAll(a.actors...)
+	for _, a := range a.actors {
+		a.Stop()
+	}
 }
 
 func (a *combinedActorImpl) Start() {
-	StartAll(a.actors...)
+	for _, a := range a.actors {
+		a.Start()
+	}
 }
 
 // Idle returns new Actor without Worker.
@@ -175,11 +165,11 @@ func Idle(opt ...Option) Actor {
 
 // Noop returns no-op Actor.
 func Noop() Actor {
-	return &noopActor
+	return noopActor
 }
 
 //nolint:gochecknoglobals
-var noopActor = basicActorImpl{}
+var noopActor = &basicActorImpl{}
 
 type basicActorImpl struct {
 	options options
