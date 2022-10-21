@@ -218,6 +218,33 @@ func Test_Combine_StartAll_StopAll(t *testing.T) {
 	assert.Len(t, onStopC, actorsCount)
 }
 
+func Test_Noop(t *testing.T) {
+	t.Parallel()
+
+	a := Noop()
+
+	a.Start()
+	a.Stop()
+}
+
+func Test_Idle(t *testing.T) {
+	t.Parallel()
+
+	onStartC := make(chan struct{}, 1)
+	onStopC := make(chan struct{}, 1)
+
+	a := Idle(
+		OptOnStart(func() { onStartC <- struct{}{} }),
+		OptOnStop(func() { onStopC <- struct{}{} }),
+	)
+
+	a.Start()
+	<-onStartC
+
+	a.Stop()
+	<-onStopC
+}
+
 func drain(c chan struct{}) {
 	for len(c) > 0 {
 		<-c

@@ -165,3 +165,30 @@ func (a *combinedActorImpl) Stop() {
 func (a *combinedActorImpl) Start() {
 	StartAll(a.actors...)
 }
+
+// Idle returns new Actor without Worker.
+func Idle(opt ...Option) Actor {
+	return &basicActorImpl{
+		options: newOptions(opt),
+	}
+}
+
+// Noop returns no-op Actor.
+func Noop() Actor {
+	return &noopActor
+}
+
+//nolint:gochecknoglobals
+var noopActor = basicActorImpl{}
+
+type basicActorImpl struct {
+	options options
+}
+
+func (a *basicActorImpl) Stop() {
+	executeFunc(a.options.Actor.OnStopFunc)
+}
+
+func (a *basicActorImpl) Start() {
+	executeFunc(a.options.Actor.OnStartFunc)
+}
