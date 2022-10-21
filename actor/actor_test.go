@@ -206,16 +206,6 @@ func Test_Combine_StartAll_StopAll(t *testing.T) {
 	a.Stop()
 	assert.Len(t, onStartC, actorsCount)
 	assert.Len(t, onStopC, actorsCount)
-
-	// Similar test but for StartAll and StopAll methods
-	drain(onStartC)
-	drain(onStopC)
-	assert.Len(t, onStartC, 0)
-	assert.Len(t, onStopC, 0)
-	StartAll(actors...)
-	StopAll(actors...)
-	assert.Len(t, onStartC, actorsCount)
-	assert.Len(t, onStopC, actorsCount)
 }
 
 func Test_Noop(t *testing.T) {
@@ -243,12 +233,6 @@ func Test_Idle(t *testing.T) {
 
 	a.Stop()
 	<-onStopC
-}
-
-func drain(c chan struct{}) {
-	for len(c) > 0 {
-		<-c
-	}
 }
 
 func newWorker() *worker {
