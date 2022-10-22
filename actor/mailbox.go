@@ -56,7 +56,7 @@ func NewMailbox[T any](opt ...Option) Mailbox[T] {
 	if mOpts.UsingChan {
 		srC := make(chan T, mOpts.Capacity)
 
-		return &mailboxImpl[T]{
+		return &mailbox[T]{
 			Actor:    Idle(OptOnStop(func() { close(srC) })),
 			sendC:    srC,
 			receiveC: srC,
@@ -70,24 +70,24 @@ func NewMailbox[T any](opt ...Option) Mailbox[T] {
 		w        = newMailboxWorker(sendC, receiveC, queue)
 	)
 
-	return &mailboxImpl[T]{
+	return &mailbox[T]{
 		Actor:    New(w, OptOnStop(w.onStop)),
 		sendC:    sendC,
 		receiveC: receiveC,
 	}
 }
 
-type mailboxImpl[T any] struct {
+type mailbox[T any] struct {
 	Actor
 	sendC    chan<- T
 	receiveC <-chan T
 }
 
-func (m *mailboxImpl[T]) SendC() chan<- T {
+func (m *mailbox[T]) SendC() chan<- T {
 	return m.sendC
 }
 
-func (m *mailboxImpl[T]) ReceiveC() <-chan T {
+func (m *mailbox[T]) ReceiveC() <-chan T {
 	return m.receiveC
 }
 

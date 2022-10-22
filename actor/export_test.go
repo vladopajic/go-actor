@@ -4,11 +4,11 @@ const (
 	MinQueueCapacity = minQueueCapacity
 )
 
-func NewContext() *contextImpl {
+func NewContext() *context {
 	return newContext()
 }
 
-func (c *contextImpl) End() {
+func (c *context) End() {
 	c.end()
 }
 
