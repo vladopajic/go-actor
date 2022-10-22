@@ -26,18 +26,18 @@ Dive into [examples](https://github.com/vladopajic/go-actor-examples) to see `go
 func main() {
 	mailbox := actor.NewMailbox[int]()
 
-	// Producer and consumer workers are created with same mailbox
-	// so that producer worker can send messages directly to consumer worker
-	pw := &producerWorker{outC: mailbox.SendC()}
-	cw1 := &consumerWorker{inC: mailbox.ReceiveC(), id: 1}
-	cw2 := &consumerWorker{inC: mailbox.ReceiveC(), id: 2}
+	// Produce and consume workers are created with same mailbox
+	// so that produce worker can send messages directly to consume worker
+	pw := &produceWorker{outC: mailbox.SendC()}
+	cw1 := &consumeWorker{inC: mailbox.ReceiveC(), id: 1}
+	cw2 := &consumeWorker{inC: mailbox.ReceiveC(), id: 2}
 
 	// Create actors using these workers and combine them to singe Actor
 	a := actor.Combine(
 		mailbox,
 		actor.New(pw),
 
-		// Note: We don't need two consumer actors, but we create them anyway
+		// Note: We don't need two consume actors, but we create them anyway
 		// for the sake of demonstration since having one or more consumers
 		// will produce the same result. Message on stdout will be written by
 		// first consumer that reads from mailbox.
@@ -52,13 +52,13 @@ func main() {
 	select {}
 }
 
-// producerWorker will produce incremented number on 1 second interval
-type producerWorker struct {
+// produceWorker will produce incremented number on 1 second interval
+type produceWorker struct {
 	outC chan<- int
 	num  int
 }
 
-func (w *producerWorker) DoWork(c actor.Context) actor.WorkerStatus {
+func (w *produceWorker) DoWork(c actor.Context) actor.WorkerStatus {
 	select {
 	case <-time.After(time.Second):
 		w.num++
@@ -71,13 +71,13 @@ func (w *producerWorker) DoWork(c actor.Context) actor.WorkerStatus {
 	}
 }
 
-// consumerWorker will consume numbers received on inC channel
-type consumerWorker struct {
+// consumeWorker will consume numbers received on inC channel
+type consumeWorker struct {
 	inC <-chan int
 	id  int
 }
 
-func (w *consumerWorker) DoWork(c actor.Context) actor.WorkerStatus {
+func (w *consumeWorker) DoWork(c actor.Context) actor.WorkerStatus {
 	select {
 	case num := <-w.inC:
 		fmt.Printf("consumed %d \t(worker %d)\n", num, w.id)
