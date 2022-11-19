@@ -17,24 +17,23 @@ Intention of go-actor is to bring [actor model](https://en.wikipedia.org/wiki/Ac
 
 Without re-usable design principles codebase of complex system can become hard to maintain. Codebase written using Golang can highly benefit from design principles based on actor model as gorutines and channels naturally translate to actors and mailboxes.
 
-## `go-actor` benefits
+## Advantage
 
- - Entire codebase can be modeld with same design principles where _actor_ is the universal primitive. 
-Example: in microservice architectured system each service is actor which reacts and sends messages to other services (actors). Services themself could be made of multiple components (actors) which interact with other components by responding and sending messages. 
-- Golang’s gorutines and channels naturally translate to actor and mailboxes.
-- System can be designed without use of mutex. This can give performance gains as overlocking is not rare in complex components. 
+- Entire codebase can be modelled with the same design principles where the actor is the universal primitive. Example: in microservice architectured systems each service is an actor which reacts and sends messages to other services (actors). Services themselves could be made of multiple components (actors) which interact with other components by responding and sending messages.
+- Golang’s gorutines and channels naturally translate to actors and mailboxes.
+- System can be designed without the use of mutex. This can give performance gains as overlocking is not rare in complex components.
 - Optimal for Golang's gorutine scheduler
-- Legacy codebase can transition to actor based design because components modeld with `go-actor` have simple interface which could be integrated in anywhere.
+- Legacy codebase can transition to actor based design because components modelled with go-actor have a simple interface which could be integrated anywhere.
 
 
-## `go-actor` abstractions
 
-`go-actor`'s base abstraction layer only have three interfaces:
+## Abstractions
 
+`go-actor`'s base abstraction layer only has three interfaces:
 
-- `actor.Actor` is anything that implements `Start()` and `Stop()` methods. Actors created using `actor.New(actor.Worker)` function will create prefered actor implementation which will on start spawn dedicated goroutine to perform work of supplied `actor.Worker`.
-  - `actor.Worker` encapsulates actor's executable logic. This is only interface which developers need to wirte in order to describe behavior of actor.
-- `actor.Mailbox` is interface for message transport mechanism between actors. Mailboxes are created using `actor.NewMailbox(...)` function.
+- `actor.Actor` is anything that implements `Start()` and `Stop()` methods. Actors created using `actor.New(actor.Worker)` function will create preferred actor implementation which will on start spawn dedicated goroutine to perform work of supplied `actor.Worker`.
+  - `actor.Worker` encapsulates actor's executable logic. This is the only interface which developers need to write in order to describe behaviour of actors.
+- `actor.Mailbox` is an interface for message transport mechanisms between actors. Mailboxes are created using the `actor.NewMailbox(...)` function.
 
 
 ## Examples
