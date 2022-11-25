@@ -111,6 +111,11 @@ func (w *consumeWorker) DoWork(c actor.Context) actor.WorkerStatus {
 }
 ```
 
+## Addons
+This section lists addon abstractions for `go-actor`.
+
+- [super-actor](https://github.com/vladopajic/go-super-actor) is addon abstraction which aims to unify testing actor's and worker's bussines logic.
+
 ## Contribution
 
 All contributions are useful, whether it is a simple typo, a more complex change, or just pointing out an issue. We welcome any contribution so feel free to open PR or issue. 
