@@ -67,7 +67,7 @@ func Test_NewActor_OptOnStartStop(t *testing.T) {
 	onStopC := make(chan struct{}, 1)
 
 	a := New(newWorker(),
-		OptOnStart(func() { onStartC <- struct{}{} }),
+		OptOnStart(func(c Context) { onStartC <- struct{}{} }),
 		OptOnStop(func() { onStopC <- struct{}{} }),
 	)
 
@@ -88,7 +88,7 @@ func Test_NewActor_MultipleStartStop(t *testing.T) {
 
 	w := newWorker()
 	a := New(w,
-		OptOnStart(func() { onStartC <- struct{}{} }),
+		OptOnStart(func(Context) { onStartC <- struct{}{} }),
 		OptOnStop(func() { onStopC <- struct{}{} }),
 	)
 
@@ -182,6 +182,9 @@ func Test_Actor_ContextEndedAfterWorkerEnded(t *testing.T) {
 
 	w := newWorker()
 	a := New(w,
+		OptOnStart(func(c Context) {
+			assertContextStarted(t, c)
+		}),
 		OptOnStop(func() {
 			// When OnStop() is called assert that context has ended
 			assertContextEnded(t, w.ctx)
@@ -212,7 +215,7 @@ func Test_Combine_StartAll_StopAll(t *testing.T) {
 
 	for i := 0; i < actorsCount; i++ {
 		actors[i] = New(newWorker(),
-			OptOnStart(func() { onStartC <- struct{}{} }),
+			OptOnStart(func(Context) { onStartC <- struct{}{} }),
 			OptOnStop(func() { onStopC <- struct{}{} }),
 		)
 	}
@@ -242,7 +245,7 @@ func Test_Idle(t *testing.T) {
 	onStopC := make(chan struct{}, 1)
 
 	a := Idle(
-		OptOnStart(func() { onStartC <- struct{}{} }),
+		OptOnStart(func(Context) { onStartC <- struct{}{} }),
 		OptOnStop(func() { onStopC <- struct{}{} }),
 	)
 

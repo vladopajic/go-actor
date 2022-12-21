@@ -107,7 +107,9 @@ func (a *actor) Start() {
 // doWork executes Worker of this Actor until
 // Actor or Worker has signaled to stop.
 func (a *actor) doWork() {
-	executeFunc(a.options.Actor.OnStartFunc)
+	if fn := a.options.Actor.OnStartFunc; fn != nil {
+		fn(a.ctx)
+	}
 
 	for wStatus := WorkerContinue; wStatus == WorkerContinue; {
 		wStatus = a.worker.DoWork(a.ctx)
@@ -115,7 +117,9 @@ func (a *actor) doWork() {
 
 	a.ctx.end()
 
-	executeFunc(a.options.Actor.OnStopFunc)
+	if fn := a.options.Actor.OnStopFunc; fn != nil {
+		fn()
+	}
 
 	{ // Worker has finished
 		a.workerRunningLock.Lock()
@@ -124,12 +128,6 @@ func (a *actor) doWork() {
 			c <- struct{}{}
 		}
 		a.workerRunningLock.Unlock()
-	}
-}
-
-func executeFunc(fn func()) {
-	if fn != nil {
-		fn()
 	}
 }
 
@@ -173,12 +171,39 @@ var noopActor = &basicActor{}
 
 type basicActor struct {
 	options options
-}
-
-func (a *basicActor) Stop() {
-	executeFunc(a.options.Actor.OnStopFunc)
+	ctx     *context
+	lock    sync.Mutex
 }
 
 func (a *basicActor) Start() {
-	executeFunc(a.options.Actor.OnStartFunc)
+	a.lock.Lock()
+
+	if a.ctx != nil {
+		a.lock.Unlock()
+		return
+	}
+
+	a.ctx = newContext()
+	a.lock.Unlock()
+
+	if fn := a.options.Actor.OnStartFunc; fn != nil {
+		fn(a.ctx)
+	}
+}
+
+func (a *basicActor) Stop() {
+	a.lock.Lock()
+
+	if a.ctx == nil {
+		a.lock.Unlock()
+		return
+	}
+
+	a.ctx.end()
+	a.ctx = nil
+	a.lock.Unlock()
+
+	if fn := a.options.Actor.OnStopFunc; fn != nil {
+		fn()
+	}
 }

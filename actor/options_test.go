@@ -17,7 +17,7 @@ func TestOptions(t *testing.T) {
 	}
 
 	{ // Assert that OnStartFunc will be set
-		opts := NewOptions(OptOnStart(func() {}))
+		opts := NewOptions(OptOnStart(func(Context) {}))
 		assert.NotNil(t, opts.Actor.OnStartFunc)
 		assert.Nil(t, opts.Actor.OnStopFunc)
 	}
@@ -29,7 +29,7 @@ func TestOptions(t *testing.T) {
 	}
 
 	{ // Assert that OnStartFunc and OnStopFunc will be set
-		opts := NewOptions(OptOnStart(func() {}), OptOnStop(func() {}))
+		opts := NewOptions(OptOnStart(func(Context) {}), OptOnStop(func() {}))
 		assert.NotNil(t, opts.Actor.OnStartFunc)
 		assert.NotNil(t, opts.Actor.OnStopFunc)
 	}
