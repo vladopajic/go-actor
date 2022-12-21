@@ -113,9 +113,9 @@ func (a *actor) doWork() {
 		wStatus = a.worker.DoWork(a.ctx)
 	}
 
-	executeFunc(a.options.Actor.OnStopFunc)
-
 	a.ctx.end()
+
+	executeFunc(a.options.Actor.OnStopFunc)
 
 	{ // Worker has finished
 		a.workerRunningLock.Lock()

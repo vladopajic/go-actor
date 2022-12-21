@@ -33,7 +33,7 @@ func Test_NewWorker(t *testing.T) {
 func Test_NewActor(t *testing.T) {
 	t.Parallel()
 
-	w := newWorkerWithDoneC()
+	w := newWorker()
 	a := New(w)
 
 	a.Start()
@@ -49,7 +49,7 @@ func Test_NewActor(t *testing.T) {
 
 	// Actor was stopped; wait for done signal
 	// and assert that worker is not running
-	<-w.doneC
+	<-w.ctx.Done()
 
 	p := make(chan int)
 	w.doWorkC <- p
@@ -86,7 +86,7 @@ func Test_NewActor_MultipleStartStop(t *testing.T) {
 	onStartC := make(chan struct{}, count)
 	onStopC := make(chan struct{}, count)
 
-	w := newWorkerWithDoneC()
+	w := newWorker()
 	a := New(w,
 		OptOnStart(func() { onStartC <- struct{}{} }),
 		OptOnStop(func() { onStopC <- struct{}{} }),
@@ -110,7 +110,7 @@ func Test_NewActor_MultipleStartStop(t *testing.T) {
 		a.Stop()
 	}
 
-	<-w.doneC
+	<-w.ctx.Done()
 	assert.Len(t, onStartC, 1)
 	assert.Len(t, onStopC, 1)
 }
@@ -137,14 +137,10 @@ func Test_NewActor_Restart(t *testing.T) {
 func Test_NewActor_StopAfterWorkerEnded(t *testing.T) {
 	t.Parallel()
 
-	var ctx Context
-
 	doWorkC := make(chan chan int)
 	workEndedC := make(chan struct{})
 
 	workerFunc := func(c Context) WorkerStatus {
-		ctx = c // saving ref to context so we can assert that context has ended
-
 		select {
 		case p, ok := <-doWorkC:
 			if !ok {
@@ -179,8 +175,30 @@ func Test_NewActor_StopAfterWorkerEnded(t *testing.T) {
 
 	// Stoping actor should produce no effect (since worker has ended)
 	a.Stop()
+}
 
-	assertContextEnded(t, ctx)
+func Test_Actor_ContextEndedAfterWorkerEnded(t *testing.T) {
+	t.Parallel()
+
+	w := newWorker()
+	a := New(w,
+		OptOnStop(func() {
+			// When OnStop() is called assert that context has ended
+			assertContextEnded(t, w.ctx)
+		}),
+	)
+
+	a.Start()
+
+	for i := 0; i < 20; i++ {
+		p := make(chan int)
+		w.doWorkC <- p
+		assert.Equal(t, i, <-p)
+	}
+
+	a.Stop()
+
+	assertContextEnded(t, w.ctx)
 }
 
 func Test_Combine_StartAll_StopAll(t *testing.T) {
@@ -238,25 +256,22 @@ func Test_Idle(t *testing.T) {
 func newWorker() *worker {
 	return &worker{
 		doWorkC: make(chan chan int, 1),
-		doneC:   nil,
-	}
-}
-
-func newWorkerWithDoneC() *worker {
-	return &worker{
-		doWorkC: make(chan chan int, 100),
-		doneC:   make(chan struct{}),
 	}
 }
 
 type worker struct {
 	workIteration int
 	doWorkC       chan chan int
-	doneC         chan struct{}
+	ctx           Context
 }
 
 func (w *worker) DoWork(c Context) WorkerStatus {
+	w.ctx = c // saving ref to context so we can assert that context
+
 	select {
+	case <-c.Done():
+		return WorkerEnd
+
 	case p, ok := <-w.doWorkC:
 		if !ok {
 			return WorkerEnd
@@ -266,12 +281,5 @@ func (w *worker) DoWork(c Context) WorkerStatus {
 		w.workIteration++
 
 		return WorkerContinue
-
-	case <-c.Done():
-		if w.doneC != nil {
-			close(w.doneC)
-		}
-
-		return WorkerEnd
 	}
 }
