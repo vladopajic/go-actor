@@ -3,7 +3,7 @@ package actor
 // OptOnStart adds function to Actor which will be executed
 // before first worker's iteration.
 // This functions is executed in actor's gorutine.
-func OptOnStart(f func()) Option {
+func OptOnStart(f func(Context)) Option {
 	return func(o *options) {
 		o.Actor.OnStartFunc = f
 	}
@@ -54,7 +54,7 @@ type Option func(o *options)
 
 type options struct {
 	Actor struct {
-		OnStartFunc func()
+		OnStartFunc func(Context)
 		OnStopFunc  func()
 	}
 

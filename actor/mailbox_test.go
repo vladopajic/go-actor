@@ -146,6 +146,8 @@ func Test_MailboxUsingChan(t *testing.T) {
 
 		m := NewMailbox[any](OptUsingChan(true))
 
+		m.Start()
+
 		// Assert sending is blocked when there is not receiver
 		select {
 		case m.SendC() <- `🌞`:
@@ -168,6 +170,8 @@ func Test_MailboxUsingChan(t *testing.T) {
 		t.Parallel()
 
 		m := NewMailbox[any](OptUsingChan(true), OptCapacity(1))
+
+		m.Start()
 
 		assertSendReceive(t, m, `🌞`)
 
