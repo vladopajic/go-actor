@@ -236,9 +236,14 @@ func Test_Noop(t *testing.T) {
 
 	a.Start()
 	a.Stop()
+
+	a.Start()
+	a.Start()
+	a.Stop()
+	a.Stop()
 }
 
-func Test_Idle(t *testing.T) {
+func Test_Idle_Options(t *testing.T) {
 	t.Parallel()
 
 	onStartC := make(chan struct{}, 1)
@@ -251,9 +256,13 @@ func Test_Idle(t *testing.T) {
 
 	a.Start()
 	<-onStartC
+	a.Start() // Should have no effect
+	assert.Len(t, onStartC, 0)
 
 	a.Stop()
 	<-onStopC
+	a.Stop() // Should have no effect
+	assert.Len(t, onStopC, 0)
 }
 
 func newWorker() *worker {

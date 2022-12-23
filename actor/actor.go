@@ -156,26 +156,18 @@ func (a *combinedActor) Start() {
 
 // Idle returns new Actor without Worker.
 func Idle(opt ...Option) Actor {
-	return &basicActor{
+	return &idleActor{
 		options: newOptions(opt),
 	}
 }
 
-// Noop returns no-op Actor.
-func Noop() Actor {
-	return noopActor
-}
-
-//nolint:gochecknoglobals
-var noopActor = &basicActor{}
-
-type basicActor struct {
+type idleActor struct {
 	options options
 	ctx     *context
 	lock    sync.Mutex
 }
 
-func (a *basicActor) Start() {
+func (a *idleActor) Start() {
 	a.lock.Lock()
 
 	if a.ctx != nil {
@@ -191,7 +183,7 @@ func (a *basicActor) Start() {
 	}
 }
 
-func (a *basicActor) Stop() {
+func (a *idleActor) Stop() {
 	a.lock.Lock()
 
 	if a.ctx == nil {
@@ -207,3 +199,16 @@ func (a *basicActor) Stop() {
 		fn()
 	}
 }
+
+// Noop returns no-op Actor.
+func Noop() Actor {
+	return noopActorInstance
+}
+
+//nolint:gochecknoglobals
+var noopActorInstance = &noopActor{}
+
+type noopActor struct{}
+
+func (a *noopActor) Start() {}
+func (a *noopActor) Stop()  {}
