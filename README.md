@@ -116,9 +116,9 @@ func (w *consumeWorker) DoWork(c actor.Context) actor.WorkerStatus {
 
 - [super](https://github.com/vladopajic/go-super-actor) is addon abstraction which aims to unify testing of actor's and worker's bussines logic.
 
-## Desing decisions
+## Design decisions
 
-Design decision are documented [here](./docs/design_decisions.md).
+Design decisions are documented [here](./docs/design_decisions.md).
 
 ## Contribution
 
