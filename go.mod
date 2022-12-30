@@ -15,4 +15,4 @@ require (
 )
 
 // versioning changed to 0.x.x
-retract [v1.0.0, v1.5.0]
+retract [v1.0.0, v1.0.5]
