@@ -44,6 +44,24 @@ type Worker interface {
 // WorkerFunc is signature of Worker's DoWork function.
 type WorkerFunc = func(c Context) WorkerStatus
 
+// startableWorker defines optional interface which Worker can implement
+type startableWorker interface {
+	// OnStart is called right before DoWork() is called for first time. It can be used to
+	// initialize Worker as it will be called only once.
+	// Context is provided in case when Actor is stopped early and OnStop should terminated
+	// with initialization. This is same Context as one which will be provided to DoWork method
+	// in later stages of Worker lifecycle.
+	OnStart(Context)
+}
+
+// stoppableWorker defines optional interface which Worker can implement
+type stoppableWorker interface {
+	// OnStop is called after last DoWork() returns. It can be used to release all
+	// resources occupied by Worker.
+	// Context is not proved as at this point as it was already ended.
+	OnStop()
+}
+
 // NewWorker returns basic Worker implementation which delegates
 // DoWork to supplied WorkerFunc.
 func NewWorker(fn WorkerFunc) Worker {
@@ -107,17 +125,17 @@ func (a *actor) Start() {
 // doWork executes Worker of this Actor until
 // Actor or Worker has signaled to stop.
 func (a *actor) doWork() {
-	if fn := a.options.Actor.OnStartFunc; fn != nil {
+	if fn := a.onStartFunc(); fn != nil {
 		fn(a.ctx)
 	}
 
-	for wStatus := WorkerContinue; wStatus == WorkerContinue; {
-		wStatus = a.worker.DoWork(a.ctx)
+	for status := WorkerContinue; status == WorkerContinue; {
+		status = a.worker.DoWork(a.ctx)
 	}
 
 	a.ctx.end()
 
-	if fn := a.options.Actor.OnStopFunc; fn != nil {
+	if fn := a.onStopFunc(); fn != nil {
 		fn()
 	}
 
@@ -129,6 +147,30 @@ func (a *actor) doWork() {
 		}
 		a.workerRunningLock.Unlock()
 	}
+}
+
+func (a *actor) onStartFunc() func(Context) {
+	if fn := a.options.Actor.OnStartFunc; fn != nil {
+		return fn
+	}
+
+	if w, ok := a.worker.(startableWorker); ok {
+		return w.OnStart
+	}
+
+	return nil
+}
+
+func (a *actor) onStopFunc() func() {
+	if fn := a.options.Actor.OnStopFunc; fn != nil {
+		return fn
+	}
+
+	if w, ok := a.worker.(stoppableWorker); ok {
+		return w.OnStop
+	}
+
+	return nil
 }
 
 // Combine returns single Actor which combines all specified actors into one.
@@ -170,6 +212,7 @@ type idleActor struct {
 func (a *idleActor) Start() {
 	a.lock.Lock()
 
+	// early return if this actor is already running
 	if a.ctx != nil {
 		a.lock.Unlock()
 		return
@@ -186,6 +229,7 @@ func (a *idleActor) Start() {
 func (a *idleActor) Stop() {
 	a.lock.Lock()
 
+	// early return if this actor is already stopped
 	if a.ctx == nil {
 		a.lock.Unlock()
 		return

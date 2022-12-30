@@ -15,7 +15,9 @@ func Test_NewWorker(t *testing.T) {
 	ctx := ContextStarted()
 	sigC := make(chan struct{}, 1)
 	workerFunc := func(c Context) WorkerStatus {
+		assert.Equal(t, ctx, c)
 		sigC <- struct{}{}
+
 		return WorkerContinue
 	}
 
@@ -60,22 +62,52 @@ func Test_NewActor(t *testing.T) {
 	}
 }
 
-func Test_NewActor_OptOnStartStop(t *testing.T) {
+func Test_Actor_OnStartStopFnGetter(t *testing.T) {
 	t.Parallel()
 
-	onStartC := make(chan struct{}, 1)
-	onStopC := make(chan struct{}, 1)
+	onStartC := make(chan any, 1)
+	onStopC := make(chan any, 1)
+	onStartFn := func(c Context) { onStartC <- `🌞` }
+	onStopFn := func() { onStopC <- `🌚` }
 
-	a := New(newWorker(),
-		OptOnStart(func(c Context) { onStartC <- struct{}{} }),
-		OptOnStop(func() { onStopC <- struct{}{} }),
-	)
+	{
+		noopWorker := func(c Context) WorkerStatus { return WorkerContinue }
+		a := NewActorImpl(NewWorker(noopWorker))
+		assert.Nil(t, a.OnStartFunc())
+		assert.Nil(t, a.OnStopFunc())
+	}
 
-	a.Start()
-	<-onStartC
+	{ // Assert that getters will return functions implemented by worker
+		w := newWorker()
+		a := NewActorImpl(w)
 
-	a.Stop()
-	<-onStopC
+		assert.NotNil(t, a.OnStartFunc())
+		a.OnStartFunc()(ContextStarted())
+		assert.Equal(t, `🌞`, <-w.onStartC)
+		assert.Len(t, w.onStartC, 0)
+
+		assert.NotNil(t, a.OnStopFunc())
+		a.OnStopFunc()()
+		assert.Equal(t, `🌚`, <-w.onStopC)
+		assert.Len(t, w.onStopC, 0)
+	}
+
+	{ // Assert that functions specified as option will have more priority then worker
+		w := newWorker()
+		a := NewActorImpl(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
+
+		assert.NotNil(t, a.OnStartFunc())
+		a.OnStartFunc()(ContextStarted())
+		assert.Equal(t, `🌞`, <-onStartC)
+		assert.Len(t, onStartC, 0)
+		assert.Len(t, w.onStartC, 0)
+
+		assert.NotNil(t, a.OnStopFunc())
+		a.OnStopFunc()()
+		assert.Equal(t, `🌚`, <-onStopC)
+		assert.Len(t, onStopC, 0)
+		assert.Len(t, w.onStopC, 0)
+	}
 }
 
 func Test_NewActor_MultipleStartStop(t *testing.T) {
@@ -204,7 +236,7 @@ func Test_Actor_ContextEndedAfterWorkerEnded(t *testing.T) {
 	assertContextEnded(t, w.ctx)
 }
 
-func Test_Combine_StartAll_StopAll(t *testing.T) {
+func Test_Combine(t *testing.T) {
 	t.Parallel()
 
 	const actorsCount = 5
@@ -267,7 +299,9 @@ func Test_Idle_Options(t *testing.T) {
 
 func newWorker() *worker {
 	return &worker{
-		doWorkC: make(chan chan int, 1),
+		doWorkC:  make(chan chan int, 1),
+		onStartC: make(chan any, 1),
+		onStopC:  make(chan any, 1),
 	}
 }
 
@@ -275,6 +309,8 @@ type worker struct {
 	workIteration int
 	doWorkC       chan chan int
 	ctx           Context
+	onStartC      chan any
+	onStopC       chan any
 }
 
 func (w *worker) DoWork(c Context) WorkerStatus {
@@ -293,5 +329,19 @@ func (w *worker) DoWork(c Context) WorkerStatus {
 		w.workIteration++
 
 		return WorkerContinue
+	}
+}
+
+func (w *worker) OnStart(c Context) {
+	select {
+	case w.onStartC <- `🌞`:
+	default:
+	}
+}
+
+func (w *worker) OnStop() {
+	select {
+	case w.onStopC <- `🌚`:
+	default:
 	}
 }
