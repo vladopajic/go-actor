@@ -36,11 +36,11 @@ type Service interface {
 }
 ```
 
-Interfaces whose methods do not return errors could be easily converted to interfaces whose methods return error, because returned value can be `nil` in later scenarios. Having this in mind it seems that `Actor` interface would be more compatible if its methods have returned errors. This certainly would make sense, but let's also consider following analogy.
+Interface whose methods do not return errors (errorless interface) could be easily converted to interface whose methods return error (error-returning interface), because returned value can be `nil` in later scenarios. Having this in mind it seems that `Actor` interface would be compatible with more interfaces if it had error-returning interface. This certainly would make sense, but let's also consider following analogy.
 
 If we make analogy that `Actor` is just a goroutine that is started by calling `Actor`'s `Start()` method then why would `Actor` return error on start if starting goroutine is errorless operation? Now, this reasoning makes completely different, but very logical statement from `Actor`'s point of view.
 
-In a system entirely made of actors it makes sense for `Service` interface to implement `Actor` interface. But how would that be possible if `Service` methods can return error? In the case of `Service` it appears to be that some piece of code which requires error handling was added at the place where service's goroutine is about to be started. This code could be dealt with in two ways:
+In a system entirely made of actors it makes sense for `Service` interface to implement `Actor` interface. But how would that be possible if `Service` is error-returning interface? In the case of `Service` it appears to be that some piece of code which requires error handling was added at the place where service's goroutine is about to be started. This code could be dealt with in two ways:
 - It could be moved before service is created. For example database connection would need to be created at the top of the bootstrap process of a program and passed on where needed.
 - More robust approach would be to move this code inside goroutine which would repeat this operation (establishing database connection) until it succeeds.
  
