@@ -25,7 +25,7 @@ It's not hard to find examples where developers have defined a similar interface
 ```go
 // example of interface similar to Actor's, but whose methods return error
 type Service interface {
-    // Start will establish database connection and start new gorutine to process
+    // Start will establish database connection and start new goroutine to process
     // all incoming requests.
     Start() error
 

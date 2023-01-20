@@ -128,7 +128,7 @@ func Test_FanOut(t *testing.T) {
 
 	wg.Wait()
 
-	// At this point inC is closed which will terminate fan out gorutine.
+	// At this point inC is closed which will terminate fan out goroutine.
 	// We don't want to end Mailbox actors at this point, because Mailbox could
 	// be used for other data flows.
 

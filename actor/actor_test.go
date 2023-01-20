@@ -205,7 +205,7 @@ func Test_NewActor_StopAfterWorkerEnded(t *testing.T) {
 	close(doWorkC)
 	<-workEndedC
 
-	// Stoping actor should produce no effect (since worker has ended)
+	// Stopping actor should produce no effect (since worker has ended)
 	a.Stop()
 }
 

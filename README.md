@@ -15,14 +15,14 @@
 
 Intention of go-actor is to bring [actor model](https://en.wikipedia.org/wiki/Actor_model) closer to Go developers and to provide design pattern needed to build scalable and high performing concurrent programs.
 
-Without re-usable design principles codebase of complex system can become hard to maintain. Codebase written using Golang can highly benefit from design principles based on actor model as gorutines and channels naturally translate to actors and mailboxes.
+Without re-usable design principles codebase of complex system can become hard to maintain. Codebase written using Golang can highly benefit from design principles based on actor model as goroutines and channels naturally translate to actors and mailboxes.
 
 ## Advantage
 
-- Entire codebase can be modelled with the same design principles where the actor is the universal primitive. Example: in microservice architectured systems each service is an actor which reacts and sends messages to other services (actors). Services themselves could be made of multiple components (actors) which interact with other components by responding and sending messages.
-- Golang’s gorutines and channels naturally translate to actors and mailboxes.
+- Entire codebase can be modelled with the same design principles where the actor is the universal primitive. Example: in microservice architected systems each service is an actor which reacts and sends messages to other services (actors). Services themselves could be made of multiple components (actors) which interact with other components by responding and sending messages.
+- Golang’s goroutines and channels naturally translate to actors and mailboxes.
 - System can be designed without the use of mutex. This can give performance gains as overlocking is not rare in complex components.
-- Optimal for Golang's gorutine scheduler
+- Optimal for Golang's goroutine scheduler
 - Legacy codebase can transition to actor based design because components modelled with go-actor have a simple interface which could be integrated anywhere.
 
 
@@ -32,7 +32,7 @@ Without re-usable design principles codebase of complex system can become hard t
 `go-actor`'s base abstraction layer only has three interfaces:
 
 - `actor.Actor` is anything that implements `Start()` and `Stop()` methods. Actors created using `actor.New(actor.Worker)` function will create preferred actor implementation which will on start spawn dedicated goroutine to perform work of supplied `actor.Worker`.
-  - `actor.Worker` encapsulates actor's executable logic. This is the only interface which developers need to write in order to describe behaviour of actors.
+  - `actor.Worker` encapsulates actor's executable logic. This is the only interface which developers need to write in order to describe behavior of actors.
 - `actor.Mailbox` is an interface for message transport mechanisms between actors. Mailboxes are created using the `actor.NewMailbox(...)` function.
 
 
@@ -43,7 +43,7 @@ Dive into [examples](https://github.com/vladopajic/go-actor-examples) to see `go
 ```go
 // This program will demonstrate how to create actors for producer-consumer use case, where
 // producer will create incremented number on every 1 second interval and
-// consumer will print whaterver number it receives
+// consumer will print whatever number it receives
 func main() {
 	mailbox := actor.NewMailbox[int]()
 
@@ -114,7 +114,7 @@ func (w *consumeWorker) DoWork(c actor.Context) actor.WorkerStatus {
 ## Addons
 `go-actor` is intended to be a tiny library with lean interfaces and basic mechanism providing core building blocks. However, developers may build on top of it and extend it's functionality with user or domain specific addon abstractions. This section lists addon abstractions for `go-actor` which could be used in addition to it. 
 
-- [super](https://github.com/vladopajic/go-super-actor) is addon abstraction which aims to unify testing of actor's and worker's bussines logic.
+- [super](https://github.com/vladopajic/go-super-actor) is addon abstraction which aims to unify testing of actor's and worker's business logic.
 
 ## Design decisions
 

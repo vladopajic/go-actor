@@ -25,7 +25,7 @@ func FromMailboxes[T any](mm []Mailbox[T]) Actor {
 	return Combine(a...)
 }
 
-// FanOut crates new Mailboxes whose receiving messages are driven by suppled
+// FanOut crates new Mailboxes whose receiving messages are driven by supplied
 // receiveC channel. FanOut spawns new goroutine in which messages received by
 // receiveC channel are forwarded to created Mailboxes. Spawned goroutine will
 // be active while receiveC is open and it's up to user to start and stop Mailboxes.
