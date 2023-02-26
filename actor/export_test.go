@@ -4,11 +4,28 @@ const (
 	MinQueueCapacity = minQueueCapacity
 )
 
-func NewContext() *contextImpl {
+type ActorImpl = actor
+
+func NewActorImpl(w Worker, opt ...Option) *ActorImpl {
+	return &actor{
+		worker:  w,
+		options: newOptions(opt),
+	}
+}
+
+func (a *ActorImpl) OnStartFunc() func(Context) {
+	return a.onStartFunc()
+}
+
+func (a *ActorImpl) OnStopFunc() func() {
+	return a.onStopFunc()
+}
+
+func NewContext() *context {
 	return newContext()
 }
 
-func (c *contextImpl) End() {
+func (c *context) End() {
 	c.end()
 }
 

@@ -15,7 +15,9 @@ func Test_NewWorker(t *testing.T) {
 	ctx := ContextStarted()
 	sigC := make(chan struct{}, 1)
 	workerFunc := func(c Context) WorkerStatus {
+		assert.Equal(t, ctx, c)
 		sigC <- struct{}{}
+
 		return WorkerContinue
 	}
 
@@ -33,7 +35,7 @@ func Test_NewWorker(t *testing.T) {
 func Test_NewActor(t *testing.T) {
 	t.Parallel()
 
-	w := newWorkerWithDoneC()
+	w := newWorker()
 	a := New(w)
 
 	a.Start()
@@ -49,7 +51,7 @@ func Test_NewActor(t *testing.T) {
 
 	// Actor was stopped; wait for done signal
 	// and assert that worker is not running
-	<-w.doneC
+	<-w.ctx.Done()
 
 	p := make(chan int)
 	w.doWorkC <- p
@@ -60,22 +62,52 @@ func Test_NewActor(t *testing.T) {
 	}
 }
 
-func Test_NewActor_OptOnStartStop(t *testing.T) {
+func Test_Actor_OnStartStopFnGetter(t *testing.T) {
 	t.Parallel()
 
-	onStartC := make(chan struct{}, 1)
-	onStopC := make(chan struct{}, 1)
+	onStartC := make(chan any, 1)
+	onStopC := make(chan any, 1)
+	onStartFn := func(c Context) { onStartC <- `🌞` }
+	onStopFn := func() { onStopC <- `🌚` }
 
-	a := New(newWorker(),
-		OptOnStart(func() { onStartC <- struct{}{} }),
-		OptOnStop(func() { onStopC <- struct{}{} }),
-	)
+	{
+		noopWorker := func(c Context) WorkerStatus { return WorkerContinue }
+		a := NewActorImpl(NewWorker(noopWorker))
+		assert.Nil(t, a.OnStartFunc())
+		assert.Nil(t, a.OnStopFunc())
+	}
 
-	a.Start()
-	<-onStartC
+	{ // Assert that getters will return functions implemented by worker
+		w := newWorker()
+		a := NewActorImpl(w)
 
-	a.Stop()
-	<-onStopC
+		assert.NotNil(t, a.OnStartFunc())
+		a.OnStartFunc()(ContextStarted())
+		assert.Equal(t, `🌞`, <-w.onStartC)
+		assert.Len(t, w.onStartC, 0)
+
+		assert.NotNil(t, a.OnStopFunc())
+		a.OnStopFunc()()
+		assert.Equal(t, `🌚`, <-w.onStopC)
+		assert.Len(t, w.onStopC, 0)
+	}
+
+	{ // Assert that functions specified as option will have more priority then worker
+		w := newWorker()
+		a := NewActorImpl(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
+
+		assert.NotNil(t, a.OnStartFunc())
+		a.OnStartFunc()(ContextStarted())
+		assert.Equal(t, `🌞`, <-onStartC)
+		assert.Len(t, onStartC, 0)
+		assert.Len(t, w.onStartC, 0)
+
+		assert.NotNil(t, a.OnStopFunc())
+		a.OnStopFunc()()
+		assert.Equal(t, `🌚`, <-onStopC)
+		assert.Len(t, onStopC, 0)
+		assert.Len(t, w.onStopC, 0)
+	}
 }
 
 func Test_NewActor_MultipleStartStop(t *testing.T) {
@@ -86,9 +118,9 @@ func Test_NewActor_MultipleStartStop(t *testing.T) {
 	onStartC := make(chan struct{}, count)
 	onStopC := make(chan struct{}, count)
 
-	w := newWorkerWithDoneC()
+	w := newWorker()
 	a := New(w,
-		OptOnStart(func() { onStartC <- struct{}{} }),
+		OptOnStart(func(Context) { onStartC <- struct{}{} }),
 		OptOnStop(func() { onStopC <- struct{}{} }),
 	)
 
@@ -110,7 +142,7 @@ func Test_NewActor_MultipleStartStop(t *testing.T) {
 		a.Stop()
 	}
 
-	<-w.doneC
+	<-w.ctx.Done()
 	assert.Len(t, onStartC, 1)
 	assert.Len(t, onStopC, 1)
 }
@@ -137,14 +169,10 @@ func Test_NewActor_Restart(t *testing.T) {
 func Test_NewActor_StopAfterWorkerEnded(t *testing.T) {
 	t.Parallel()
 
-	var ctx Context
-
 	doWorkC := make(chan chan int)
 	workEndedC := make(chan struct{})
 
 	workerFunc := func(c Context) WorkerStatus {
-		ctx = c // saving ref to context so we can assert that context has ended
-
 		select {
 		case p, ok := <-doWorkC:
 			if !ok {
@@ -177,13 +205,38 @@ func Test_NewActor_StopAfterWorkerEnded(t *testing.T) {
 	close(doWorkC)
 	<-workEndedC
 
-	// Stoping actor should produce no effect (since worker has ended)
+	// Stopping actor should produce no effect (since worker has ended)
 	a.Stop()
-
-	assertContextEnded(t, ctx)
 }
 
-func Test_Combine_StartAll_StopAll(t *testing.T) {
+func Test_Actor_ContextEndedAfterWorkerEnded(t *testing.T) {
+	t.Parallel()
+
+	w := newWorker()
+	a := New(w,
+		OptOnStart(func(c Context) {
+			assertContextStarted(t, c)
+		}),
+		OptOnStop(func() {
+			// When OnStop() is called assert that context has ended
+			assertContextEnded(t, w.ctx)
+		}),
+	)
+
+	a.Start()
+
+	for i := 0; i < 20; i++ {
+		p := make(chan int)
+		w.doWorkC <- p
+		assert.Equal(t, i, <-p)
+	}
+
+	a.Stop()
+
+	assertContextEnded(t, w.ctx)
+}
+
+func Test_Combine(t *testing.T) {
 	t.Parallel()
 
 	const actorsCount = 5
@@ -194,7 +247,7 @@ func Test_Combine_StartAll_StopAll(t *testing.T) {
 
 	for i := 0; i < actorsCount; i++ {
 		actors[i] = New(newWorker(),
-			OptOnStart(func() { onStartC <- struct{}{} }),
+			OptOnStart(func(Context) { onStartC <- struct{}{} }),
 			OptOnStop(func() { onStopC <- struct{}{} }),
 		)
 	}
@@ -206,16 +259,6 @@ func Test_Combine_StartAll_StopAll(t *testing.T) {
 	a.Stop()
 	assert.Len(t, onStartC, actorsCount)
 	assert.Len(t, onStopC, actorsCount)
-
-	// Similar test but for StartAll and StopAll methods
-	drain(onStartC)
-	drain(onStopC)
-	assert.Len(t, onStartC, 0)
-	assert.Len(t, onStopC, 0)
-	StartAll(actors...)
-	StopAll(actors...)
-	assert.Len(t, onStartC, actorsCount)
-	assert.Len(t, onStopC, actorsCount)
 }
 
 func Test_Noop(t *testing.T) {
@@ -225,54 +268,58 @@ func Test_Noop(t *testing.T) {
 
 	a.Start()
 	a.Stop()
+
+	a.Start()
+	a.Start()
+	a.Stop()
+	a.Stop()
 }
 
-func Test_Idle(t *testing.T) {
+func Test_Idle_Options(t *testing.T) {
 	t.Parallel()
 
 	onStartC := make(chan struct{}, 1)
 	onStopC := make(chan struct{}, 1)
 
 	a := Idle(
-		OptOnStart(func() { onStartC <- struct{}{} }),
+		OptOnStart(func(Context) { onStartC <- struct{}{} }),
 		OptOnStop(func() { onStopC <- struct{}{} }),
 	)
 
 	a.Start()
 	<-onStartC
+	a.Start() // Should have no effect
+	assert.Len(t, onStartC, 0)
 
 	a.Stop()
 	<-onStopC
-}
-
-func drain(c chan struct{}) {
-	for len(c) > 0 {
-		<-c
-	}
+	a.Stop() // Should have no effect
+	assert.Len(t, onStopC, 0)
 }
 
 func newWorker() *worker {
 	return &worker{
-		doWorkC: make(chan chan int, 1),
-		doneC:   nil,
-	}
-}
-
-func newWorkerWithDoneC() *worker {
-	return &worker{
-		doWorkC: make(chan chan int, 100),
-		doneC:   make(chan struct{}),
+		doWorkC:  make(chan chan int, 1),
+		onStartC: make(chan any, 1),
+		onStopC:  make(chan any, 1),
 	}
 }
 
 type worker struct {
 	workIteration int
 	doWorkC       chan chan int
-	doneC         chan struct{}
+	ctx           Context
+	onStartC      chan any
+	onStopC       chan any
 }
 
 func (w *worker) DoWork(c Context) WorkerStatus {
+	w.ctx = c // saving ref to context so we can assert that context
+
 	select {
+	case <-c.Done():
+		return WorkerEnd
+
 	case p, ok := <-w.doWorkC:
 		if !ok {
 			return WorkerEnd
@@ -282,12 +329,19 @@ func (w *worker) DoWork(c Context) WorkerStatus {
 		w.workIteration++
 
 		return WorkerContinue
+	}
+}
 
-	case <-c.Done():
-		if w.doneC != nil {
-			close(w.doneC)
-		}
+func (w *worker) OnStart(c Context) {
+	select {
+	case w.onStartC <- `🌞`:
+	default:
+	}
+}
 
-		return WorkerEnd
+func (w *worker) OnStop() {
+	select {
+	case w.onStopC <- `🌚`:
+	default:
 	}
 }

@@ -44,38 +44,56 @@ type Worker interface {
 // WorkerFunc is signature of Worker's DoWork function.
 type WorkerFunc = func(c Context) WorkerStatus
 
+// startableWorker defines optional interface which Worker can implement
+type startableWorker interface {
+	// OnStart is called right before DoWork() is called for first time. It can be used to
+	// initialize Worker as it will be called only once.
+	// Context is provided in case when Actor is stopped early and OnStop should terminated
+	// with initialization. This is same Context as one which will be provided to DoWork method
+	// in later stages of Worker lifecycle.
+	OnStart(Context)
+}
+
+// stoppableWorker defines optional interface which Worker can implement
+type stoppableWorker interface {
+	// OnStop is called after last DoWork() returns. It can be used to release all
+	// resources occupied by Worker.
+	// Context is not proved as at this point as it was already ended.
+	OnStop()
+}
+
 // NewWorker returns basic Worker implementation which delegates
 // DoWork to supplied WorkerFunc.
 func NewWorker(fn WorkerFunc) Worker {
-	return &workerImpl{fn}
+	return &worker{fn}
 }
 
-type workerImpl struct {
+type worker struct {
 	fn WorkerFunc
 }
 
-func (w *workerImpl) DoWork(c Context) WorkerStatus {
+func (w *worker) DoWork(c Context) WorkerStatus {
 	return w.fn(c)
 }
 
 // New returns new Actor with specified Worker and Options.
 func New(w Worker, opt ...Option) Actor {
-	return &actorImpl{
+	return &actor{
 		worker:  w,
 		options: newOptions(opt),
 	}
 }
 
-type actorImpl struct {
+type actor struct {
 	worker            Worker
 	options           options
-	ctx               *contextImpl
+	ctx               *context
 	workEndedSigC     chan struct{}
 	workerRunning     bool
 	workerRunningLock sync.Mutex
 }
 
-func (a *actorImpl) Stop() {
+func (a *actor) Stop() {
 	a.workerRunningLock.Lock()
 	if !a.workerRunning {
 		a.workerRunningLock.Unlock()
@@ -90,7 +108,7 @@ func (a *actorImpl) Stop() {
 	<-a.workEndedSigC
 }
 
-func (a *actorImpl) Start() {
+func (a *actor) Start() {
 	a.workerRunningLock.Lock()
 	defer a.workerRunningLock.Unlock()
 
@@ -106,16 +124,20 @@ func (a *actorImpl) Start() {
 
 // doWork executes Worker of this Actor until
 // Actor or Worker has signaled to stop.
-func (a *actorImpl) doWork() {
-	executeFunc(a.options.Actor.OnStartFunc)
-
-	for wStatus := WorkerContinue; wStatus == WorkerContinue; {
-		wStatus = a.worker.DoWork(a.ctx)
+func (a *actor) doWork() {
+	if fn := a.onStartFunc(); fn != nil {
+		fn(a.ctx)
 	}
 
-	executeFunc(a.options.Actor.OnStopFunc)
+	for status := WorkerContinue; status == WorkerContinue; {
+		status = a.worker.DoWork(a.ctx)
+	}
 
 	a.ctx.end()
+
+	if fn := a.onStopFunc(); fn != nil {
+		fn()
+	}
 
 	{ // Worker has finished
 		a.workerRunningLock.Lock()
@@ -127,68 +149,110 @@ func (a *actorImpl) doWork() {
 	}
 }
 
-func executeFunc(fn func()) {
-	if fn != nil {
-		fn()
+func (a *actor) onStartFunc() func(Context) {
+	if fn := a.options.Actor.OnStartFunc; fn != nil {
+		return fn
 	}
+
+	if w, ok := a.worker.(startableWorker); ok {
+		return w.OnStart
+	}
+
+	return nil
 }
 
-// StartAll starts all specified actors.
-func StartAll(actors ...Actor) {
-	for _, a := range actors {
-		a.Start()
+func (a *actor) onStopFunc() func() {
+	if fn := a.options.Actor.OnStopFunc; fn != nil {
+		return fn
 	}
-}
 
-// StopAll starts all specified actors.
-func StopAll(actors ...Actor) {
-	for _, a := range actors {
-		a.Stop()
+	if w, ok := a.worker.(stoppableWorker); ok {
+		return w.OnStop
 	}
+
+	return nil
 }
 
 // Combine returns single Actor which combines all specified actors into one.
 // Calling Start or Stop function on this Actor will invoke respective function
 // on all Actors provided to this function.
 func Combine(actors ...Actor) Actor {
-	return &combinedActorImpl{actors}
+	return &combinedActor{actors}
 }
 
-type combinedActorImpl struct {
+type combinedActor struct {
 	actors []Actor
 }
 
-func (a *combinedActorImpl) Stop() {
-	StopAll(a.actors...)
+func (a *combinedActor) Stop() {
+	for _, a := range a.actors {
+		a.Stop()
+	}
 }
 
-func (a *combinedActorImpl) Start() {
-	StartAll(a.actors...)
+func (a *combinedActor) Start() {
+	for _, a := range a.actors {
+		a.Start()
+	}
 }
 
 // Idle returns new Actor without Worker.
 func Idle(opt ...Option) Actor {
-	return &basicActorImpl{
+	return &idleActor{
 		options: newOptions(opt),
+	}
+}
+
+type idleActor struct {
+	options options
+	ctx     *context
+	lock    sync.Mutex
+}
+
+func (a *idleActor) Start() {
+	a.lock.Lock()
+
+	// early return if this actor is already running
+	if a.ctx != nil {
+		a.lock.Unlock()
+		return
+	}
+
+	a.ctx = newContext()
+	a.lock.Unlock()
+
+	if fn := a.options.Actor.OnStartFunc; fn != nil {
+		fn(a.ctx)
+	}
+}
+
+func (a *idleActor) Stop() {
+	a.lock.Lock()
+
+	// early return if this actor is already stopped
+	if a.ctx == nil {
+		a.lock.Unlock()
+		return
+	}
+
+	a.ctx.end()
+	a.ctx = nil
+	a.lock.Unlock()
+
+	if fn := a.options.Actor.OnStopFunc; fn != nil {
+		fn()
 	}
 }
 
 // Noop returns no-op Actor.
 func Noop() Actor {
-	return &noopActor
+	return noopActorInstance
 }
 
 //nolint:gochecknoglobals
-var noopActor = basicActorImpl{}
+var noopActorInstance = &noopActor{}
 
-type basicActorImpl struct {
-	options options
-}
+type noopActor struct{}
 
-func (a *basicActorImpl) Stop() {
-	executeFunc(a.options.Actor.OnStopFunc)
-}
-
-func (a *basicActorImpl) Start() {
-	executeFunc(a.options.Actor.OnStartFunc)
-}
+func (a *noopActor) Start() {}
+func (a *noopActor) Stop()  {}

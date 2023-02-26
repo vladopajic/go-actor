@@ -128,7 +128,7 @@ func Test_FanOut(t *testing.T) {
 
 	wg.Wait()
 
-	// At this point inC is closed which will terminate fan out gorutine.
+	// At this point inC is closed which will terminate fan out goroutine.
 	// We don't want to end Mailbox actors at this point, because Mailbox could
 	// be used for other data flows.
 
@@ -145,6 +145,8 @@ func Test_MailboxUsingChan(t *testing.T) {
 		t.Parallel()
 
 		m := NewMailbox[any](OptUsingChan(true))
+
+		m.Start()
 
 		// Assert sending is blocked when there is not receiver
 		select {
@@ -168,6 +170,8 @@ func Test_MailboxUsingChan(t *testing.T) {
 		t.Parallel()
 
 		m := NewMailbox[any](OptUsingChan(true), OptCapacity(1))
+
+		m.Start()
 
 		assertSendReceive(t, m, `🌞`)
 

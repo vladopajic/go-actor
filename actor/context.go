@@ -1,14 +1,15 @@
 package actor
 
 import (
-	"context"
+	gocontext "context"
 	"errors"
 	"sync"
 	"time"
 )
 
-// Context is provided so Worker can listen and respond on stop signal sent from Actor.
-type Context = context.Context
+// Context is provided to Worker so they can listen and respond
+// on stop signal sent from Actor.
+type Context = gocontext.Context
 
 // ErrStopped is the error returned by Context.Err when the Actor is stopped.
 var ErrStopped = errors.New("actor stopped")
@@ -17,11 +18,11 @@ var ErrStopped = errors.New("actor stopped")
 var (
 	contextStarted = newContext()
 
-	contextEnded = func() *contextImpl {
+	contextEnded = func() *context {
 		doneC := make(chan struct{})
 		close(doneC)
 
-		return &contextImpl{
+		return &context{
 			doneC: doneC,
 			err:   ErrStopped,
 		}
@@ -40,23 +41,23 @@ func ContextEnded() Context {
 	return contextEnded
 }
 
-type contextImpl struct {
+type context struct {
 	mu    sync.Mutex
 	err   error
 	doneC chan struct{}
 }
 
-func newContext() *contextImpl {
-	return &contextImpl{
+func newContext() *context {
+	return &context{
 		doneC: make(chan struct{}),
 	}
 }
 
-func (c *contextImpl) Deadline() (time.Time, bool) {
+func (c *context) Deadline() (time.Time, bool) {
 	return time.Time{}, false
 }
 
-func (c *contextImpl) end() {
+func (c *context) end() {
 	c.mu.Lock()
 	if c.err == nil {
 		c.err = ErrStopped
@@ -65,11 +66,11 @@ func (c *contextImpl) end() {
 	c.mu.Unlock()
 }
 
-func (c *contextImpl) Done() <-chan struct{} {
+func (c *context) Done() <-chan struct{} {
 	return c.doneC
 }
 
-func (c *contextImpl) Err() error {
+func (c *context) Err() error {
 	c.mu.Lock()
 	err := c.err
 	c.mu.Unlock()
@@ -77,10 +78,10 @@ func (c *contextImpl) Err() error {
 	return err
 }
 
-func (*contextImpl) Value(key any) any {
+func (*context) Value(key any) any {
 	return nil
 }
 
-func (c *contextImpl) String() string {
+func (c *context) String() string {
 	return "actor.Context"
 }

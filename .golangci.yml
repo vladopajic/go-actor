@@ -88,6 +88,8 @@ linters-settings:
         - 'time.Sleep*(# Do not sleep)?'
         - 'panic*(# Do not panic)?'
         - 'os.Exit*(# Do not exit)?'
+  gomoddirectives:
+    retract-allow-no-explanation: true
   maintidx:
     under: 40
   misspell:

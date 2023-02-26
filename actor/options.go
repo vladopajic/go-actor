@@ -2,8 +2,8 @@ package actor
 
 // OptOnStart adds function to Actor which will be executed
 // before first worker's iteration.
-// This functions is executed in actor's gorutine.
-func OptOnStart(f func()) Option {
+// This functions is executed in actor's goroutine.
+func OptOnStart(f func(Context)) Option {
 	return func(o *options) {
 		o.Actor.OnStartFunc = f
 	}
@@ -11,7 +11,7 @@ func OptOnStart(f func()) Option {
 
 // OptOnStop adds function to Actor which will be executed
 // after last worker's iteration.
-// This functions is executed in actor's gorutine.
+// This functions is executed in actor's goroutine.
 func OptOnStop(f func()) Option {
 	return func(o *options) {
 		o.Actor.OnStopFunc = f
@@ -54,7 +54,7 @@ type Option func(o *options)
 
 type options struct {
 	Actor struct {
-		OnStartFunc func()
+		OnStartFunc func(Context)
 		OnStopFunc  func()
 	}
 
