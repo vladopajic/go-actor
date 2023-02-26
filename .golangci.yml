@@ -83,6 +83,11 @@ linters:
     - wsl
 
 linters-settings:
+  forbidigo:
+      forbid:
+        - 'time.Sleep*(# Do not sleep)?'
+        - 'panic*(# Do not panic)?'
+        - 'os.Exit*(# Do not exit)?'
   gomoddirectives:
     retract-allow-no-explanation: true
   maintidx:
@@ -108,9 +113,9 @@ issues:
   exclude-rules:
     - path: _test\.go
       linters:
-        - funlen      ## Function lenght is okay due to many tests cases
+        - funlen      ## Function length is okay due to many tests cases
         - wrapcheck   ## No need to check wrapping errors in tests
 
     - path: export_test\.go
       linters:
-        - revive      ## Disabling linter because we intentionally want to use unexpored types in tests
+        - revive      ## Disabling linter because we intentionally want to use unexported types in tests
