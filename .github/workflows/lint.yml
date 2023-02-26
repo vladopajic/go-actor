@@ -1,19 +1,19 @@
 name: lint
 on: [push]
 jobs:
-  golangci:
-    strategy:
-      matrix:
-        go-version: [1.18, 1.19]
+  lint:
     name: lint
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+        uses: actions/checkout@v3
+      - name: setup go
+        uses: actions/setup-go@v3
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version-file: go.mod
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.49
+          version: v1.51.2
+      - name: go mod tidy check
+        uses: katexochen/go-tidy-check@v2
