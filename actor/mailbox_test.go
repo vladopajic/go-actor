@@ -95,29 +95,28 @@ func Test_FanOut(t *testing.T) {
 	)
 
 	wg := sync.WaitGroup{}
-	inC := make(chan any)
+	inMbx := NewMailbox[any]()
+	fanMbxx := NewMailboxes[any](fanoutCount)
 
-	// Fan out inC channel
-	fanOuts := FanOut(inC, fanoutCount)
-	assert.Len(t, fanOuts, fanoutCount)
+	// Fan out inMbx
+	FanOut[any](inMbx, fanMbxx)
 
-	a := FromMailboxes(fanOuts)
+	a := Combine(inMbx, FromMailboxes(fanMbxx))
 
 	a.Start()
 	defer a.Stop()
 
 	wg.Add(fanoutCount)
 
-	// Produce data on inC channel
+	// Produce data on inMbx
 	go func() {
 		for i := 0; i < sendMessagesCount; i++ {
-			inC <- i
+			inMbx.SendC() <- i
 		}
-		close(inC)
 	}()
 
-	// Assert that correct data is received by Mailbox
-	for _, m := range fanOuts {
+	// Assert that correct data is received by fanMbxx
+	for _, m := range fanMbxx {
 		go func(m Mailbox[any]) {
 			for i := 0; i < sendMessagesCount; i++ {
 				assert.Equal(t, i, <-m.ReceiveC())
@@ -128,12 +127,13 @@ func Test_FanOut(t *testing.T) {
 
 	wg.Wait()
 
-	// At this point inC is closed which will terminate fan out goroutine.
-	// We don't want to end Mailbox actors at this point, because Mailbox could
-	// be used for other data flows.
+	// Closing inMbx will terminate fan out goroutine.
+	// At this point we don't want to end receiving mailboxes of fan out,
+	// because those Mailbox could be used for other data flows.
+	inMbx.Stop()
 
 	// Assert that Mailbox actor is still working
-	for _, m := range fanOuts {
+	for _, m := range fanMbxx {
 		assertSendReceive(t, m, `🌞`)
 	}
 }
