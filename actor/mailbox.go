@@ -7,10 +7,18 @@ package actor
 // receiving end of the Mailbox will get all messages in FIFO order.
 type Mailbox[T any] interface {
 	Actor
+	MailboxSender[T]
+	MailboxReceiver[T]
+}
 
+// MailboxSender is interface for sender bits of Mailbox.
+type MailboxSender[T any] interface {
 	// SendC returns channel where data can be sent.
 	SendC() chan<- T
+}
 
+// MailboxReceiver is interface for receiver bits of Mailbox.
+type MailboxReceiver[T any] interface {
 	// ReceiveC returns channel where data can be received.
 	ReceiveC() <-chan T
 }
@@ -25,23 +33,25 @@ func FromMailboxes[T any](mm []Mailbox[T]) Actor {
 	return Combine(a...)
 }
 
-// FanOut crates new Mailboxes whose receiving messages are driven by supplied
-// receiveC channel. FanOut spawns new goroutine in which messages received by
-// receiveC channel are forwarded to created Mailboxes. Spawned goroutine will
-// be active while receiveC is open and it's up to user to start and stop Mailboxes.
-func FanOut[T any](receiveC <-chan T, count int, opt ...Option) []Mailbox[T] {
+// FanOut spawns new goroutine in which messages received by receiver are forwarded
+// to senders. Spawned goroutine will be active while receiver is open.
+func FanOut[T any, MS MailboxSender[T]](receiver MailboxReceiver[T], senders []MS) {
+	go func(receiver MailboxReceiver[T], senders []MS) {
+		receiveC := receiver.ReceiveC()
+		for v := range receiveC {
+			for _, m := range senders {
+				m.SendC() <- v
+			}
+		}
+	}(receiver, senders)
+}
+
+// NewMailboxes returns slice of new Mailbox instances with specified count.
+func NewMailboxes[T any](count int, opt ...Option) []Mailbox[T] {
 	mm := make([]Mailbox[T], count)
 	for i := 0; i < count; i++ {
 		mm[i] = NewMailbox[T](opt...)
 	}
-
-	go func(receiveC <-chan T, mm []Mailbox[T]) {
-		for v := range receiveC {
-			for _, m := range mm {
-				m.SendC() <- v
-			}
-		}
-	}(receiveC, mm)
 
 	return mm
 }
@@ -54,12 +64,12 @@ func NewMailbox[T any](opt ...Option) Mailbox[T] {
 	)
 
 	if mOpts.UsingChan {
-		srC := make(chan T, mOpts.Capacity)
+		c := make(chan T, mOpts.Capacity)
 
 		return &mailbox[T]{
-			Actor:    Idle(OptOnStop(func() { close(srC) })),
-			sendC:    srC,
-			receiveC: srC,
+			Actor:    Idle(OptOnStop(func() { close(c) })),
+			sendC:    c,
+			receiveC: c,
 		}
 	}
 
