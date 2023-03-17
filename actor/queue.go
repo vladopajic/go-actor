@@ -32,7 +32,7 @@ func (q *queue[T]) PopFront() T {
 	return q.q.PopFront()
 }
 
-func (q *queue[T]) Size() int {
+func (q *queue[T]) Len() int {
 	return q.q.Len()
 }
 
