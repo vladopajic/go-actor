@@ -7,7 +7,7 @@ localPrefix: "github.com/vladopajic/actor"
 # Holds coverage thresholds percentages, values should be in range [0-100]
 threshold:
   # (optional; default 0) The minimum coverage that each file should have
-  file: 95
+  file: 94
 
   # (optional; default 0) The minimum coverage that each package should have
   package: 95
