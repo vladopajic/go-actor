@@ -11,10 +11,10 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version-file: go.mod
-      - name: test (race detector)
+      - name: test
         run: go test -timeout=30s -race -count=10 -failfast ./...
-      - name: test (coverage)
-        run: go test -v ./... -coverprofile=./cover.out -covermode=atomic
+      - name: generate coverage
+        run: go test ./... -coverprofile=./cover.out -covermode=atomic
       - name: check test coverage
         uses: vladopajic/go-test-coverage@v1
         with:
