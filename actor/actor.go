@@ -125,9 +125,7 @@ func (a *actor) Start() {
 // doWork executes Worker of this Actor until
 // Actor or Worker has signaled to stop.
 func (a *actor) doWork() {
-	if fn := a.onStartFunc(); fn != nil {
-		fn(a.ctx)
-	}
+	a.onStart()
 
 	for status := WorkerContinue; status == WorkerContinue; {
 		status = a.worker.DoWork(a.ctx)
@@ -135,9 +133,7 @@ func (a *actor) doWork() {
 
 	a.ctx.end()
 
-	if fn := a.onStopFunc(); fn != nil {
-		fn()
-	}
+	a.onStop()
 
 	{ // Worker has finished
 		a.workerRunningLock.Lock()
@@ -149,28 +145,24 @@ func (a *actor) doWork() {
 	}
 }
 
-func (a *actor) onStartFunc() func(Context) {
-	if fn := a.options.Actor.OnStartFunc; fn != nil {
-		return fn
-	}
-
+func (a *actor) onStart() {
 	if w, ok := a.worker.(StartableWorker); ok {
-		return w.OnStart
+		w.OnStart(a.ctx)
 	}
 
-	return nil
+	if fn := a.options.Actor.OnStartFunc; fn != nil {
+		fn(a.ctx)
+	}
 }
 
-func (a *actor) onStopFunc() func() {
-	if fn := a.options.Actor.OnStopFunc; fn != nil {
-		return fn
-	}
-
+func (a *actor) onStop() {
 	if w, ok := a.worker.(StoppableWorker); ok {
-		return w.OnStop
+		w.OnStop()
 	}
 
-	return nil
+	if fn := a.options.Actor.OnStopFunc; fn != nil {
+		fn()
+	}
 }
 
 // Combine returns single Actor which combines all specified actors into one.
