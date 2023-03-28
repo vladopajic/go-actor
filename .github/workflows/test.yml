@@ -12,7 +12,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: test
-        run: go test -timeout=30s -race -count=10 -failfast ./...
+        run: go test -timeout=3s -race -count=10 -shuffle=on -failfast ./...
       - name: generate coverage
         run: go test ./... -coverprofile=./cover.out -covermode=atomic
       - name: check test coverage
