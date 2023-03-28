@@ -99,7 +99,7 @@ func Test_FanOut(t *testing.T) {
 	fanMbxx := NewMailboxes[any](fanoutCount)
 
 	// Fan out inMbx
-	FanOut[any](inMbx, fanMbxx)
+	FanOut(inMbx.ReceiveC(), fanMbxx)
 
 	a := Combine(inMbx, FromMailboxes(fanMbxx))
 

@@ -33,17 +33,16 @@ func FromMailboxes[T any](mm []Mailbox[T]) Actor {
 	return Combine(a...)
 }
 
-// FanOut spawns new goroutine in which messages received by receiver are forwarded
-// to senders. Spawned goroutine will be active while receiver is open.
-func FanOut[T any, MS MailboxSender[T]](receiver MailboxReceiver[T], senders []MS) {
-	go func(receiver MailboxReceiver[T], senders []MS) {
-		receiveC := receiver.ReceiveC()
+// FanOut spawns new goroutine in which messages received by receiveC are forwarded
+// to senders. Spawned goroutine will be active while receiveC is open.
+func FanOut[T any, MS MailboxSender[T]](receiveC <-chan T, senders []MS) {
+	go func(receiveC <-chan T, senders []MS) {
 		for v := range receiveC {
 			for _, m := range senders {
 				m.SendC() <- v
 			}
 		}
-	}(receiver, senders)
+	}(receiveC, senders)
 }
 
 // NewMailboxes returns slice of new Mailbox instances with specified count.
