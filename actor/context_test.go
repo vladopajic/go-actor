@@ -58,6 +58,19 @@ func Test_Context_ContextEnded(t *testing.T) {
 	assert.True(t, ContextEnded() == ContextEnded())
 }
 
+func Test_Context_Value(t *testing.T) {
+	t.Parallel()
+
+	assertNoValue(t, func() Context {
+		endedCtx := NewContext()
+		endedCtx.End()
+		return endedCtx
+	}())
+	assertNoValue(t, NewContext())
+	assertNoValue(t, ContextEnded())
+	assertNoValue(t, ContextStarted())
+}
+
 func assertContextStarted(t *testing.T, ctx Context) {
 	t.Helper()
 
@@ -99,4 +112,17 @@ func assertNoDeadline(t *testing.T, ctx Context) {
 	d, ok := ctx.Deadline()
 	assert.Equal(t, time.Time{}, d)
 	assert.False(t, ok)
+}
+
+func assertNoValue(t *testing.T, ctx Context) {
+	t.Helper()
+
+	var (
+		keyStr string
+		keyInt int
+	)
+
+	assert.Empty(t, ctx.Value(nil))
+	assert.Empty(t, ctx.Value(&keyInt))
+	assert.Empty(t, ctx.Value(&keyStr))
 }
