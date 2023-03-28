@@ -48,6 +48,7 @@ type WorkerFunc = func(c Context) WorkerStatus
 type StartableWorker interface {
 	// OnStart is called right before DoWork() is called for first time. It can be used to
 	// initialize Worker as it will be called only once.
+	//
 	// Context is provided in case when Actor is stopped early and OnStop should terminated
 	// with initialization. This is same Context as one which will be provided to DoWork method
 	// in later stages of Worker lifecycle.
@@ -58,6 +59,7 @@ type StartableWorker interface {
 type StoppableWorker interface {
 	// OnStop is called after last DoWork() returns. It can be used to release all
 	// resources occupied by Worker.
+	//
 	// Context is not proved as at this point as it was already ended.
 	OnStop()
 }
