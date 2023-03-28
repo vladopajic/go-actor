@@ -79,9 +79,9 @@ func Test_Actor_OnStartStop(t *testing.T) {
 
 	{
 		// Nothing should happen when calling OnStart and OnStop
-		// when callbacks are not defined (panic free test)
-		noopWorker := func(c Context) WorkerStatus { return WorkerContinue }
-		a := NewActorImpl(NewWorker(noopWorker))
+		// when callbacks are not defined (no panic should occur
+		w := NewWorker(func(c Context) WorkerStatus { return WorkerContinue })
+		a := NewActorImpl(w)
 		a.OnStart()
 		a.OnStop()
 	}
@@ -97,6 +97,21 @@ func Test_Actor_OnStartStop(t *testing.T) {
 		a.OnStop()
 		assert.Equal(t, `🌚`, <-w.onStopC)
 		assert.Len(t, w.onStopC, 0)
+	}
+
+	{ // Assert that actor will call callbacks passed by options
+		w := NewWorker(func(c Context) WorkerStatus { return WorkerContinue })
+		a := NewActorImpl(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
+
+		go a.OnStart()
+		wg <- struct{}{}
+		assert.Equal(t, `🌞`, <-onStartC)
+		assert.Len(t, onStartC, 0)
+
+		go a.OnStop()
+		wg <- struct{}{}
+		assert.Equal(t, `🌚`, <-onStopC)
+		assert.Len(t, onStopC, 0)
 	}
 
 	{
