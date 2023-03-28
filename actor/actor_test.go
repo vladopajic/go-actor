@@ -62,18 +62,19 @@ func Test_NewActor(t *testing.T) {
 	}
 }
 
+//nolint:maintidx // long test case
 func Test_Actor_OnStartStop(t *testing.T) {
 	t.Parallel()
 
-	wg := make(chan any)
+	readySigC := make(chan any)
 	onStartC := make(chan any, 1)
 	onStopC := make(chan any, 1)
 	onStartFn := func(c Context) {
-		<-wg
+		<-readySigC
 		onStartC <- `🌞`
 	}
 	onStopFn := func() {
-		<-wg
+		<-readySigC
 		onStopC <- `🌚`
 	}
 
@@ -104,12 +105,12 @@ func Test_Actor_OnStartStop(t *testing.T) {
 		a := NewActorImpl(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
 
 		go a.OnStart()
-		wg <- struct{}{}
+		readySigC <- struct{}{}
 		assert.Equal(t, `🌞`, <-onStartC)
 		assert.Len(t, onStartC, 0)
 
 		go a.OnStop()
-		wg <- struct{}{}
+		readySigC <- struct{}{}
 		assert.Equal(t, `🌚`, <-onStopC)
 		assert.Len(t, onStopC, 0)
 	}
@@ -126,7 +127,7 @@ func Test_Actor_OnStartStop(t *testing.T) {
 		assert.Len(t, w.onStartC, 0)
 		assert.Len(t, onStartC, 0)
 
-		wg <- struct{}{}
+		readySigC <- struct{}{}
 		assert.Equal(t, `🌞`, <-onStartC)
 		assert.Len(t, w.onStartC, 0)
 		assert.Len(t, onStartC, 0)
@@ -137,7 +138,7 @@ func Test_Actor_OnStartStop(t *testing.T) {
 		assert.Len(t, w.onStopC, 0)
 		assert.Len(t, onStopC, 0)
 
-		wg <- struct{}{}
+		readySigC <- struct{}{}
 		assert.Equal(t, `🌚`, <-onStopC)
 		assert.Len(t, w.onStopC, 0)
 		assert.Len(t, onStopC, 0)
