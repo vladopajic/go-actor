@@ -305,6 +305,12 @@ func newWorker() *worker {
 	}
 }
 
+var (
+	_ Worker          = (*worker)(nil)
+	_ StartableWorker = (*worker)(nil)
+	_ StoppableWorker = (*worker)(nil)
+)
+
 type worker struct {
 	workIteration int
 	doWorkC       chan chan int
