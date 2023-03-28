@@ -41,9 +41,9 @@ Without re-usable design principles codebase of complex system can become hard t
 Dive into [examples](https://github.com/vladopajic/go-actor-examples) to see `go-actor` in action.
 
 ```go
-// This program will demonstrate how to create actors for producer-consumer use case, where
-// producer will create incremented number on every 1 second interval and
-// consumer will print whatever number it receives
+// This example will demonstrate how to create actors for producer-consumer use case.
+// Producer will create incremented number on every 1 second interval and
+// consumer will print whatever number it receives.
 func main() {
 	mailbox := actor.NewMailbox[int]()
 
@@ -51,22 +51,21 @@ func main() {
 	// so that produce worker can send messages directly to consume worker
 	pw := &produceWorker{outC: mailbox.SendC()}
 	cw1 := &consumeWorker{inC: mailbox.ReceiveC(), id: 1}
+
+	// Note: Example creates two consumers for the sake of demonstration
+	// since having one or more consumers will produce the same result. 
+	// Message on stdout will be written by first consumer that reads from mailbox.
 	cw2 := &consumeWorker{inC: mailbox.ReceiveC(), id: 2}
 
-	// Create actors using these workers and combine them to singe Actor
+	// Create actors using these workers and combine them to singe actor
 	a := actor.Combine(
 		mailbox,
 		actor.New(pw),
-
-		// Note: We don't need two consume actors, but we create them anyway
-		// for the sake of demonstration since having one or more consumers
-		// will produce the same result. Message on stdout will be written by
-		// first consumer that reads from mailbox.
 		actor.New(cw1),
 		actor.New(cw2),
 	)
 
-	// Finally we start all actors at once
+	// Finally all actors are started and stopped at once
 	a.Start()
 	defer a.Stop()
 
