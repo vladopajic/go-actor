@@ -24,7 +24,7 @@ func Test_NewWorker(t *testing.T) {
 	w := NewWorker(workerFunc)
 	assert.NotNil(t, w)
 
-	// We assert that worker will delegate call to supplied workerFunc
+	// Assert that worker will delegate call to supplied workerFunc
 	for i := 0; i < 10; i++ {
 		assert.Equal(t, WorkerContinue, w.DoWork(ctx))
 		assert.Len(t, sigC, 1)
@@ -62,51 +62,86 @@ func Test_NewActor(t *testing.T) {
 	}
 }
 
-func Test_Actor_OnStartStopFnGetter(t *testing.T) {
+//nolint:maintidx // long test case
+func Test_Actor_OnStartStop(t *testing.T) {
 	t.Parallel()
 
+	readySigC := make(chan any)
 	onStartC := make(chan any, 1)
 	onStopC := make(chan any, 1)
-	onStartFn := func(c Context) { onStartC <- `🌞` }
-	onStopFn := func() { onStopC <- `🌚` }
-
-	{
-		noopWorker := func(c Context) WorkerStatus { return WorkerContinue }
-		a := NewActorImpl(NewWorker(noopWorker))
-		assert.Nil(t, a.OnStartFunc())
-		assert.Nil(t, a.OnStopFunc())
+	onStartFn := func(c Context) {
+		<-readySigC
+		onStartC <- `🌞`
+	}
+	onStopFn := func() {
+		<-readySigC
+		onStopC <- `🌚`
 	}
 
-	{ // Assert that getters will return functions implemented by worker
+	{
+		// Nothing should happen when calling OnStart and OnStop
+		// when callbacks are not defined (no panic should occur
+		w := NewWorker(func(c Context) WorkerStatus { return WorkerContinue })
+		a := NewActorImpl(w)
+		a.OnStart()
+		a.OnStop()
+	}
+
+	{ // Assert that actor will call callbacks implemented by worker
 		w := newWorker()
 		a := NewActorImpl(w)
 
-		assert.NotNil(t, a.OnStartFunc())
-		a.OnStartFunc()(ContextStarted())
+		a.OnStart()
 		assert.Equal(t, `🌞`, <-w.onStartC)
 		assert.Len(t, w.onStartC, 0)
 
-		assert.NotNil(t, a.OnStopFunc())
-		a.OnStopFunc()()
+		a.OnStop()
 		assert.Equal(t, `🌚`, <-w.onStopC)
 		assert.Len(t, w.onStopC, 0)
 	}
 
-	{ // Assert that functions specified as option will have more priority then worker
+	{ // Assert that actor will call callbacks passed by options
+		w := NewWorker(func(c Context) WorkerStatus { return WorkerContinue })
+		a := NewActorImpl(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
+
+		go a.OnStart()
+		readySigC <- struct{}{}
+		assert.Equal(t, `🌞`, <-onStartC)
+		assert.Len(t, onStartC, 0)
+
+		go a.OnStop()
+		readySigC <- struct{}{}
+		assert.Equal(t, `🌚`, <-onStopC)
+		assert.Len(t, onStopC, 0)
+	}
+
+	{
+		// Assert that actor will call callbacks implemented by worker,
+		// then callbacks passed by options
 		w := newWorker()
 		a := NewActorImpl(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
 
-		assert.NotNil(t, a.OnStartFunc())
-		a.OnStartFunc()(ContextStarted())
-		assert.Equal(t, `🌞`, <-onStartC)
-		assert.Len(t, onStartC, 0)
-		assert.Len(t, w.onStartC, 0)
+		go a.OnStart()
 
-		assert.NotNil(t, a.OnStopFunc())
-		a.OnStopFunc()()
-		assert.Equal(t, `🌚`, <-onStopC)
-		assert.Len(t, onStopC, 0)
+		assert.Equal(t, `🌞`, <-w.onStartC)
+		assert.Len(t, w.onStartC, 0)
+		assert.Len(t, onStartC, 0)
+
+		readySigC <- struct{}{}
+		assert.Equal(t, `🌞`, <-onStartC)
+		assert.Len(t, w.onStartC, 0)
+		assert.Len(t, onStartC, 0)
+
+		go a.OnStop()
+
+		assert.Equal(t, `🌚`, <-w.onStopC)
 		assert.Len(t, w.onStopC, 0)
+		assert.Len(t, onStopC, 0)
+
+		readySigC <- struct{}{}
+		assert.Equal(t, `🌚`, <-onStopC)
+		assert.Len(t, w.onStopC, 0)
+		assert.Len(t, onStopC, 0)
 	}
 }
 
@@ -124,8 +159,7 @@ func Test_NewActor_MultipleStartStop(t *testing.T) {
 		OptOnStop(func() { onStopC <- struct{}{} }),
 	)
 
-	// Calling Start() multiple times should have same effect
-	// as calling it once
+	// Calling Start() multiple times should have same effect as calling it once
 	for i := 0; i < count; i++ {
 		a.Start()
 	}
@@ -136,8 +170,7 @@ func Test_NewActor_MultipleStartStop(t *testing.T) {
 		assert.Equal(t, i, <-p)
 	}
 
-	// Calling Stop() multiple times should have same effect
-	// as calling it once
+	// Calling Stop() multiple times should have same effect as calling it once
 	for i := 0; i < count; i++ {
 		a.Stop()
 	}
@@ -185,7 +218,7 @@ func Test_NewActor_StopAfterWorkerEnded(t *testing.T) {
 			return WorkerContinue
 
 		case <-c.Done():
-			// If we receive done signal from Actor we should fail test
+			// Test should fail if done signal is received from Actor
 			assert.FailNow(t, "worker should be ended")
 			return WorkerEnd
 		}
@@ -216,6 +249,7 @@ func Test_Actor_ContextEndedAfterWorkerEnded(t *testing.T) {
 	a := New(w,
 		OptOnStart(func(c Context) {
 			assertContextStarted(t, c)
+			assert.True(t, c == w.ctx)
 		}),
 		OptOnStop(func() {
 			// When OnStop() is called assert that context has ended
@@ -320,8 +354,6 @@ type worker struct {
 }
 
 func (w *worker) DoWork(c Context) WorkerStatus {
-	w.ctx = c // saving ref to context so we can assert that context
-
 	select {
 	case <-c.Done():
 		return WorkerEnd
@@ -339,6 +371,8 @@ func (w *worker) DoWork(c Context) WorkerStatus {
 }
 
 func (w *worker) OnStart(c Context) {
+	w.ctx = c // saving ref to context so it can be asserted in tests
+
 	select {
 	case w.onStartC <- `🌞`:
 	default:

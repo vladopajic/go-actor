@@ -13,12 +13,12 @@ func NewActorImpl(w Worker, opt ...Option) *ActorImpl {
 	}
 }
 
-func (a *ActorImpl) OnStartFunc() func(Context) {
-	return a.onStartFunc()
+func (a *ActorImpl) OnStart() {
+	a.onStart()
 }
 
-func (a *ActorImpl) OnStopFunc() func() {
-	return a.onStopFunc()
+func (a *ActorImpl) OnStop() {
+	a.onStop()
 }
 
 func NewContext() *context {

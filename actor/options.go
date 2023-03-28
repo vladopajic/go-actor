@@ -2,6 +2,8 @@ package actor
 
 // OptOnStart adds function to Actor which will be executed
 // before first worker's iteration.
+// If Actor implements StartableWorker interface then function
+// will be called after calling respective method on this interface.
 // This functions is executed in actor's goroutine.
 func OptOnStart(f func(Context)) Option {
 	return func(o *options) {
@@ -11,6 +13,8 @@ func OptOnStart(f func(Context)) Option {
 
 // OptOnStop adds function to Actor which will be executed
 // after last worker's iteration.
+// If Actor implements StoppableWorker interface then function
+// will be called after calling respective method on this interface.
 // This functions is executed in actor's goroutine.
 func OptOnStop(f func()) Option {
 	return func(o *options) {
