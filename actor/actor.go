@@ -44,8 +44,8 @@ type Worker interface {
 // WorkerFunc is signature of Worker's DoWork function.
 type WorkerFunc = func(c Context) WorkerStatus
 
-// startableWorker defines optional interface which Worker can implement
-type startableWorker interface {
+// StartableWorker defines optional interface which Worker can implement
+type StartableWorker interface {
 	// OnStart is called right before DoWork() is called for first time. It can be used to
 	// initialize Worker as it will be called only once.
 	// Context is provided in case when Actor is stopped early and OnStop should terminated
@@ -54,8 +54,8 @@ type startableWorker interface {
 	OnStart(Context)
 }
 
-// stoppableWorker defines optional interface which Worker can implement
-type stoppableWorker interface {
+// StoppableWorker defines optional interface which Worker can implement
+type StoppableWorker interface {
 	// OnStop is called after last DoWork() returns. It can be used to release all
 	// resources occupied by Worker.
 	// Context is not proved as at this point as it was already ended.
@@ -154,7 +154,7 @@ func (a *actor) onStartFunc() func(Context) {
 		return fn
 	}
 
-	if w, ok := a.worker.(startableWorker); ok {
+	if w, ok := a.worker.(StartableWorker); ok {
 		return w.OnStart
 	}
 
@@ -166,7 +166,7 @@ func (a *actor) onStopFunc() func() {
 		return fn
 	}
 
-	if w, ok := a.worker.(stoppableWorker); ok {
+	if w, ok := a.worker.(StoppableWorker); ok {
 		return w.OnStop
 	}
 
