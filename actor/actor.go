@@ -102,12 +102,13 @@ func (a *actor) Stop() {
 		return
 	}
 
-	a.workEndedSigC = make(chan struct{})
+	// End context, then wait for worker to finish
+	a.ctx.end()
+	workEndedSigC := a.workEndedSigC
+
 	a.workerRunningLock.Unlock()
 
-	a.ctx.end()
-
-	<-a.workEndedSigC
+	<-workEndedSigC
 }
 
 func (a *actor) Start() {
@@ -118,6 +119,7 @@ func (a *actor) Start() {
 		return
 	}
 
+	a.workEndedSigC = make(chan struct{})
 	a.ctx = newContext()
 	a.workerRunning = true
 
@@ -140,9 +142,7 @@ func (a *actor) doWork() {
 	{ // Worker has finished
 		a.workerRunningLock.Lock()
 		a.workerRunning = false
-		if c := a.workEndedSigC; c != nil {
-			c <- struct{}{}
-		}
+		close(a.workEndedSigC)
 		a.workerRunningLock.Unlock()
 	}
 }
