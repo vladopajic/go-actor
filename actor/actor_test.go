@@ -203,7 +203,7 @@ func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
 		select {
 		case p, ok := <-doWorkC:
 			if !ok {
-				close(workEndedC)
+				defer close(workEndedC)
 				return WorkerEnd
 			}
 
@@ -227,12 +227,18 @@ func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
 
 	// Closing doWorkC will cause worker to end
 	close(doWorkC)
-	<-workEndedC
 
+	// Assert that context is ended after worker ends.
+	// Small sleep is needed in order to fix potentially race condition
+	// if actor's goroutine does not finish before this check.
+	<-workEndedC
+	time.Sleep(time.Millisecond * 10) //nolint:forbidigo // explained above
 	assertContextEnded(t, ctx)
 
 	// Stopping actor should produce no effect (since worker has ended)
 	a.Stop()
+
+	assertContextEnded(t, ctx)
 }
 
 // Test asserts that context supplied to worker will be ended
