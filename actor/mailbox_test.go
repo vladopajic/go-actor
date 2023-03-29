@@ -23,7 +23,7 @@ func Test_MailboxWorker_EndSignal(t *testing.T) {
 	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
 
 	// Worker should signal end with non-empty queue
-	q.PushBack(`🌞`)
+	q.PushBack(`🌹`)
 	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
 }
 
@@ -34,6 +34,8 @@ func Test_Mailbox(t *testing.T) {
 
 	m := NewMailbox[any]()
 	assert.NotNil(t, m)
+
+	assertSendReceiveBlocking(t, m)
 
 	m.Start()
 
@@ -75,7 +77,7 @@ func Test_FromMailboxes(t *testing.T) {
 
 	// After combined Agent is started all Mailboxes should be executing
 	for _, m := range mm {
-		assertSendReceive(t, m, `🌞`)
+		assertSendReceive(t, m, `🌹`)
 	}
 
 	a.Stop()
@@ -134,46 +136,46 @@ func Test_FanOut(t *testing.T) {
 
 	// Assert that Mailbox actor is still working
 	for _, m := range fanMbxx {
-		assertSendReceive(t, m, `🌞`)
+		assertSendReceive(t, m, `🌹`)
 	}
 }
 
 func Test_MailboxUsingChan(t *testing.T) {
 	t.Parallel()
 
-	t.Run("zero-cap", func(t *testing.T) {
+	t.Run("zero cap", func(t *testing.T) {
 		t.Parallel()
 
 		m := NewMailbox[any](OptUsingChan(true))
 
 		m.Start()
 
-		// Assert sending is blocked when there is not receiver
+		// Assert sending is blocked when there is no receiver
 		select {
-		case m.SendC() <- `🌞`:
+		case m.SendC() <- `🌹`:
 			assert.FailNow(t, "should not be able to send")
 		default:
 		}
 
 		// Send when there is receiver
 		go func() {
-			m.SendC() <- `🌞`
+			m.SendC() <- `🌹`
 		}()
-		assert.Equal(t, `🌞`, <-m.ReceiveC())
+		assert.Equal(t, `🌹`, <-m.ReceiveC())
 
 		m.Stop()
 
 		assertMailboxChannelsClosed(t, m)
 	})
 
-	t.Run("non-zero-cap", func(t *testing.T) {
+	t.Run("non zero cap", func(t *testing.T) {
 		t.Parallel()
 
 		m := NewMailbox[any](OptUsingChan(true), OptCapacity(1))
 
 		m.Start()
 
-		assertSendReceive(t, m, `🌞`)
+		assertSendReceive(t, m, `🌹`)
 
 		m.Stop()
 
@@ -197,4 +199,20 @@ func assertMailboxChannelsClosed(t *testing.T, m Mailbox[any]) {
 
 	_, ok := <-m.ReceiveC()
 	assert.False(t, ok)
+}
+
+func assertSendReceiveBlocking(t *testing.T, m Mailbox[any]) {
+	t.Helper()
+
+	select {
+	case m.SendC() <- `🌹`:
+		assert.FailNow(t, "should not be able to send")
+	default:
+	}
+
+	select {
+	case <-m.ReceiveC():
+		assert.FailNow(t, "should not be able to receive")
+	default:
+	}
 }

@@ -1,6 +1,7 @@
 package actor_test
 
 import (
+	"math/rand"
 	"testing"
 	"time"
 
@@ -9,14 +10,16 @@ import (
 	. "github.com/vladopajic/go-actor/actor"
 )
 
+// Test asserts that worker created with NewWorker utility
+// will delegate call to supplied WorkerFunc.
 func Test_NewWorker(t *testing.T) {
 	t.Parallel()
 
 	ctx := ContextStarted()
-	sigC := make(chan struct{}, 1)
+	workC := make(chan any, 1)
 	workerFunc := func(c Context) WorkerStatus {
 		assert.Equal(t, ctx, c)
-		sigC <- struct{}{}
+		workC <- `🛠️`
 
 		return WorkerContinue
 	}
@@ -24,15 +27,14 @@ func Test_NewWorker(t *testing.T) {
 	w := NewWorker(workerFunc)
 	assert.NotNil(t, w)
 
-	// Assert that worker will delegate call to supplied workerFunc
 	for i := 0; i < 10; i++ {
 		assert.Equal(t, WorkerContinue, w.DoWork(ctx))
-		assert.Len(t, sigC, 1)
-		<-sigC
+		assert.Equal(t, `🛠️`, <-workC)
 	}
 }
 
-func Test_NewActor(t *testing.T) {
+// Test asserts basic Actor functions
+func Test_Actor_New(t *testing.T) {
 	t.Parallel()
 
 	w := newWorker()
@@ -41,46 +43,78 @@ func Test_NewActor(t *testing.T) {
 	a.Start()
 
 	// Asset that worker is going to be executed by actor
-	for i := 0; i < 10; i++ {
-		p := make(chan int)
-		w.doWorkC <- p
-		assert.Equal(t, i, <-p)
-	}
+	assertDoWork(t, w.doWorkC, 0)
 
 	a.Stop()
 
-	// Actor was stopped; wait for done signal
-	// and assert that worker is not running
-	<-w.ctx.Done()
-
-	p := make(chan int)
-	w.doWorkC <- p
-	select {
-	case <-p:
-		assert.FailNow(t, "actor should not be running worker")
-	case <-time.After(time.Millisecond * 20):
-	}
+	// After stopping actor assert that worker is not going to be executed
+	assertNoWork(t, w.doWorkC)
 }
 
+// Test asserts that restarting actor will no impact on worker execution.
+func Test_Actor_Restart(t *testing.T) {
+	t.Parallel()
+
+	w := newWorker()
+	a := New(w)
+
+	for i := 0; i < 20; i++ {
+		a.Start()
+
+		assertDoWork(t, w.doWorkC, i*workIterationsPerAssert)
+
+		a.Stop()
+	}
+
+	assertStartStopAtRandom(t, a)
+}
+
+// Test asserts that nothing should happen if
+// Start() or Stop() methods are called multiple times.
+func Test_Actor_MultipleStartStop(t *testing.T) {
+	t.Parallel()
+
+	const count = 3
+
+	onStartC := make(chan any, count)
+	onStopC := make(chan any, count)
+
+	w := newWorker()
+	a := New(w,
+		OptOnStart(func(Context) { onStartC <- `🌞` }),
+		OptOnStop(func() { onStopC <- `🌚` }),
+	)
+
+	// Calling Start() multiple times should have same effect as calling it once
+	for i := 0; i < count; i++ {
+		a.Start()
+	}
+
+	assertDoWork(t, w.doWorkC, 0)
+
+	// Calling Stop() multiple times should have same effect as calling it once
+	for i := 0; i < count; i++ {
+		a.Stop()
+	}
+
+	assert.Len(t, onStartC, 1)
+	assert.Len(t, onStopC, 1)
+}
+
+// Test asserts that actor will invoke OnStart and OnStop callbacks.
+//
 //nolint:maintidx // long test case
-func Test_Actor_OnStartStop(t *testing.T) {
+func Test_Actor_OnStartOnStop(t *testing.T) {
 	t.Parallel()
 
 	readySigC := make(chan any)
-	onStartC := make(chan any, 1)
-	onStopC := make(chan any, 1)
-	onStartFn := func(c Context) {
-		<-readySigC
-		onStartC <- `🌞`
-	}
-	onStopFn := func() {
-		<-readySigC
-		onStopC <- `🌚`
-	}
+	onStartC, onStopC := make(chan any, 1), make(chan any, 1)
+	onStartFn := func(c Context) { <-readySigC; onStartC <- `🌞` }
+	onStopFn := func() { <-readySigC; onStopC <- `🌚` }
 
 	{
 		// Nothing should happen when calling OnStart and OnStop
-		// when callbacks are not defined (no panic should occur
+		// when callbacks are not defined (no panic should occur)
 		w := NewWorker(func(c Context) WorkerStatus { return WorkerContinue })
 		a := NewActorImpl(w)
 		a.OnStart()
@@ -145,75 +179,36 @@ func Test_Actor_OnStartStop(t *testing.T) {
 	}
 }
 
-func Test_NewActor_MultipleStartStop(t *testing.T) {
+// Test asserts that actor should stop after worker
+// has signaled that that
+func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
 	t.Parallel()
 
-	const count = 3
+	var ctx Context
 
-	onStartC := make(chan struct{}, count)
-	onStopC := make(chan struct{}, count)
-
-	w := newWorker()
-	a := New(w,
-		OptOnStart(func(Context) { onStartC <- struct{}{} }),
-		OptOnStop(func() { onStopC <- struct{}{} }),
-	)
-
-	// Calling Start() multiple times should have same effect as calling it once
-	for i := 0; i < count; i++ {
-		a.Start()
-	}
-
-	for i := 0; i < 10; i++ {
-		p := make(chan int)
-		w.doWorkC <- p
-		assert.Equal(t, i, <-p)
-	}
-
-	// Calling Stop() multiple times should have same effect as calling it once
-	for i := 0; i < count; i++ {
-		a.Stop()
-	}
-
-	<-w.ctx.Done()
-	assert.Len(t, onStartC, 1)
-	assert.Len(t, onStopC, 1)
-}
-
-func Test_NewActor_Restart(t *testing.T) {
-	t.Parallel()
-
-	w := newWorker()
-	a := New(w)
-
-	// Assert that restarting actor will not impact worker execution
-
-	for i := 0; i < 20; i++ {
-		a.Start()
-
-		p := make(chan int)
-		w.doWorkC <- p
-		assert.Equal(t, i, <-p)
-
-		a.Stop()
-	}
-}
-
-func Test_NewActor_StopAfterWorkerEnded(t *testing.T) {
-	t.Parallel()
-
+	workIteration := 0
 	doWorkC := make(chan chan int)
 	workEndedC := make(chan struct{})
-
 	workerFunc := func(c Context) WorkerStatus {
+		ctx = c
+
+		// assert that DoWork should not be called
+		// after WorkerEnd signal is returned
+		select {
+		case <-workEndedC:
+			assert.FailNow(t, "worker should be ended")
+		default:
+		}
+
 		select {
 		case p, ok := <-doWorkC:
 			if !ok {
-				workEndedC <- struct{}{}
+				defer close(workEndedC)
 				return WorkerEnd
 			}
 
-			p <- 1
+			p <- workIteration
+			workIteration++
 
 			return WorkerContinue
 
@@ -228,21 +223,27 @@ func Test_NewActor_StopAfterWorkerEnded(t *testing.T) {
 
 	a.Start()
 
-	for i := 0; i < 20; i++ {
-		p := make(chan int)
-		doWorkC <- p
-		assert.Equal(t, 1, <-p)
-	}
+	assertDoWork(t, doWorkC, 0)
 
 	// Closing doWorkC will cause worker to end
 	close(doWorkC)
+
+	// Assert that context is ended after worker ends.
+	// Small sleep is needed in order to fix potentially race condition
+	// if actor's goroutine does not finish before this check.
 	<-workEndedC
+	time.Sleep(time.Millisecond * 10) //nolint:forbidigo // explained above
+	assertContextEnded(t, ctx)
 
 	// Stopping actor should produce no effect (since worker has ended)
 	a.Stop()
+
+	assertContextEnded(t, ctx)
 }
 
-func Test_Actor_ContextEndedAfterWorkerEnded(t *testing.T) {
+// Test asserts that context supplied to worker will be ended
+// after actor is stopped.
+func Test_Actor_ContextEndedAfterStop(t *testing.T) {
 	t.Parallel()
 
 	w := newWorker()
@@ -259,30 +260,28 @@ func Test_Actor_ContextEndedAfterWorkerEnded(t *testing.T) {
 
 	a.Start()
 
-	for i := 0; i < 20; i++ {
-		p := make(chan int)
-		w.doWorkC <- p
-		assert.Equal(t, i, <-p)
-	}
+	assertDoWork(t, w.doWorkC, 0)
 
 	a.Stop()
 
 	assertContextEnded(t, w.ctx)
 }
 
+// Test asserts that all Start and Stop is
+// delegated to all combined actors.
 func Test_Combine(t *testing.T) {
 	t.Parallel()
 
 	const actorsCount = 5
 
-	onStartC := make(chan struct{}, actorsCount)
-	onStopC := make(chan struct{}, actorsCount)
+	onStartC := make(chan any, actorsCount)
+	onStopC := make(chan any, actorsCount)
 	actors := make([]Actor, actorsCount)
 
 	for i := 0; i < actorsCount; i++ {
 		actors[i] = New(newWorker(),
-			OptOnStart(func(Context) { onStartC <- struct{}{} }),
-			OptOnStop(func() { onStopC <- struct{}{} }),
+			OptOnStart(func(Context) { onStartC <- `🌞` }),
+			OptOnStop(func() { onStopC <- `🌚` }),
 		)
 	}
 
@@ -295,38 +294,44 @@ func Test_Combine(t *testing.T) {
 	assert.Len(t, onStopC, actorsCount)
 }
 
+// This test could not assert much, except that test
+// should not panic when Start() and Stop() are called.
 func Test_Noop(t *testing.T) {
 	t.Parallel()
 
-	a := Noop()
-
-	a.Start()
-	a.Stop()
-
-	a.Start()
-	a.Start()
-	a.Stop()
-	a.Stop()
+	assertStartStopAtRandom(t, Noop())
 }
 
+// This test could not assert much, except that test
+// should not panic when Start() and Stop() are called.
+func Test_Idle(t *testing.T) {
+	t.Parallel()
+
+	assertStartStopAtRandom(t, Idle())
+}
+
+// Test asserts that OnStart and OnStop callbacks
+// are being called.
 func Test_Idle_Options(t *testing.T) {
 	t.Parallel()
 
-	onStartC := make(chan struct{}, 1)
-	onStopC := make(chan struct{}, 1)
+	var ctx Context
 
+	onStartC, onStopC := make(chan any, 1), make(chan any, 1)
 	a := Idle(
-		OptOnStart(func(Context) { onStartC <- struct{}{} }),
-		OptOnStop(func() { onStopC <- struct{}{} }),
+		OptOnStart(func(c Context) { ctx = c; onStartC <- `🌞` }),
+		OptOnStop(func() { onStopC <- `🌚` }),
 	)
 
 	a.Start()
-	<-onStartC
+	assert.Equal(t, `🌞`, <-onStartC)
+	assertContextStarted(t, ctx)
 	a.Start() // Should have no effect
 	assert.Len(t, onStartC, 0)
 
 	a.Stop()
-	<-onStopC
+	assert.Equal(t, `🌚`, <-onStopC)
+	assertContextEnded(t, ctx)
 	a.Stop() // Should have no effect
 	assert.Len(t, onStopC, 0)
 }
@@ -384,4 +389,43 @@ func (w *worker) OnStop() {
 	case w.onStopC <- `🌚`:
 	default:
 	}
+}
+
+const workIterationsPerAssert = 20
+
+func assertDoWork(t *testing.T, doWorkC chan chan int, start int) {
+	t.Helper()
+
+	for i := start; i < workIterationsPerAssert; i++ {
+		p := make(chan int)
+		doWorkC <- p
+		assert.Equal(t, i, <-p)
+	}
+}
+
+func assertNoWork(t *testing.T, doWorkC chan chan int) {
+	t.Helper()
+
+	p := make(chan int)
+	doWorkC <- p
+	select {
+	case <-p:
+		assert.FailNow(t, "actor should not be running worker")
+	case <-time.After(time.Millisecond * 20):
+	}
+}
+
+func assertStartStopAtRandom(t *testing.T, a Actor) {
+	t.Helper()
+
+	for i := 0; i < 1000; i++ {
+		if rand.Int()%2 == 0 { //nolint:gosec // realx
+			a.Start()
+		} else {
+			a.Stop()
+		}
+	}
+
+	// Make sure that actor is stopped when exiting
+	a.Stop()
 }

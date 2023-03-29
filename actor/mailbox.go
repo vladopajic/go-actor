@@ -80,7 +80,7 @@ func NewMailbox[T any](opt ...Option) Mailbox[T] {
 	)
 
 	return &mailbox[T]{
-		Actor:    New(w, OptOnStop(w.onStop)),
+		Actor:    New(w),
 		sendC:    sendC,
 		receiveC: receiveC,
 	}
@@ -144,7 +144,7 @@ func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
 	}
 }
 
-func (w *mailboxWorker[T]) onStop() {
+func (w *mailboxWorker[T]) OnStop() {
 	close(w.sendC)
 	close(w.receiveC)
 }

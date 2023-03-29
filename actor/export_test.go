@@ -7,10 +7,8 @@ const (
 type ActorImpl = actor
 
 func NewActorImpl(w Worker, opt ...Option) *ActorImpl {
-	return &actor{
-		worker:  w,
-		options: newOptions(opt),
-	}
+	a := New(w, opt...)
+	return a.(*actor) //nolint:forcetypeassert //relax
 }
 
 func (a *ActorImpl) OnStart() {
