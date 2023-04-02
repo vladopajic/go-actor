@@ -2,6 +2,7 @@
 # go-actor commits to keep 100% test coverage.
 
 profile: cover.out
+github-action-output: true
 local-prefix: "github.com/vladopajic/go-actor"
 threshold:
   file: 100
