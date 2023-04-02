@@ -22,7 +22,7 @@ jobs:
           config: ./.testcoverage.yml
       - name: make coverage badge
         uses: action-badges/core@0.2.2
-        # if: contains(github.ref, 'main')
+        if: contains(github.ref, 'main')
         with:
           label: coverage
           message: ${{ steps.coverage.outputs.badge-text }}
