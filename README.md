@@ -1,6 +1,6 @@
 # Badges
 
-`badges` branch is hosting badges generate from workflow.
+`badges` branch is hosting badges generated from workflow.
 
 ## Go test coverage badge 
 
