@@ -13,14 +13,20 @@ jobs:
           go-version-file: go.mod
       - name: test
         run: go test -timeout=3s -race -count=10 -shuffle=on -failfast ./...
-      - name: generate coverage
+      - name: generate test coverage
         run: go test ./... -coverprofile=./cover.out -covermode=atomic
       - name: check test coverage
-        uses: vladopajic/go-test-coverage@v1
+        id: coverage
+        uses: vladopajic/go-test-coverage@v2
         with:
           config: ./.testcoverage.yml
-      - name: upload code coverage
-        uses: codecov/codecov-action@v3.1.0
+      - name: make coverage badge
+        uses: action-badges/core@0.2.2
         if: contains(github.ref, 'main')
         with:
-          file: ./cover.out
+          label: coverage
+          message: ${{ steps.coverage.outputs.badge-text }}
+          message-color: ${{ steps.coverage.outputs.badge-color }}
+          file-name: coverage.svg
+          badge-branch: badges
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
