@@ -32,4 +32,4 @@ install-go-test-coverage:
 .PHONY: check-coverage
 check-coverage: install-go-test-coverage
 	go test ./... -coverprofile=./cover.out -covermode=atomic
-	$(TEST_COVERAGE) --config=./.testcoverage.yml
+	$(TEST_COVERAGE) -config=./.testcoverage.yml
