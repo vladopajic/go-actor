@@ -26,7 +26,7 @@ tidy:
 
 .PHONY: install-go-test-coverage
 install-go-test-coverage:
-	go install github.com/vladopajic/go-test-coverage/v2@v2
+	go install github.com/vladopajic/go-test-coverage/v2@latest
 
 # Check test coverage
 .PHONY: check-coverage
