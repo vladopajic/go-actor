@@ -1,7 +1,6 @@
 package actor_test
 
 import (
-	"math/rand"
 	"testing"
 	"time"
 
@@ -66,7 +65,7 @@ func Test_Actor_Restart(t *testing.T) {
 		a.Stop()
 	}
 
-	assertStartStopAtRandom(t, a)
+	AssertStartStopAtRandom(t, a)
 }
 
 // Test asserts that nothing should happen if
@@ -299,7 +298,7 @@ func Test_Combine(t *testing.T) {
 func Test_Noop(t *testing.T) {
 	t.Parallel()
 
-	assertStartStopAtRandom(t, Noop())
+	AssertStartStopAtRandom(t, Noop())
 }
 
 // This test could not assert much, except that test
@@ -307,7 +306,7 @@ func Test_Noop(t *testing.T) {
 func Test_Idle(t *testing.T) {
 	t.Parallel()
 
-	assertStartStopAtRandom(t, Idle())
+	AssertStartStopAtRandom(t, Idle())
 }
 
 // Test asserts that OnStart and OnStop callbacks
@@ -413,19 +412,4 @@ func assertNoWork(t *testing.T, doWorkC chan chan int) {
 		assert.FailNow(t, "actor should not be running worker")
 	case <-time.After(time.Millisecond * 20):
 	}
-}
-
-func assertStartStopAtRandom(t *testing.T, a Actor) {
-	t.Helper()
-
-	for i := 0; i < 1000; i++ {
-		if rand.Int()%2 == 0 { //nolint:gosec // realx
-			a.Start()
-		} else {
-			a.Stop()
-		}
-	}
-
-	// Make sure that actor is stopped when exiting
-	a.Stop()
 }
