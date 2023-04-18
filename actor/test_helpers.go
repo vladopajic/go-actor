@@ -27,6 +27,8 @@ func TestSuite(t *testing.T, fact func() Actor) {
 func AssertStartStopAtRandom(t *testing.T, a Actor) {
 	t.Helper()
 
+	assert.NotNil(t, a)
+
 	for i := 0; i < 1000; i++ {
 		if rand.Int()%2 == 0 { //nolint:gosec // realx
 			a.Start()
@@ -41,6 +43,8 @@ func AssertStartStopAtRandom(t *testing.T, a Actor) {
 
 func AssertWorkerEndSig(t *testing.T, aw any) {
 	t.Helper()
+
+	assert.NotNil(t, aw)
 
 	var w Worker
 
