@@ -114,6 +114,7 @@ func (w *consumeWorker) DoWork(c actor.Context) actor.WorkerStatus {
 `go-actor` is intended to be a tiny library with lean interfaces and basic mechanism providing core building blocks. However, developers may build on top of it and extend it's functionality with user or domain specific addon abstractions. This section lists addon abstractions for `go-actor` which could be used in addition to it. 
 
 - [super](https://github.com/vladopajic/go-super-actor) is addon abstraction which aims to unify testing of actor's and worker's business logic.
+- [commence](https://github.com/vladopajic/go-actor-commence) is addon which gives mechanism for waiting on actors execution to commence.
 
 ## Design decisions
 
