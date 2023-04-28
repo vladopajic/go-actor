@@ -2,7 +2,7 @@
 
 [![test](https://github.com/vladopajic/go-actor/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/vladopajic/go-actor/actions/workflows/test.yml)
 [![lint](https://github.com/vladopajic/go-actor/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/vladopajic/go-actor/actions/workflows/lint.yml)
-[![coverage](https://raw.githubusercontent.com/vladopajic/go-actor/badges/.badges/main/coverage.svg)](https://github.com/vladopajic/go-actor/tree/badges)
+[![coverage](https://raw.githubusercontent.com/vladopajic/go-actor/badges/.badges/main/coverage.svg)](./.testcoverage.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/vladopajic/go-actor?cache=v1)](https://goreportcard.com/report/github.com/vladopajic/go-actor)
 [![GoDoc](https://godoc.org/github.com/vladopajic/go-actor?status.svg)](https://godoc.org/github.com/vladopajic/go-actor)
 [![Release](https://img.shields.io/github/release/vladopajic/go-actor.svg?style=flat-square)](https://github.com/vladopajic/go-actor/releases/latest)
