@@ -11,16 +11,8 @@ type SupervisedWorker struct {
 	Outbox chan<- Message
 }
 
-func (sw *SupervisedWorker) GetInbox() <-chan Message {
-	return sw.Inbox
-}
-
 func (sw *SupervisedWorker) SetInbox(inbox <-chan Message) {
 	sw.Inbox = inbox
-}
-
-func (sw *SupervisedWorker) GetOutbox() chan<- Message {
-	return sw.Outbox
 }
 
 func (sw *SupervisedWorker) SetOutbox(outbox chan<- Message) {
@@ -29,8 +21,6 @@ func (sw *SupervisedWorker) SetOutbox(outbox chan<- Message) {
 
 type supervisedWorker interface {
 	Worker
-	GetInbox() <-chan Message
-	GetOutbox() chan<- Message
 	SetInbox(inbox <-chan Message)
 	SetOutbox(outbox chan<- Message)
 }
