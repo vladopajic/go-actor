@@ -11,6 +11,10 @@ type testConsumeWorker struct {
 	ID string
 }
 
+func (tw *testConsumeWorker) GetID() string {
+	return tw.ID
+}
+
 func (tw *testConsumeWorker) DoWork(c Context) WorkerStatus {
 	// For simplicity, just wait for a message and then end
 	fmt.Print("Worker 2 waiting for message\n")
@@ -25,6 +29,10 @@ func (tw *testConsumeWorker) DoWork(c Context) WorkerStatus {
 type testProduceWorker struct {
 	SupervisedWorker
 	ID string
+}
+
+func (tw *testProduceWorker) GetID() string {
+	return tw.ID
 }
 
 func (tw *testProduceWorker) DoWork(c Context) WorkerStatus {
@@ -46,8 +54,8 @@ func TestSupervisor(t *testing.T) {
 	worker1 := testProduceWorker{ID: "worker1"}
 	worker2 := testConsumeWorker{ID: "worker2"}
 	supervisor := NewSupervisor()
-	supervisor.RegisterWorker(&worker1, worker1.ID)
-	supervisor.RegisterWorker(&worker2, worker2.ID)
+	supervisor.RegisterWorker(&worker1)
+	supervisor.RegisterWorker(&worker2)
 
 	if _, ok := supervisor.actors["worker1"]; !ok {
 		t.Errorf("Expected worker1 to be in supervisor.actors")

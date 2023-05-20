@@ -21,6 +21,7 @@ func (sw *SupervisedWorker) SetOutbox(outbox chan<- Message) {
 
 type supervisedWorker interface {
 	Worker
+	GetID() string
 	SetInbox(inbox <-chan Message)
 	SetOutbox(outbox chan<- Message)
 }
@@ -49,19 +50,20 @@ func NewSupervisor() *Supervisor {
 	return &supervisor
 }
 
-func (s *Supervisor) RegisterWorker(worker supervisedWorker, ID string) {
+func (s *Supervisor) RegisterWorker(worker supervisedWorker) {
 	inbox := NewMailbox[Message]()
 	outbox := NewMailbox[Message]()
-
 	worker.SetInbox(inbox.ReceiveC())
 	worker.SetOutbox(outbox.SendC())
 	actor := New(worker)
+
 	s.mu.Lock()
-	s.actors[ID] = Combine(actor, inbox, outbox)
-	s.outboxes[ID] = outbox
-	s.inboxes[ID] = inbox
+	s.actors[worker.GetID()] = Combine(actor, inbox, outbox)
+	s.outboxes[worker.GetID()] = outbox
+	s.inboxes[worker.GetID()] = inbox
 	s.mu.Unlock()
-	s.IDs = append(s.IDs, ID)
+
+	s.IDs = append(s.IDs, worker.GetID())
 }
 
 func (s *Supervisor) StartAll() {
