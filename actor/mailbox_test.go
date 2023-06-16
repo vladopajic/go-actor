@@ -36,7 +36,8 @@ func Test_Mailbox(t *testing.T) {
 	m := NewMailbox[any]()
 	assert.NotNil(t, m)
 
-	assertSendReceiveBlocking(t, m)
+	assertSendBlocking(t, m)
+	assertReceiveBlocking(t, m)
 
 	m.Start()
 
@@ -151,8 +152,8 @@ func Test_MailboxUsingChan(t *testing.T) {
 
 		m.Start()
 
-		// Assert sending is blocked when there is no receiver
 		assertSendBlocking(t, m)
+		assertReceiveBlocking(t, m)
 
 		// Send when there is receiver
 		go func() {
@@ -198,10 +199,8 @@ func assertMailboxChannelsClosed(t *testing.T, m Mailbox[any]) {
 	assert.False(t, ok)
 }
 
-func assertSendReceiveBlocking(t *testing.T, m Mailbox[any]) {
+func assertReceiveBlocking(t *testing.T, m Mailbox[any]) {
 	t.Helper()
-
-	assertSendBlocking(t, m)
 
 	select {
 	case <-m.ReceiveC():
