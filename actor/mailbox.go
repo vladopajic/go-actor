@@ -1,10 +1,8 @@
 package actor
 
-// Mailbox is interface for message transport mechanism between Actors
-// which can receive infinite number of messages.
-// Mailbox is much like native go channel, except that writing to the Mailbox
-// will never block, all messages are going to be queued and Actors on
-// receiving end of the Mailbox will get all messages in FIFO order.
+import "fmt"
+
+// Mailbox is interface for message transport mechanism between Actors.
 type Mailbox[T any] interface {
 	Actor
 	MailboxSender[T]
@@ -13,8 +11,8 @@ type Mailbox[T any] interface {
 
 // MailboxSender is interface for sender bits of Mailbox.
 type MailboxSender[T any] interface {
-	// SendC returns channel where data can be sent.
-	SendC() chan<- T
+	// Send message via mailbox.
+	Send(ctx Context, msg T) error
 }
 
 // MailboxReceiver is interface for receiver bits of Mailbox.
@@ -36,10 +34,12 @@ func FromMailboxes[T any](mm []Mailbox[T]) Actor {
 // FanOut spawns new goroutine in which messages received by receiveC are forwarded
 // to senders. Spawned goroutine will be active while receiveC is open.
 func FanOut[T any, MS MailboxSender[T]](receiveC <-chan T, senders []MS) {
+	ctx := ContextStarted()
+
 	go func(receiveC <-chan T, senders []MS) {
 		for v := range receiveC {
 			for _, m := range senders {
-				m.SendC() <- v
+				m.Send(ctx, v) //nolint:errcheck // errors are swallowed
 			}
 		}
 	}(receiveC, senders)
@@ -92,8 +92,13 @@ type mailbox[T any] struct {
 	receiveC <-chan T
 }
 
-func (m *mailbox[T]) SendC() chan<- T {
-	return m.sendC
+func (m *mailbox[T]) Send(ctx Context, msg T) error {
+	select {
+	case m.sendC <- msg:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("Mailbox.Send failed: %w", ctx.Err())
+	}
 }
 
 func (m *mailbox[T]) ReceiveC() <-chan T {
