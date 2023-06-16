@@ -65,7 +65,7 @@ func NewMailbox[T any](opt ...Option) Mailbox[T] {
 		mOpts = opts.Mailbox
 	)
 
-	if mOpts.UsingChan {
+	if mOpts.AsChan {
 		c := make(chan T, mOpts.Capacity)
 
 		return &mailbox[T]{
