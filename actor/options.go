@@ -46,11 +46,11 @@ func OptMailbox(capacity, minCapacity int) Option {
 	}
 }
 
-// OptUsingChan makes Mailbox to function as wrapper for
+// OptAsChan makes Mailbox to function as wrapper for
 // native go channel.
-func OptUsingChan(usingChan bool) Option {
+func OptAsChan() Option {
 	return func(o *options) {
-		o.Mailbox.UsingChan = usingChan
+		o.Mailbox.AsChan = true
 	}
 }
 
@@ -63,7 +63,7 @@ type options struct {
 	}
 
 	Mailbox struct {
-		UsingChan   bool
+		AsChan      bool
 		Capacity    int
 		MinCapacity int
 	}

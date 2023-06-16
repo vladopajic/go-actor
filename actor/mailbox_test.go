@@ -142,13 +142,13 @@ func Test_FanOut(t *testing.T) {
 	}
 }
 
-func Test_MailboxUsingChan(t *testing.T) {
+func Test_MailboxOptAsChan(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero cap", func(t *testing.T) {
 		t.Parallel()
 
-		m := NewMailbox[any](OptUsingChan(true))
+		m := NewMailbox[any](OptAsChan())
 
 		m.Start()
 
@@ -169,7 +169,7 @@ func Test_MailboxUsingChan(t *testing.T) {
 	t.Run("non zero cap", func(t *testing.T) {
 		t.Parallel()
 
-		m := NewMailbox[any](OptUsingChan(true), OptCapacity(1))
+		m := NewMailbox[any](OptAsChan(), OptCapacity(1))
 
 		m.Start()
 
