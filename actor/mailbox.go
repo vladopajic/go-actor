@@ -60,10 +60,7 @@ func NewMailboxes[T any](count int, opt ...Option) []Mailbox[T] {
 // will never block, all messages are going to be queued and Actors on
 // receiving end of the Mailbox will get all messages in FIFO order.
 func NewMailbox[T any](opt ...Option) Mailbox[T] {
-	var (
-		opts  = newOptions(opt)
-		mOpts = opts.Mailbox
-	)
+	mOpts := newOptions(opt).Mailbox
 
 	if mOpts.AsChan {
 		c := make(chan T, mOpts.Capacity)
