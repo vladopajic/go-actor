@@ -55,7 +55,10 @@ func NewMailboxes[T any](count int, opt ...Option) []Mailbox[T] {
 	return mm
 }
 
-// NewMailbox returns new Mailbox.
+// NewMailbox returns new local Mailbox implementation.
+// Mailbox is much like native go channel, except that writing to the Mailbox
+// will never block, all messages are going to be queued and Actors on
+// receiving end of the Mailbox will get all messages in FIFO order.
 func NewMailbox[T any](opt ...Option) Mailbox[T] {
 	var (
 		opts  = newOptions(opt)
