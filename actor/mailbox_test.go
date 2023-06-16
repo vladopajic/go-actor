@@ -3,6 +3,7 @@ package actor_test
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -35,7 +36,8 @@ func Test_Mailbox(t *testing.T) {
 	m := NewMailbox[any]()
 	assert.NotNil(t, m)
 
-	assertSendReceiveBlocking(t, m)
+	assertSendBlocking(t, m)
+	assertReceiveBlocking(t, m)
 
 	m.Start()
 
@@ -45,7 +47,7 @@ func Test_Mailbox(t *testing.T) {
 	// incoming messages on this Mailbox.
 
 	for i := 0; i < sendMessagesCount; i++ {
-		m.SendC() <- i
+		assert.NoError(t, m.Send(ContextStarted(), i))
 	}
 
 	for i := 0; i < sendMessagesCount; i++ {
@@ -113,7 +115,7 @@ func Test_FanOut(t *testing.T) {
 	// Produce data on inMbx
 	go func() {
 		for i := 0; i < sendMessagesCount; i++ {
-			inMbx.SendC() <- i
+			assert.NoError(t, inMbx.Send(ContextStarted(), i))
 		}
 	}()
 
@@ -150,16 +152,12 @@ func Test_MailboxUsingChan(t *testing.T) {
 
 		m.Start()
 
-		// Assert sending is blocked when there is no receiver
-		select {
-		case m.SendC() <- `🌹`:
-			assert.FailNow(t, "should not be able to send")
-		default:
-		}
+		assertSendBlocking(t, m)
+		assertReceiveBlocking(t, m)
 
 		// Send when there is receiver
 		go func() {
-			m.SendC() <- `🌹`
+			assert.NoError(t, m.Send(ContextStarted(), `🌹`))
 		}()
 		assert.Equal(t, `🌹`, <-m.ReceiveC())
 
@@ -186,7 +184,7 @@ func Test_MailboxUsingChan(t *testing.T) {
 func assertSendReceive(t *testing.T, m Mailbox[any], val any) {
 	t.Helper()
 
-	m.SendC() <- val
+	assert.NoError(t, m.Send(ContextStarted(), val))
 	assert.Equal(t, val, <-m.ReceiveC())
 }
 
@@ -194,25 +192,43 @@ func assertMailboxChannelsClosed(t *testing.T, m Mailbox[any]) {
 	t.Helper()
 
 	assert.Panics(t, func() {
-		m.SendC() <- `👹`
+		m.Send(ContextStarted(), `👹`) //nolint:errcheck // this line panics
 	})
 
 	_, ok := <-m.ReceiveC()
 	assert.False(t, ok)
 }
 
-func assertSendReceiveBlocking(t *testing.T, m Mailbox[any]) {
+func assertReceiveBlocking(t *testing.T, m Mailbox[any]) {
 	t.Helper()
-
-	select {
-	case m.SendC() <- `🌹`:
-		assert.FailNow(t, "should not be able to send")
-	default:
-	}
 
 	select {
 	case <-m.ReceiveC():
 		assert.FailNow(t, "should not be able to receive")
 	default:
 	}
+}
+
+func assertSendBlocking(t *testing.T, m Mailbox[any]) {
+	t.Helper()
+
+	testDoneSigC := make(chan struct{})
+
+	ctx := NewContext()
+
+	go func() {
+		err := m.Send(ctx, `🌹`)
+		if err == nil {
+			assert.FailNow(t, "should not be able to send")
+		}
+
+		close(testDoneSigC)
+	}()
+
+	// This sleep is necessary to give some time goroutine from above
+	// to be started and Send() method to get blocked while sending
+	time.Sleep(time.Millisecond * 10) //nolint:forbidigo // relax
+	ctx.End()
+
+	<-testDoneSigC
 }
