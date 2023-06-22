@@ -97,7 +97,7 @@ func (m *mailbox[T]) Send(ctx Context, msg T) error {
 	case m.sendC <- msg:
 		return nil
 	case <-ctx.Done():
-		return fmt.Errorf("Mailbox.Send failed: %w", ctx.Err())
+		return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
 	}
 }
 
