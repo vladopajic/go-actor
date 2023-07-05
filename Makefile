@@ -31,5 +31,5 @@ install-go-test-coverage:
 # Check test coverage
 .PHONY: check-coverage
 check-coverage: install-go-test-coverage
-	go test ./... -coverprofile=./cover.out -covermode=atomic
+	go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
 	$(TEST_COVERAGE) -config=./.testcoverage.yml
