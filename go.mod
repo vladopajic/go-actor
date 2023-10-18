@@ -1,6 +1,6 @@
 module github.com/vladopajic/go-actor
 
-go 1.20
+go 1.21
 
 require (
 	github.com/gammazero/deque v0.2.0

@@ -78,7 +78,7 @@ func (c *context) Err() error {
 	return err
 }
 
-func (*context) Value(key any) any {
+func (*context) Value(key any) any { //nolint:revive // needed to implement context.Context
 	return nil
 }
 
