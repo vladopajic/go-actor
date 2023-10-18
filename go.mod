@@ -3,7 +3,7 @@ module github.com/vladopajic/go-actor
 go 1.21
 
 require (
-	github.com/gammazero/deque v0.2.0
+	github.com/gammazero/deque v0.2.1
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/goleak v1.1.12
 )
