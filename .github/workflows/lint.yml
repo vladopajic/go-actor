@@ -14,6 +14,6 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.51.2
+          version: v1.54.2
       - name: go mod tidy check
         uses: katexochen/go-tidy-check@v2

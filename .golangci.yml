@@ -83,6 +83,23 @@ linters:
     - wsl
 
 linters-settings:
+  depguard:
+      rules:
+        main:
+          files:
+            - $all
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/gammazero/deque      ## needed for queue implementation
+            - github.com/stretchr             ## needed for test helpers
+        test:
+          files:
+            - "$test"
+          allow:
+            - $gostd
+            - github.com/stretchr
+            - github.com/vladopajic/go-actor
   forbidigo:
       forbid:
         - 'time.Sleep*(# Do not sleep)?'
@@ -113,8 +130,8 @@ issues:
   exclude-rules:
     - path: _test\.go
       linters:
-        - funlen      ## Function length is okay due to many tests cases
-        - wrapcheck   ## No need to check wrapping errors in tests
+        - funlen        ## Function length is okay due to many tests cases
+        - wrapcheck     ## No need to check wrapping errors in tests
 
     - path: export_test\.go
       linters:
