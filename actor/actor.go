@@ -131,11 +131,20 @@ func (a *actor) Start() {
 func (a *actor) doWork() {
 	a.onStart()
 
+	ctx := a.ctx
+
+cycle:
 	for status := WorkerContinue; status == WorkerContinue; {
-		status = a.worker.DoWork(a.ctx)
+		select {
+		case <-ctx.Done():
+			break cycle
+		default:
+		}
+
+		status = a.worker.DoWork(ctx)
 	}
 
-	a.ctx.end()
+	ctx.end()
 
 	a.onStop()
 

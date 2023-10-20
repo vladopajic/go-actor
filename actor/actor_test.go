@@ -179,7 +179,7 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 }
 
 // Test asserts that actor should stop after worker
-// has signaled that that
+// has signaled that there is no more work via WorkerEnd signal.
 func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
 	t.Parallel()
 
@@ -238,6 +238,49 @@ func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
 	a.Stop()
 
 	assertContextEnded(t, ctx)
+}
+
+// Test asserts that actor will end even when worker
+// behaves recklessly eg. it's not responding to context.
+func Test_Actor_StopRecklessWorker(t *testing.T) {
+	t.Parallel()
+
+	workC := make(chan any, 100)
+	stopSigC := make(chan any, 1)
+	w := NewWorker(func(c Context) WorkerStatus {
+		select {
+		case <-stopSigC:
+			assert.FailNow(t, "worker should not be called after actor was stopped")
+		default:
+		}
+
+		// simulate some work to assert that worker was running
+		select {
+		case workC <- `🛠️`:
+		default:
+		}
+
+		return WorkerContinue
+	})
+	a := New(w)
+
+	a.Start()
+
+	for i := 0; i < 100; i++ {
+		assert.Equal(t, `🛠️`, <-workC)
+	}
+
+	a.Stop()
+
+	// after actor was stopped it is guaranteed that worker will not be executed
+	stopSigC <- `🛑`
+
+	// if worker was stopped, we won't be able to send stop signal again
+	select {
+	case stopSigC <- `🛑`:
+		assert.FailNow(t, "worker should not be running")
+	case <-time.After(time.Millisecond * 20):
+	}
 }
 
 // Test asserts that context supplied to worker will be ended
