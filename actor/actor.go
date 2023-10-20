@@ -133,11 +133,11 @@ func (a *actor) doWork() {
 
 	ctx := a.ctx
 
-cycle:
+workLoop:
 	for status := WorkerContinue; status == WorkerContinue; {
 		select {
 		case <-ctx.Done():
-			break cycle
+			break workLoop
 		default:
 		}
 
