@@ -167,29 +167,6 @@ func (a *actor) onStop() {
 	}
 }
 
-// Combine returns single Actor which combines all specified actors into one.
-// Calling Start or Stop function on this Actor will invoke respective function
-// on all Actors provided to this function.
-func Combine(actors ...Actor) Actor {
-	return &combinedActor{actors}
-}
-
-type combinedActor struct {
-	actors []Actor
-}
-
-func (a *combinedActor) Stop() {
-	for _, a := range a.actors {
-		a.Stop()
-	}
-}
-
-func (a *combinedActor) Start() {
-	for _, a := range a.actors {
-		a.Start()
-	}
-}
-
 // Idle returns new Actor without Worker.
 func Idle(opt ...Option) Actor {
 	return &idleActor{
