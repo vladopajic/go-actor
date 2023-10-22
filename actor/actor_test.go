@@ -179,7 +179,7 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 }
 
 // Test asserts that actor should stop after worker
-// has signaled that that
+// has signaled that there is no more work via WorkerEnd signal.
 func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
 	t.Parallel()
 

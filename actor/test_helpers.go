@@ -7,7 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//nolint:tparallel // relax
+// TestSuite is test helper function that tests all basic actor functionality.
+//
+//nolint:tparallel // this is helper to test case (lint fake positive)
 func TestSuite(t *testing.T, fact func() Actor) {
 	t.Helper()
 
@@ -17,13 +19,15 @@ func TestSuite(t *testing.T, fact func() Actor) {
 		AssertStartStopAtRandom(t, fact())
 	})
 
-	t.Run("worker end sig", func(t *testing.T) {
+	t.Run("worker end signal", func(t *testing.T) {
 		t.Parallel()
 
 		AssertWorkerEndSig(t, fact())
 	})
 }
 
+// AssertStartStopAtRandom is test helper that starts and stops actor repeatedly, which
+// will catch potential panic, race conditions, or some other issues.
 func AssertStartStopAtRandom(t *testing.T, a Actor) {
 	t.Helper()
 
@@ -41,6 +45,7 @@ func AssertStartStopAtRandom(t *testing.T, a Actor) {
 	a.Stop()
 }
 
+// AssertWorkerEndSig test asserts that worker will respond to context.Done() signal.
 func AssertWorkerEndSig(t *testing.T, aw any) {
 	t.Helper()
 
