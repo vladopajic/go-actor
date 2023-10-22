@@ -55,7 +55,7 @@ func main() {
 	// Note: Example creates two consumers for the sake of demonstration
 	// since having one or more consumers will produce the same result. 
 	// Message on stdout will be written by first consumer that reads from mailbox.
-	cw2 := &consumeWorker{inC: mailbox.ReceiveC(), id: 2}
+	cw2 := &consumeWorker{mailbox: mailbox, id: 2}
 
 	// Create actors using these workers and combine them to singe actor
 	a := actor.Combine(
