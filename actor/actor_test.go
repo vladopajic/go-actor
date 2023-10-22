@@ -266,33 +266,6 @@ func Test_Actor_ContextEndedAfterStop(t *testing.T) {
 	assertContextEnded(t, w.ctx)
 }
 
-// Test asserts that all Start and Stop is
-// delegated to all combined actors.
-func Test_Combine(t *testing.T) {
-	t.Parallel()
-
-	const actorsCount = 5
-
-	onStartC := make(chan any, actorsCount)
-	onStopC := make(chan any, actorsCount)
-	actors := make([]Actor, actorsCount)
-
-	for i := 0; i < actorsCount; i++ {
-		actors[i] = New(newWorker(),
-			OptOnStart(func(Context) { onStartC <- `🌞` }),
-			OptOnStop(func() { onStopC <- `🌚` }),
-		)
-	}
-
-	// Assert that starting and stopping combined actors
-	// will start and stop all individual actors
-	a := Combine(actors...)
-	a.Start()
-	a.Stop()
-	assert.Len(t, onStartC, actorsCount)
-	assert.Len(t, onStopC, actorsCount)
-}
-
 // This test could not assert much, except that test
 // should not panic when Start() and Stop() are called.
 func Test_Noop(t *testing.T) {

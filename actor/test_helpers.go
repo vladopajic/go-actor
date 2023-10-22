@@ -30,7 +30,7 @@ func AssertStartStopAtRandom(t *testing.T, a Actor) {
 	assert.NotNil(t, a)
 
 	for i := 0; i < 1000; i++ {
-		if rand.Int()%2 == 0 { //nolint:gosec // realx
+		if rand.Int()%2 == 0 { //nolint:gosec // weak random is fine
 			a.Start()
 		} else {
 			a.Stop()
