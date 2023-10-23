@@ -78,16 +78,16 @@ type produceWorker struct {
 	num  int
 }
 
-func (w *produceWorker) DoWork(c actor.Context) actor.WorkerStatus {
+func (w *produceWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 	select {
+	case <-ctx.Done():
+		return actor.WorkerEnd
+
 	case <-time.After(time.Second):
 		w.num++
-		w.mailbox.Send(c, w.num)
+		w.mailbox.Send(ctx, w.num)
 
 		return actor.WorkerContinue
-
-	case <-c.Done():
-		return actor.WorkerEnd
 	}
 }
 
@@ -97,15 +97,15 @@ type consumeWorker struct {
 	id  int
 }
 
-func (w *consumeWorker) DoWork(c actor.Context) actor.WorkerStatus {
+func (w *consumeWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 	select {
+	case <-ctx.Done():
+		return actor.WorkerEnd
+
 	case num := <-w.mailbox.ReceiveC():
 		fmt.Printf("consumed %d \t(worker %d)\n", num, w.id)
 
 		return actor.WorkerContinue
-
-	case <-c.Done():
-		return actor.WorkerEnd
 	}
 }
 ```
