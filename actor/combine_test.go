@@ -42,9 +42,9 @@ func Test_Combine(t *testing.T) {
 	assert.Len(t, onStopC, actorsCount)
 }
 
-// Test_CombineAndStopTogether asserts that all actors will end as soon
+// Test_Combine_StopTogether asserts that all actors will end as soon
 // as first actors ends.
-func Test_CombineAndStopTogether(t *testing.T) {
+func Test_Combine_StopTogether(t *testing.T) {
 	t.Parallel()
 
 	const actorsCount = 5
