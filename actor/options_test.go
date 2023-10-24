@@ -11,10 +11,8 @@ import (
 func TestOptions(t *testing.T) {
 	t.Parallel()
 
-	{ // NewOptions with no options should equal to zero options
-		opts := NewOptions()
-		assert.Equal(t, NewZeroOptions(), opts)
-	}
+	// NewOptions with no options should equal to zero options
+	assert.Equal(t, NewZeroOptions(), NewOptions[ActorOption]())
 
 	testActorOptions(t)
 	testMailboxOptions(t)

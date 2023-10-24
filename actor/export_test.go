@@ -6,7 +6,7 @@ const (
 
 type ActorImpl = actor
 
-func NewActorImpl(w Worker, opt ...Option) *ActorImpl {
+func NewActorImpl(w Worker, opt ...ActorOption) *ActorImpl {
 	a := New(w, opt...)
 	return a.(*actor) //nolint:forcetypeassert //relax
 }
@@ -27,7 +27,7 @@ func (c *context) End() {
 	c.end()
 }
 
-func NewOptions(opts ...Option) options {
+func NewOptions[T ~func(o *options)](opts ...T) options {
 	return newOptions(opts)
 }
 

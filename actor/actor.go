@@ -79,7 +79,7 @@ func (w *worker) DoWork(c Context) WorkerStatus {
 }
 
 // New returns new Actor with specified Worker and Options.
-func New(w Worker, opt ...Option) Actor {
+func New(w Worker, opt ...ActorOption) Actor {
 	return &actor{
 		worker:  w,
 		options: newOptions(opt),
@@ -168,7 +168,7 @@ func (a *actor) onStop() {
 }
 
 // Idle returns new Actor without Worker.
-func Idle(opt ...Option) Actor {
+func Idle(opt ...ActorOption) Actor {
 	return &idleActor{
 		options: newOptions(opt),
 	}

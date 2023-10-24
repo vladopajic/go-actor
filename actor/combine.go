@@ -33,7 +33,7 @@ func (b *CombineBuilder) Build() Actor {
 }
 
 // WithOptions adds options for combined actor.
-func (b *CombineBuilder) WithOptions(opt ...Option) *CombineBuilder {
+func (b *CombineBuilder) WithOptions(opt ...CombinedOption) *CombineBuilder {
 	b.options = newOptions(opt)
 	return b
 }

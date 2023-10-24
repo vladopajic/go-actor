@@ -5,7 +5,7 @@ package actor
 // If Actor implements StartableWorker interface then function
 // will be called after calling respective method on this interface.
 // This functions is executed in actor's goroutine.
-func OptOnStart(f func(Context)) Option {
+func OptOnStart(f func(Context)) ActorOption {
 	return func(o *options) {
 		o.Actor.OnStartFunc = f
 	}
@@ -16,7 +16,7 @@ func OptOnStart(f func(Context)) Option {
 // If Actor implements StoppableWorker interface then function
 // will be called after calling respective method on this interface.
 // This functions is executed in actor's goroutine.
-func OptOnStop(f func()) Option {
+func OptOnStop(f func()) ActorOption {
 	return func(o *options) {
 		o.Actor.OnStopFunc = f
 	}
@@ -24,7 +24,7 @@ func OptOnStop(f func()) Option {
 
 // OptCapacity sets initial Mailbox queue capacity.
 // Value must be power of 2.
-func OptCapacity(capacity int) Option {
+func OptCapacity(capacity int) MailboxOption {
 	return func(o *options) {
 		o.Mailbox.Capacity = capacity
 	}
@@ -32,14 +32,14 @@ func OptCapacity(capacity int) Option {
 
 // OptMinCapacity sets minimum Mailbox queue capacity.
 // Value must be power of 2.
-func OptMinCapacity(minCapacity int) Option {
+func OptMinCapacity(minCapacity int) MailboxOption {
 	return func(o *options) {
 		o.Mailbox.MinCapacity = minCapacity
 	}
 }
 
 // OptMailbox sets all Mailbox capacity options at once.
-func OptMailbox(capacity, minCapacity int) Option {
+func OptMailbox(capacity, minCapacity int) MailboxOption {
 	return func(o *options) {
 		o.Mailbox.Capacity = capacity
 		o.Mailbox.MinCapacity = minCapacity
@@ -48,7 +48,7 @@ func OptMailbox(capacity, minCapacity int) Option {
 
 // OptAsChan makes Mailbox to function as wrapper for
 // native go channel.
-func OptAsChan() Option {
+func OptAsChan() MailboxOption {
 	return func(o *options) {
 		o.Mailbox.AsChan = true
 	}
@@ -56,13 +56,19 @@ func OptAsChan() Option {
 
 // OptStopTogether will stop all actors when any of combined
 // actors is stopped.
-func OptStopTogether() Option {
+func OptStopTogether() CombinedOption {
 	return func(o *options) {
 		o.Combined.StopTogether = true
 	}
 }
 
-type Option func(o *options)
+type (
+	option func(o *options)
+
+	ActorOption    option
+	MailboxOption  option
+	CombinedOption option
+)
 
 type options struct {
 	Actor struct {
@@ -81,15 +87,12 @@ type options struct {
 	}
 }
 
-func (o *options) apply(opts []Option) {
+func newOptions[T ~func(o *options)](opts []T) options {
+	o := &options{}
+
 	for _, opt := range opts {
 		opt(o)
 	}
-}
-
-func newOptions(opts []Option) options {
-	o := &options{}
-	o.apply(opts)
 
 	return *o
 }
