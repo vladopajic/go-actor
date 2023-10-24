@@ -2,27 +2,40 @@ package actor
 
 import "sync/atomic"
 
-// Combine returns single Actor which combines all specified actors into one.
-// Calling Start or Stop function on this Actor will invoke respective function
-// on all Actors provided to this function.
-func Combine(actors ...Actor) Actor {
-	return &combinedActor{
-		stopping: &atomic.Bool{},
-		actors:   actors,
+// Combine returns builder which is used to create single Actor that combines all
+// specified actors into one.
+//
+// Calling Start or Stop function on combined Actor will invoke respective
+// function on all underlying Actors.
+func Combine(actors ...Actor) *CombineBuilder {
+	return &CombineBuilder{
+		actors: actors,
 	}
 }
 
-// CombineAndStopTogether returns single Actor which combines all specified actors into one,
-// just like Combine function, and additionally actors combined with this function will end
-// together as soon as any of supplied actors ends.
-func CombineAndStopTogether(actors ...Actor) Actor {
+type CombineBuilder struct {
+	actors  []Actor
+	options options
+}
+
+// Build returns combined Actor.
+func (b *CombineBuilder) Build() Actor {
 	combined := &combinedActor{
 		stopping: &atomic.Bool{},
+		actors:   b.actors,
 	}
 
-	combined.actors = wrapActors(actors, combined.Stop)
+	if b.options.Combined.StopTogether {
+		combined.actors = wrapActors(combined.actors, combined.Stop)
+	}
 
 	return combined
+}
+
+// WithOptions adds options for combined actor.
+func (b *CombineBuilder) WithOptions(opt ...CombinedOption) *CombineBuilder {
+	b.options = newOptions(opt)
+	return b
 }
 
 type combinedActor struct {

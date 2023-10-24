@@ -28,7 +28,7 @@ func FromMailboxes[T any](mm []Mailbox[T]) Actor {
 		a[i] = m
 	}
 
-	return Combine(a...)
+	return Combine(a...).Build()
 }
 
 // FanOut spawns new goroutine in which messages received by receiveC are forwarded
@@ -46,7 +46,7 @@ func FanOut[T any, MS MailboxSender[T]](receiveC <-chan T, senders []MS) {
 }
 
 // NewMailboxes returns slice of new Mailbox instances with specified count.
-func NewMailboxes[T any](count int, opt ...Option) []Mailbox[T] {
+func NewMailboxes[T any](count int, opt ...MailboxOption) []Mailbox[T] {
 	mm := make([]Mailbox[T], count)
 	for i := 0; i < count; i++ {
 		mm[i] = NewMailbox[T](opt...)
@@ -59,7 +59,7 @@ func NewMailboxes[T any](count int, opt ...Option) []Mailbox[T] {
 // Mailbox is much like native go channel, except that writing to the Mailbox
 // will never block, all messages are going to be queued and Actors on
 // receiving end of the Mailbox will get all messages in FIFO order.
-func NewMailbox[T any](opt ...Option) Mailbox[T] {
+func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	mOpts := newOptions(opt).Mailbox
 
 	if mOpts.AsChan {

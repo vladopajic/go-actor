@@ -27,7 +27,7 @@ func (c *context) End() {
 	c.end()
 }
 
-func NewOptions(opts ...Option) options {
+func NewOptions[T ~func(o *options)](opts ...T) options {
 	return newOptions(opts)
 }
 

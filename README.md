@@ -63,7 +63,7 @@ func main() {
 		actor.New(pw),
 		actor.New(cw1),
 		actor.New(cw2),
-	)
+	).Build()
 
 	// Finally all actors are started and stopped at once
 	a.Start()
