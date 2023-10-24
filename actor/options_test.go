@@ -16,6 +16,14 @@ func TestOptions(t *testing.T) {
 		assert.Equal(t, NewZeroOptions(), opts)
 	}
 
+	testActorOptions(t)
+	testMailboxOptions(t)
+	testCombinedOptions(t)
+}
+
+func testActorOptions(t *testing.T) {
+	t.Helper()
+
 	{ // Assert that OnStartFunc will be set
 		opts := NewOptions(OptOnStart(func(Context) {}))
 		assert.NotNil(t, opts.Actor.OnStartFunc)
@@ -33,6 +41,10 @@ func TestOptions(t *testing.T) {
 		assert.NotNil(t, opts.Actor.OnStartFunc)
 		assert.NotNil(t, opts.Actor.OnStopFunc)
 	}
+}
+
+func testMailboxOptions(t *testing.T) {
+	t.Helper()
 
 	{ // Assert that OptCapacity will be set
 		opts := NewOptions(OptCapacity(16))
@@ -61,5 +73,14 @@ func TestOptions(t *testing.T) {
 	{ // Assert that OptAsChan will be set
 		opts := NewOptions(OptAsChan())
 		assert.True(t, opts.Mailbox.AsChan)
+	}
+}
+
+func testCombinedOptions(t *testing.T) {
+	t.Helper()
+
+	{ // Assert that StopTogether will be set
+		opts := NewOptions(OptStopTogether())
+		assert.True(t, opts.Combined.StopTogether)
 	}
 }
