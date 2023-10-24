@@ -5,7 +5,7 @@ package actor
 // If Actor implements StartableWorker interface then function
 // will be called after calling respective method on this interface.
 // This functions is executed in actor's goroutine.
-func OptOnStart(f func(Context)) ActorOption {
+func OptOnStart(f func(Context)) Option {
 	return func(o *options) {
 		o.Actor.OnStartFunc = f
 	}
@@ -16,7 +16,7 @@ func OptOnStart(f func(Context)) ActorOption {
 // If Actor implements StoppableWorker interface then function
 // will be called after calling respective method on this interface.
 // This functions is executed in actor's goroutine.
-func OptOnStop(f func()) ActorOption {
+func OptOnStop(f func()) Option {
 	return func(o *options) {
 		o.Actor.OnStopFunc = f
 	}
@@ -65,7 +65,7 @@ func OptStopTogether() CombinedOption {
 type (
 	option func(o *options)
 
-	ActorOption    option
+	Option         option
 	MailboxOption  option
 	CombinedOption option
 )

@@ -6,7 +6,7 @@ const (
 
 type ActorImpl = actor
 
-func NewActorImpl(w Worker, opt ...ActorOption) *ActorImpl {
+func NewActorImpl(w Worker, opt ...Option) *ActorImpl {
 	a := New(w, opt...)
 	return a.(*actor) //nolint:forcetypeassert //relax
 }
