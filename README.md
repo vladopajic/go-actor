@@ -91,7 +91,7 @@ func (w *produceWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 	}
 }
 
-// consumeWorker will consume numbers received on inC channel
+// consumeWorker will consume numbers received on mailbox
 type consumeWorker struct {
 	mailbox actor.MailboxReceiver[int]
 	id  int
