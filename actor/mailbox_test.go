@@ -105,7 +105,7 @@ func Test_FanOut(t *testing.T) {
 	// Fan out inMbx
 	FanOut(inMbx.ReceiveC(), fanMbxx)
 
-	a := Combine(inMbx, FromMailboxes(fanMbxx))
+	a := Combine(inMbx, FromMailboxes(fanMbxx)).Build()
 
 	a.Start()
 	defer a.Stop()

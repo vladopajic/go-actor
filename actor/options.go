@@ -54,12 +54,24 @@ func OptAsChan() Option {
 	}
 }
 
+// OptStopTogether will stop all actors when any of combined
+// actors is stopped.
+func OptStopTogether() Option {
+	return func(o *options) {
+		o.Combined.StopTogether = true
+	}
+}
+
 type Option func(o *options)
 
 type options struct {
 	Actor struct {
 		OnStartFunc func(Context)
 		OnStopFunc  func()
+	}
+
+	Combined struct {
+		StopTogether bool
 	}
 
 	Mailbox struct {

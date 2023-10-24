@@ -28,7 +28,7 @@ func FromMailboxes[T any](mm []Mailbox[T]) Actor {
 		a[i] = m
 	}
 
-	return Combine(a...)
+	return Combine(a...).Build()
 }
 
 // FanOut spawns new goroutine in which messages received by receiveC are forwarded

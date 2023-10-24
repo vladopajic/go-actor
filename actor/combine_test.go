@@ -29,7 +29,7 @@ func Test_Combine(t *testing.T) {
 
 	// Assert that starting and stopping combined actors
 	// will start and stop all individual actors
-	a := Combine(actors...)
+	a := Combine(actors...).Build()
 
 	// Start combined actor and wait for all actors to be started
 	a.Start()
@@ -64,7 +64,7 @@ func Test_CombineAndStopTogether(t *testing.T) {
 		}
 	}
 
-	a := CombineAndStopTogether(actors...)
+	a := Combine(actors...).WithOptions(OptStopTogether()).Build()
 
 	a.Start()
 	drainC(onStartC, actorsCount)
