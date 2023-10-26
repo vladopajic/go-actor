@@ -139,7 +139,7 @@ func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
 	const actorsCount = 5 * 2
 
 	for i := 0; i < actorsCount/2+1; i++ {
-		onStopC := make(chan any, 1)
+		onStopC := make(chan any, 2)
 		actors := make([]Actor, actorsCount/2+1)
 		actorsNested := make([]Actor, actorsCount/2)
 
@@ -151,16 +151,6 @@ func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
 			return Idle()
 		}
 
-		for i := range actors {
-			actors[i] = create(i)
-		}
-
-		for i := range actorsNested {
-			actorsNested[i] = create(i)
-		}
-		// add nested actors to actors list
-		actors[actorsCount/2] = Combine(actorsNested...).Build()
-
 		onStopFunc := func() {
 			select {
 			case onStopC <- `🌚`:
@@ -169,6 +159,16 @@ func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
 			}
 		}
 
+		for i := range actors {
+			actors[i] = create(i)
+		}
+
+		for i := range actorsNested {
+			actorsNested[i] = create(i)
+		}
+		// add nested actors to actors list
+		actors[actorsCount/2] = Combine(actorsNested...).WithOptions(OptOnStopFunc(onStopFunc)).Build()
+
 		a := Combine(actors...).
 			WithOptions(OptOnStopFunc(onStopFunc), OptStopTogether()).
 			Build()
@@ -176,6 +176,7 @@ func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
 		a.Start()
 
 		actors[i].Stop()
+		assert.Equal(t, `🌚`, <-onStopC)
 		assert.Equal(t, `🌚`, <-onStopC)
 		a.Stop() // should have no effect
 	}
