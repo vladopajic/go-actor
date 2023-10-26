@@ -1,6 +1,9 @@
 package actor
 
-import "sync/atomic"
+import (
+	"sync"
+	"sync/atomic"
+)
 
 // Combine returns builder which is used to create single Actor that combines all
 // specified actors into one.
@@ -20,16 +23,16 @@ type CombineBuilder struct {
 
 // Build returns combined Actor.
 func (b *CombineBuilder) Build() Actor {
-	combined := &combinedActor{
-		stopping: &atomic.Bool{},
-		actors:   b.actors,
+	a := &combinedActor{
+		stopping:     &atomic.Bool{},
+		actors:       b.actors,
+		onStopFunc:   b.options.Combined.OnStopFunc,
+		stopTogether: b.options.Combined.StopTogether,
 	}
 
-	if b.options.Combined.StopTogether {
-		combined.actors = wrapActors(combined.actors, combined.Stop)
-	}
+	a.actors = wrapActors(a.actors, a.onActorStopped)
 
-	return combined
+	return a
 }
 
 // WithOptions adds options for combined actor.
@@ -39,37 +42,66 @@ func (b *CombineBuilder) WithOptions(opt ...CombinedOption) *CombineBuilder {
 }
 
 type combinedActor struct {
-	stopping *atomic.Bool
-	actors   []Actor
+	actors       []Actor
+	onStopFunc   func()
+	stopTogether bool
+
+	runningCount int
+	stopping     *atomic.Bool
+	onEnd        *sync.Once
+}
+
+func (a *combinedActor) onActorStopped() {
+	a.runningCount--
+
+	if a.runningCount == 0 {
+		// Last actor to end should call onStopFunc
+		if once, fn := a.onEnd, a.onStopFunc; once != nil && fn != nil {
+			once.Do(fn)
+		}
+	}
+
+	// First actor to stop should stop other actors
+	if a.stopTogether && a.stopping.CompareAndSwap(false, true) {
+		// run stop in goroutine because wrapped actor
+		// should not block until other actors to stop
+		go a.Stop()
+	}
 }
 
 func (a *combinedActor) Stop() {
-	if !a.stopping.CompareAndSwap(false, true) {
-		return
-	}
-
 	for _, a := range a.actors {
 		a.Stop()
+	}
+
+	if once, fn := a.onEnd, a.onStopFunc; once != nil && fn != nil {
+		once.Do(fn)
 	}
 }
 
 func (a *combinedActor) Start() {
 	a.stopping.Store(false)
+	a.onEnd = &sync.Once{}
 
-	for _, a := range a.actors {
-		a.Start()
+	for _, aa := range a.actors {
+		a.runningCount++
+		aa.Start()
 	}
 }
 
-func wrapActors(actors []Actor, onStop func()) []Actor {
+func wrapActors(
+	actors []Actor,
+	onStopFunc func(),
+) []Actor {
 	wrapActorStruct := func(a *actor) *actor {
 		prevOnStopFunc := a.options.Actor.OnStopFunc
+
 		a.options.Actor.OnStopFunc = func() {
 			if prevOnStopFunc != nil {
 				prevOnStopFunc()
 			}
 
-			go onStop()
+			onStopFunc()
 		}
 
 		return a
@@ -77,8 +109,8 @@ func wrapActors(actors []Actor, onStop func()) []Actor {
 
 	wrapActorInterface := func(a Actor) Actor {
 		return &wrappedActor{
-			actor:    a,
-			onStopFn: onStop,
+			actor:      a,
+			onStopFunc: onStopFunc,
 		}
 	}
 
@@ -95,8 +127,8 @@ func wrapActors(actors []Actor, onStop func()) []Actor {
 }
 
 type wrappedActor struct {
-	actor    Actor
-	onStopFn func()
+	actor      Actor
+	onStopFunc func()
 }
 
 func (a *wrappedActor) Start() {
@@ -105,5 +137,5 @@ func (a *wrappedActor) Start() {
 
 func (a *wrappedActor) Stop() {
 	a.actor.Stop()
-	go a.onStopFn()
+	a.onStopFunc()
 }

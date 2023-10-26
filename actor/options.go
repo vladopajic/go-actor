@@ -62,6 +62,13 @@ func OptStopTogether() CombinedOption {
 	}
 }
 
+// OptOnStopFunc will is called after all combined actors are stopped.
+func OptOnStopFunc(f func()) CombinedOption {
+	return func(o *options) {
+		o.Combined.OnStopFunc = f
+	}
+}
+
 type (
 	option func(o *options)
 
@@ -78,6 +85,7 @@ type options struct {
 
 	Combined struct {
 		StopTogether bool
+		OnStopFunc   func()
 	}
 
 	Mailbox struct {
