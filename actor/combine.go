@@ -46,19 +46,26 @@ type combinedActor struct {
 	onStopFunc   func()
 	stopTogether bool
 
-	runningCount int
+	runningCount atomic.Int32
+	running      bool
+	runningLock  sync.Mutex
 	stopping     *atomic.Bool
-	onEnd        *sync.Once
+	onStopOnce   *sync.Once
 }
 
 func (a *combinedActor) onActorStopped() {
-	a.runningCount--
+	a.runningLock.Lock()
 
-	if a.runningCount == 0 {
-		// Last actor to end should call onStopFunc
-		if once, fn := a.onEnd, a.onStopFunc; once != nil && fn != nil {
-			once.Do(fn)
-		}
+	runningCount := a.runningCount.Add(-1)
+	once, onStopFunc := a.onStopOnce, a.onStopFunc
+	wasRunning := a.running
+	a.running = runningCount != 0
+
+	a.runningLock.Unlock()
+
+	// Last actor to end should call onStopFunc
+	if runningCount == 0 && wasRunning && onStopFunc != nil {
+		once.Do(onStopFunc)
 	}
 
 	// First actor to stop should stop other actors
@@ -70,21 +77,43 @@ func (a *combinedActor) onActorStopped() {
 }
 
 func (a *combinedActor) Stop() {
+	a.runningLock.Lock()
+
+	if !a.running {
+		a.runningLock.Unlock()
+		return
+	}
+
+	onStopOnce, onStopFunc := a.onStopOnce, a.onStopFunc
+	a.running = false
+
+	a.runningLock.Unlock()
+
 	for _, a := range a.actors {
 		a.Stop()
 	}
 
-	if once, fn := a.onEnd, a.onStopFunc; once != nil && fn != nil {
-		once.Do(fn)
+	if onStopFunc != nil {
+		onStopOnce.Do(onStopFunc)
 	}
 }
 
 func (a *combinedActor) Start() {
+	a.runningLock.Lock()
+
+	if a.running {
+		a.runningLock.Unlock()
+		return
+	}
+
 	a.stopping.Store(false)
-	a.onEnd = &sync.Once{}
+	a.onStopOnce = &sync.Once{}
+	a.running = true
+
+	a.runningLock.Unlock()
 
 	for _, aa := range a.actors {
-		a.runningCount++
+		a.runningCount.Add(1)
 		aa.Start()
 	}
 }
@@ -107,6 +136,20 @@ func wrapActors(
 		return a
 	}
 
+	wrapCombinedActorStruct := func(a *combinedActor) *combinedActor {
+		prevOnStopFunc := a.onStopFunc
+
+		a.onStopFunc = func() {
+			if prevOnStopFunc != nil {
+				prevOnStopFunc()
+			}
+
+			onStopFunc()
+		}
+
+		return a
+	}
+
 	wrapActorInterface := func(a Actor) Actor {
 		return &wrappedActor{
 			actor:      a,
@@ -118,6 +161,8 @@ func wrapActors(
 		switch v := a.(type) {
 		case *actor:
 			actors[i] = wrapActorStruct(v)
+		case *combinedActor:
+			actors[i] = wrapCombinedActorStruct(v)
 		default:
 			actors[i] = wrapActorInterface(v)
 		}
