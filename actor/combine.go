@@ -50,22 +50,20 @@ type combinedActor struct {
 	running      bool
 	runningLock  sync.Mutex
 	stopping     *atomic.Bool
-	onStopOnce   *sync.Once
 }
 
 func (a *combinedActor) onActorStopped() {
 	a.runningLock.Lock()
 
 	runningCount := a.runningCount.Add(-1)
-	once, onStopFunc := a.onStopOnce, a.onStopFunc
 	wasRunning := a.running
 	a.running = runningCount != 0
 
 	a.runningLock.Unlock()
 
 	// Last actor to end should call onStopFunc
-	if runningCount == 0 && wasRunning && onStopFunc != nil {
-		once.Do(onStopFunc)
+	if runningCount == 0 && wasRunning && a.onStopFunc != nil {
+		a.onStopFunc()
 	}
 
 	// First actor to stop should stop other actors
@@ -84,17 +82,11 @@ func (a *combinedActor) Stop() {
 		return
 	}
 
-	onStopOnce, onStopFunc := a.onStopOnce, a.onStopFunc
 	a.running = false
-
 	a.runningLock.Unlock()
 
 	for _, a := range a.actors {
 		a.Stop()
-	}
-
-	if onStopFunc != nil {
-		onStopOnce.Do(onStopFunc)
 	}
 }
 
@@ -107,7 +99,6 @@ func (a *combinedActor) Start() {
 	}
 
 	a.stopping.Store(false)
-	a.onStopOnce = &sync.Once{}
 	a.running = true
 
 	a.runningLock.Unlock()
