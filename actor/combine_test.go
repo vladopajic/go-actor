@@ -61,9 +61,8 @@ func Test_Combine_OptStopTogether(t *testing.T) {
 		actors := createActors(actorsCount/2, onStart, onStop)
 
 		// append one more actor to actors list
-		actors = append(actors,
-			Combine(createActors(actorsCount/2, onStart, onStop)...).Build(),
-		)
+		cmb := Combine(createActors(actorsCount/2, onStart, onStop)...).Build()
+		actors = append(actors, cmb)
 
 		a := Combine(actors...).WithOptions(OptStopTogether()).Build()
 
@@ -81,19 +80,11 @@ func Test_Combine_OptOnStop(t *testing.T) {
 
 	const actorsCount = 5
 
-	onStopC := make(chan any, 1)
+	onStopC, onStopOpt := createCombinedOnStopOption(t, 1)
 	actors := createActors(actorsCount)
 
-	onStopFunc := func() {
-		select {
-		case onStopC <- `🌚`:
-		default:
-			t.Fatal("onStopFunc should be called only once")
-		}
-	}
-
 	a := Combine(actors...).
-		WithOptions(OptOnStopFunc(onStopFunc)).
+		WithOptions(onStopOpt).
 		Build()
 
 	a.Start()
@@ -111,24 +102,15 @@ func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
 	const actorsCount = 5 * 2
 
 	for i := 0; i < actorsCount/2+1; i++ {
-		onStopC := make(chan any, 2)
-		onStopFunc := func() {
-			select {
-			case onStopC <- `🌚`:
-			default:
-				t.Fatal("onStopFunc should be called only once")
-			}
-		}
-
+		onStopC, onStopOpt := createCombinedOnStopOption(t, 2)
 		actors := createActors(actorsCount / 2)
 
 		// append one more actor to actors list
-		actors = append(actors,
-			Combine(createActors(actorsCount/2)...).WithOptions(OptOnStopFunc(onStopFunc)).Build(),
-		)
+		cmb := Combine(createActors(actorsCount / 2)...).WithOptions(onStopOpt).Build()
+		actors = append(actors, cmb)
 
 		a := Combine(actors...).
-			WithOptions(OptOnStopFunc(onStopFunc), OptStopTogether()).
+			WithOptions(onStopOpt, OptStopTogether()).
 			Build()
 
 		a.Start()
@@ -156,4 +138,19 @@ func createActor(i int, opts ...Option) Actor {
 	}
 
 	return Idle(opts...)
+}
+
+func createCombinedOnStopOption(t *testing.T, count int) (<-chan any, CombinedOption) {
+	t.Helper()
+
+	onStopC := make(chan any, count)
+	onStopFunc := func() {
+		select {
+		case onStopC <- `🌚`:
+		default:
+			t.Fatal("onStopFunc should be called only once")
+		}
+	}
+
+	return onStopC, OptOnStopCombined(onStopFunc)
 }

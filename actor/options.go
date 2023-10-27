@@ -62,8 +62,8 @@ func OptStopTogether() CombinedOption {
 	}
 }
 
-// OptOnStopFunc will is called after all combined actors are stopped.
-func OptOnStopFunc(f func()) CombinedOption {
+// OptOnStopCombined will is called after all combined actors are stopped.
+func OptOnStopCombined(f func()) CombinedOption {
 	return func(o *options) {
 		o.Combined.OnStopFunc = f
 	}
