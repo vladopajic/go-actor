@@ -24,10 +24,10 @@ type CombineBuilder struct {
 // Build returns combined Actor.
 func (b *CombineBuilder) Build() Actor {
 	a := &combinedActor{
-		stopping:     &atomic.Bool{},
 		actors:       b.actors,
 		onStopFunc:   b.options.Combined.OnStopFunc,
 		stopTogether: b.options.Combined.StopTogether,
+		stopping:     &atomic.Bool{},
 	}
 
 	a.actors = wrapActors(a.actors, a.onActorStopped)
@@ -68,8 +68,8 @@ func (a *combinedActor) onActorStopped() {
 
 	// First actor to stop should stop other actors
 	if a.stopTogether && a.stopping.CompareAndSwap(false, true) {
-		// run stop in goroutine because wrapped actor
-		// should not block until other actors to stop
+		// Run stop in goroutine because wrapped actor
+		// should not wait for other actors to stop.
 		go a.Stop()
 	}
 }
@@ -85,8 +85,8 @@ func (a *combinedActor) Stop() {
 	a.running = false
 	a.runningLock.Unlock()
 
-	for _, a := range a.actors {
-		a.Stop()
+	for _, actor := range a.actors {
+		actor.Stop()
 	}
 }
 
@@ -103,9 +103,9 @@ func (a *combinedActor) Start() {
 
 	a.runningLock.Unlock()
 
-	for _, aa := range a.actors {
+	for _, actor := range a.actors {
 		a.runningCount.Add(1)
-		aa.Start()
+		actor.Start()
 	}
 }
 
