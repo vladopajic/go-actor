@@ -1,13 +1,24 @@
 package actor_test
 
 import (
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	. "github.com/vladopajic/go-actor/actor"
 )
+
+func Test_Combine_TestSuite(t *testing.T) {
+	t.Parallel()
+
+	const actorsCount = 10
+
+	TestSuite(t, func() Actor {
+		actors := createActors(actorsCount)
+
+		return Combine(actors...).Build()
+	})
+}
 
 // Test asserts that all Start and Stop is
 // delegated to all combined actors.
@@ -18,17 +29,10 @@ func Test_Combine(t *testing.T) {
 
 	onStartC := make(chan any, actorsCount)
 	onStopC := make(chan any, actorsCount)
-	actors := make([]Actor, actorsCount)
+	onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
+	onStop := OptOnStop(func() { onStopC <- `🌚` })
+	actors := createActors(actorsCount, onStart, onStop)
 
-	for i := 0; i < actorsCount; i++ {
-		actors[i] = New(newWorker(),
-			OptOnStart(func(Context) { onStartC <- `🌞` }),
-			OptOnStop(func() { onStopC <- `🌚` }),
-		)
-	}
-
-	// Assert that starting and stopping combined actors
-	// will start and stop all individual actors
 	a := Combine(actors...).Build()
 
 	// Start combined actor and wait for all actors to be started
@@ -42,34 +46,111 @@ func Test_Combine(t *testing.T) {
 	assert.Len(t, onStopC, actorsCount)
 }
 
-// Test_Combine_StopTogether asserts that all actors will end as soon
+// Test_Combine_OptStopTogether asserts that all actors will end as soon
 // as first actors ends.
-func Test_Combine_StopTogether(t *testing.T) {
+func Test_Combine_OptStopTogether(t *testing.T) {
+	t.Parallel()
+
+	const actorsCount = 5 * 2
+
+	for i := 0; i < actorsCount/2+1; i++ {
+		onStartC := make(chan any, actorsCount)
+		onStopC := make(chan any, actorsCount)
+		onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
+		onStop := OptOnStop(func() { onStopC <- `🌚` })
+		actors := createActors(actorsCount/2, onStart, onStop)
+
+		// append one more actor to actors list
+		cmb := Combine(createActors(actorsCount/2, onStart, onStop)...).Build()
+		actors = append(actors, cmb)
+
+		a := Combine(actors...).WithOptions(OptStopTogether()).Build()
+
+		a.Start()
+		drainC(onStartC, actorsCount)
+
+		// stop actor and assert that all actors will be stopped
+		actors[i].Stop()
+		drainC(onStopC, actorsCount)
+	}
+}
+
+func Test_Combine_OptOnStop(t *testing.T) {
 	t.Parallel()
 
 	const actorsCount = 5
 
-	onStartC := make(chan any, actorsCount)
-	onStopC := make(chan any, actorsCount)
-	actors := make([]Actor, actorsCount)
+	onStopC, onStopOpt := createCombinedOnStopOption(t, 1)
+	actors := createActors(actorsCount)
 
-	onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
-	onStop := OptOnStop(func() { onStopC <- `🌚` })
+	a := Combine(actors...).
+		WithOptions(onStopOpt).
+		Build()
 
-	for i := 0; i < actorsCount; i++ {
-		if i%2 == 0 { // case with actorStruct wrapper
-			actors[i] = New(newWorker(), onStart, onStop)
-		} else { // case with actorInterface wrapper
-			actors[i] = Idle(onStart, onStop)
+	a.Start()
+
+	a.Stop()
+	a.Stop() // should have no effect
+	a.Stop() // should have no effect
+	a.Stop() // should have no effect
+	assert.Equal(t, `🌚`, <-onStopC)
+}
+
+func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
+	t.Parallel()
+
+	const actorsCount = 5 * 2
+
+	for i := 0; i < actorsCount/2+1; i++ {
+		onStopC, onStopOpt := createCombinedOnStopOption(t, 2)
+		actors := createActors(actorsCount / 2)
+
+		// append one more actor to actors list
+		cmb := Combine(createActors(actorsCount / 2)...).WithOptions(onStopOpt).Build()
+		actors = append(actors, cmb)
+
+		a := Combine(actors...).
+			WithOptions(onStopOpt, OptStopTogether()).
+			Build()
+
+		a.Start()
+
+		actors[i].Stop()
+		assert.Equal(t, `🌚`, <-onStopC)
+		assert.Equal(t, `🌚`, <-onStopC)
+		a.Stop() // should have no effect
+	}
+}
+
+func createActors(count int, opts ...Option) []Actor {
+	actors := make([]Actor, count)
+
+	for i := 0; i < count; i++ {
+		actors[i] = createActor(i, opts...)
+	}
+
+	return actors
+}
+
+func createActor(i int, opts ...Option) Actor {
+	if i%2 == 0 {
+		return New(newWorker(), opts...)
+	}
+
+	return Idle(opts...)
+}
+
+func createCombinedOnStopOption(t *testing.T, count int) (<-chan any, CombinedOption) {
+	t.Helper()
+
+	onStopC := make(chan any, count)
+	onStopFunc := func() {
+		select {
+		case onStopC <- `🌚`:
+		default:
+			t.Fatal("onStopFunc should be called only once")
 		}
 	}
 
-	a := Combine(actors...).WithOptions(OptStopTogether()).Build()
-
-	a.Start()
-	drainC(onStartC, actorsCount)
-
-	// Stop random actor and assert that all actors will be stopped
-	actors[rand.Int31n(actorsCount)].Stop() //nolint:gosec // weak random is fine
-	drainC(onStopC, actorsCount)
+	return onStopC, OptOnStopCombined(onStopFunc)
 }
