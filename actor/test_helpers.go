@@ -1,10 +1,9 @@
 package actor
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"io"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // TestSuite is test helper function that tests all basic actor functionality.
@@ -28,13 +27,16 @@ func TestSuite(t *testing.T, fact func() Actor) {
 
 // AssertStartStopAtRandom is test helper that starts and stops actor repeatedly, which
 // will catch potential panic, race conditions, or some other issues.
-func AssertStartStopAtRandom(t *testing.T, a Actor) {
-	t.Helper()
+func AssertStartStopAtRandom(tb testing.TB, a Actor) {
+	tb.Helper()
 
-	assert.NotNil(t, a)
+	if a == nil {
+		tb.Error("actor should not be nil")
+		return
+	}
 
 	for i := 0; i < 1000; i++ {
-		if rand.Int()%2 == 0 { //nolint:gosec // weak random is fine
+		if randInt32(tb)%2 == 0 {
 			a.Start()
 		} else {
 			a.Stop()
@@ -46,10 +48,13 @@ func AssertStartStopAtRandom(t *testing.T, a Actor) {
 }
 
 // AssertWorkerEndSig test asserts that worker will respond to context.Done() signal.
-func AssertWorkerEndSig(t *testing.T, aw any) {
-	t.Helper()
+func AssertWorkerEndSig(tb testing.TB, aw any) {
+	tb.Helper()
 
-	assert.NotNil(t, aw)
+	if aw == nil {
+		tb.Error("actor or worker should not be nil")
+		return
+	}
 
 	var w Worker
 
@@ -58,11 +63,41 @@ func AssertWorkerEndSig(t *testing.T, aw any) {
 	} else if ww, ok := aw.(Worker); ok {
 		w = ww
 	} else {
-		t.Skip("couldn't test worker end sig")
+		tb.Skip("couldn't test worker end sig")
+		return
 	}
 
-	assert.NotNil(t, w)
+	if w == nil {
+		tb.Error("worker should be initialized")
+		return
+	}
 
 	status := w.DoWork(ContextEnded())
-	assert.Equal(t, WorkerEnd, status, "worker should end when context has ended")
+	if status != WorkerEnd {
+		tb.Error("worker should end when context has ended")
+	}
+}
+
+func randInt32(tb testing.TB) int32 {
+	tb.Helper()
+	return randInt32WithReader(tb, rand.Reader)
+}
+
+func randInt32WithReader(tb testing.TB, randReader io.Reader) int32 {
+	tb.Helper()
+
+	b := make([]byte, 4) //nolint:gomnd // 4 bytes = int32
+
+	_, err := randReader.Read(b)
+	if err != nil {
+		tb.Error("failed to read random bytes")
+	}
+
+	result := int32(0)
+	for i := 0; i < 4; i++ {
+		result <<= 8
+		result += int32(b[i])
+	}
+
+	return result
 }

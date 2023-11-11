@@ -1,5 +1,10 @@
 package actor
 
+import (
+	"io"
+	"testing"
+)
+
 const (
 	MinQueueCapacity = minQueueCapacity
 )
@@ -56,4 +61,9 @@ func NewQueue[T any](capacity, minimum int) *queue[T] {
 
 func (q *queue[T]) Cap() int {
 	return q.q.Cap()
+}
+
+//nolint:thelper // this is just export
+func RandInt32WithReader(tb testing.TB, reader io.Reader) int32 {
+	return randInt32WithReader(tb, reader)
 }
