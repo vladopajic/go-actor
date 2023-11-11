@@ -2,6 +2,7 @@ package actor
 
 import (
 	"crypto/rand"
+	"io"
 	"testing"
 )
 
@@ -22,7 +23,6 @@ func TestSuite(t *testing.T, fact func() Actor) {
 
 		AssertWorkerEndSig(t, fact())
 	})
-
 }
 
 // AssertStartStopAtRandom is test helper that starts and stops actor repeatedly, which
@@ -80,10 +80,18 @@ func AssertWorkerEndSig(tb testing.TB, aw any) {
 
 func randInt32(tb testing.TB) int32 {
 	tb.Helper()
+	return randInt32WithReader(tb, rand.Reader)
+}
+
+func randInt32WithReader(tb testing.TB, randReader io.Reader) int32 {
+	tb.Helper()
 
 	b := make([]byte, 4) //nolint:gomnd // 4 bytes = int32
 
-	rand.Read(b)
+	_, err := randReader.Read(b)
+	if err != nil {
+		tb.Error("failed to read random bytes")
+	}
 
 	result := int32(0)
 	for i := 0; i < 4; i++ {
