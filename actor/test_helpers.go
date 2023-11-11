@@ -22,19 +22,21 @@ func TestSuite(t *testing.T, fact func() Actor) {
 
 		AssertWorkerEndSig(t, fact())
 	})
+
 }
 
 // AssertStartStopAtRandom is test helper that starts and stops actor repeatedly, which
 // will catch potential panic, race conditions, or some other issues.
-func AssertStartStopAtRandom(t *testing.T, a Actor) {
-	t.Helper()
+func AssertStartStopAtRandom(tb testing.TB, a Actor) {
+	tb.Helper()
 
 	if a == nil {
-		t.Errorf("actor should not be nil")
+		tb.Error("actor should not be nil")
+		return
 	}
 
 	for i := 0; i < 1000; i++ {
-		if randInt32(t)%2 == 0 {
+		if randInt32(tb)%2 == 0 {
 			a.Start()
 		} else {
 			a.Stop()
@@ -46,11 +48,12 @@ func AssertStartStopAtRandom(t *testing.T, a Actor) {
 }
 
 // AssertWorkerEndSig test asserts that worker will respond to context.Done() signal.
-func AssertWorkerEndSig(t *testing.T, aw any) {
-	t.Helper()
+func AssertWorkerEndSig(tb testing.TB, aw any) {
+	tb.Helper()
 
 	if aw == nil {
-		t.Errorf("actor or worker should not be nil")
+		tb.Error("actor or worker should not be nil")
+		return
 	}
 
 	var w Worker
@@ -60,28 +63,27 @@ func AssertWorkerEndSig(t *testing.T, aw any) {
 	} else if ww, ok := aw.(Worker); ok {
 		w = ww
 	} else {
-		t.Skip("couldn't test worker end sig")
+		tb.Skip("couldn't test worker end sig")
+		return
 	}
 
 	if w == nil {
-		t.Errorf("worker should be initialized")
+		tb.Error("worker should be initialized")
+		return
 	}
 
 	status := w.DoWork(ContextEnded())
 	if status != WorkerEnd {
-		t.Error("worker should end when context has ended")
+		tb.Error("worker should end when context has ended")
 	}
 }
 
-func randInt32(t *testing.T) int32 {
-	t.Helper()
+func randInt32(tb testing.TB) int32 {
+	tb.Helper()
 
 	b := make([]byte, 4) //nolint:gomnd // 4 bytes = int32
 
-	_, err := rand.Read(b)
-	if err != nil {
-		t.Errorf("failed reading random bytes: %v", err)
-	}
+	rand.Read(b)
 
 	result := int32(0)
 	for i := 0; i < 4; i++ {

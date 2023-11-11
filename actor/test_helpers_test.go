@@ -30,8 +30,32 @@ func Test_AssertWorkerEndSig(t *testing.T) {
 	// Test with actor
 	AssertWorkerEndSig(t, New(newWorker()))
 
-	// Test when actor is not created with default constructor
-	AssertWorkerEndSig(t, Noop)
+	// Test expected to fail because argument nil
+	tw := &tWrapper{T: t}
+	AssertWorkerEndSig(tw, nil)
+	assert.True(t, tw.hadError)
+
+	// Test expected to fail because worker is nil
+	tw = &tWrapper{T: t}
+	AssertWorkerEndSig(tw, New(nil))
+	assert.True(t, tw.hadError)
+
+	// Test expected to fail becaue worker didn't return end singal
+	tw = &tWrapper{T: t}
+	AssertWorkerEndSig(tw, NewWorker(func(c Context) WorkerStatus { return WorkerContinue }))
+	assert.True(t, tw.hadError)
+}
+
+func Test_AssertStartStopAtRandom(t *testing.T) {
+	t.Parallel()
+
+	AssertStartStopAtRandom(t, New(newWorker()))
+	AssertStartStopAtRandom(t, Noop())
+
+	// Test expected to fail because actor is nil
+	tw := &tWrapper{T: t}
+	AssertStartStopAtRandom(tw, nil)
+	assert.True(t, tw.hadError)
 }
 
 func Test_RandInt32(t *testing.T) {
