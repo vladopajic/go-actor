@@ -3,8 +3,6 @@ package actor
 import (
 	"crypto/rand"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // TestSuite is test helper function that tests all basic actor functionality.
@@ -31,7 +29,9 @@ func TestSuite(t *testing.T, fact func() Actor) {
 func AssertStartStopAtRandom(t *testing.T, a Actor) {
 	t.Helper()
 
-	assert.NotNil(t, a)
+	if a == nil {
+		t.Errorf("actor should not be nil")
+	}
 
 	for i := 0; i < 1000; i++ {
 		if randInt32(t)%2 == 0 {
@@ -49,7 +49,9 @@ func AssertStartStopAtRandom(t *testing.T, a Actor) {
 func AssertWorkerEndSig(t *testing.T, aw any) {
 	t.Helper()
 
-	assert.NotNil(t, aw)
+	if aw == nil {
+		t.Errorf("actor or worker should not be nil")
+	}
 
 	var w Worker
 
@@ -61,18 +63,25 @@ func AssertWorkerEndSig(t *testing.T, aw any) {
 		t.Skip("couldn't test worker end sig")
 	}
 
-	assert.NotNil(t, w)
+	if w == nil {
+		t.Errorf("worker should be initialized")
+	}
 
 	status := w.DoWork(ContextEnded())
-	assert.Equal(t, WorkerEnd, status, "worker should end when context has ended")
+	if status != WorkerEnd {
+		t.Error("worker should end when context has ended")
+	}
 }
 
 func randInt32(t *testing.T) int32 {
 	t.Helper()
 
 	b := make([]byte, 4) //nolint:gomnd // 4 bytes = int32
+
 	_, err := rand.Read(b)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("failed reading random bytes: %v", err)
+	}
 
 	result := int32(0)
 	for i := 0; i < 4; i++ {
