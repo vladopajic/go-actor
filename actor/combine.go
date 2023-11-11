@@ -114,9 +114,9 @@ func wrapActors(
 	onStopFunc func(),
 ) []Actor {
 	wrapActorStruct := func(a *actor) *actor {
-		prevOnStopFunc := a.options.Actor.OnStopFunc
+		prevOnStopFunc := a.options.OnStopFunc
 
-		a.options.Actor.OnStopFunc = func() {
+		a.options.OnStopFunc = func() {
 			if prevOnStopFunc != nil {
 				prevOnStopFunc()
 			}

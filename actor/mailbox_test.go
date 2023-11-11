@@ -15,16 +15,16 @@ func Test_MailboxWorker_EndSignal(t *testing.T) {
 
 	sendC := make(chan any)
 	receiveC := make(chan any)
-	q := NewQueue[any](0, 0)
+	options := OptionsMailbox{}
 
-	w := NewMailboxWorker(sendC, receiveC, q)
+	w := NewMailboxWorker(sendC, receiveC, options)
 	assert.NotNil(t, w)
 
 	// Worker should signal end with empty queue
 	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
 
 	// Worker should signal end with non-empty queue
-	q.PushBack(`🌹`)
+	w.Queue().PushBack(`🌹`)
 	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
 }
 
@@ -178,6 +178,65 @@ func Test_MailboxOptAsChan(t *testing.T) {
 		m.Stop()
 
 		assertMailboxChannelsClosed(t, m)
+	})
+}
+
+// This test asserts that Mailbox will end only after all messages have been received.
+func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
+	t.Parallel()
+
+	const messagesCount = 1000
+
+	sendMessages := func(m Mailbox[any]) {
+		t.Helper()
+
+		for i := 0; i < messagesCount; i++ {
+			assert.NoError(t, m.Send(ContextStarted(), `🥥`))
+		}
+	}
+	assertGotAllMessages := func(m Mailbox[any]) {
+		t.Helper()
+
+		gotMessages := 0
+
+		for msg := range m.ReceiveC() {
+			assert.Equal(t, `🥥`, msg)
+			gotMessages++
+		}
+
+		assert.Equal(t, messagesCount, gotMessages)
+	}
+
+	t.Run("the-best-way", func(t *testing.T) {
+		t.Parallel()
+
+		m := NewMailbox[any](OptStopAfterReceivingAll())
+		m.Start()
+		sendMessages(m)
+
+		// Stop has to be called in goroutine because Stop is blocking until
+		// actor (mailbox) has fully ended. And current thread of execution is needed
+		// to read data from mailbox.
+		go m.Stop()
+
+		assertGotAllMessages(m)
+	})
+
+	t.Run("suboptimal-way", func(t *testing.T) {
+		t.Parallel()
+
+		m := NewMailbox[any](OptStopAfterReceivingAll())
+		m.Start()
+		sendMessages(m)
+
+		// This time we start gorotune which will read all messages from mailbox instead of
+		// stopping in separate goroutine.
+		// There are no guaranees that this gorutine will finish after Stop is called, so
+		// it could be the case that this gorotuine has received all messages from mailbox,
+		// even before mailbox was stopped. Which wouldn't correctly assert this feature.
+		go assertGotAllMessages(m)
+
+		m.Stop()
 	})
 }
 

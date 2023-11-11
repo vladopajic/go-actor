@@ -102,9 +102,11 @@ linters-settings:
             - github.com/vladopajic/go-actor
   forbidigo:
       forbid:
-        - 'time.Sleep*(# Do not sleep)?'
+        - 'time\.Sleep*(# Do not sleep)?'
         - 'panic*(# Do not panic)?'
-        - 'os.Exit*(# Do not exit)?'
+        - 'os\.Exit*(# Do not exit)?'
+        - p: ^fmt\.Print*$
+          msg: Do not commit print statements.
   gomoddirectives:
     retract-allow-no-explanation: true
   maintidx:
