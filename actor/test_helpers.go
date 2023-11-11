@@ -1,7 +1,7 @@
 package actor
 
 import (
-	"math/rand"
+	"crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +34,7 @@ func AssertStartStopAtRandom(t *testing.T, a Actor) {
 	assert.NotNil(t, a)
 
 	for i := 0; i < 1000; i++ {
-		if rand.Int()%2 == 0 { //nolint:gosec // weak random is fine
+		if randInt32(t)%2 == 0 {
 			a.Start()
 		} else {
 			a.Stop()
@@ -65,4 +65,20 @@ func AssertWorkerEndSig(t *testing.T, aw any) {
 
 	status := w.DoWork(ContextEnded())
 	assert.Equal(t, WorkerEnd, status, "worker should end when context has ended")
+}
+
+func randInt32(t *testing.T) int32 {
+	t.Helper()
+
+	b := make([]byte, 4) //nolint:gomnd // 4 bytes = int32
+	_, err := rand.Read(b)
+	assert.NoError(t, err)
+
+	result := int32(0)
+	for i := 0; i < 4; i++ {
+		result <<= 8
+		result += int32(b[i])
+	}
+
+	return result
 }

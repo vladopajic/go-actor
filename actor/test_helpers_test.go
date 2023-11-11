@@ -3,6 +3,7 @@ package actor_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	. "github.com/vladopajic/go-actor/actor"
 )
 
@@ -30,4 +31,15 @@ func Test_AssertWorkerEndSig(t *testing.T) {
 
 	// Test when actor is not created with default constructor
 	AssertWorkerEndSig(t, Noop)
+}
+
+func Test_RandInt32(t *testing.T) {
+	t.Parallel()
+
+	v := make(map[int32]struct{})
+	for i := 0; i < 10000; i++ {
+		v[RandInt32(t)] = struct{}{}
+	}
+
+	assert.GreaterOrEqual(t, len(v), 1000) // should have at least 1000 unque elements
 }

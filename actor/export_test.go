@@ -1,5 +1,7 @@
 package actor
 
+import "testing"
+
 const (
 	MinQueueCapacity = minQueueCapacity
 )
@@ -56,4 +58,8 @@ func NewQueue[T any](capacity, minimum int) *queue[T] {
 
 func (q *queue[T]) Cap() int {
 	return q.q.Cap()
+}
+
+func RandInt32(t *testing.T) int32 {
+	return randInt32(t)
 }
