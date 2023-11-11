@@ -159,7 +159,6 @@ func (w *mailboxWorker[T]) OnStop() {
 	// close receiveC channel after all data from queue is received
 	if w.options.StopAfterReceivingAll {
 		for !w.queue.IsEmpty() {
-			fmt.Printf(".")
 			w.receiveC <- w.queue.PopFront()
 		}
 	}
