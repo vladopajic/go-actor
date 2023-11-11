@@ -54,6 +54,14 @@ func OptAsChan() MailboxOption {
 	}
 }
 
+// OptStopAfterReceivingAll will close ReceiveC channel of Mailbox
+// after all messages have been received from this channel.
+func OptStopAfterReceivingAll() MailboxOption {
+	return func(o *options) {
+		o.Mailbox.StopAfterReceivingAll = true
+	}
+}
+
 // OptStopTogether will stop all actors when any of combined
 // actors is stopped.
 func OptStopTogether() CombinedOption {
@@ -78,21 +86,26 @@ type (
 )
 
 type options struct {
-	Actor struct {
-		OnStartFunc func(Context)
-		OnStopFunc  func()
-	}
+	Actor    optionsActor
+	Combined optionsCombined
+	Mailbox  optionsMailbox
+}
 
-	Combined struct {
-		StopTogether bool
-		OnStopFunc   func()
-	}
+type optionsActor struct {
+	OnStartFunc func(Context)
+	OnStopFunc  func()
+}
 
-	Mailbox struct {
-		AsChan      bool
-		Capacity    int
-		MinCapacity int
-	}
+type optionsCombined struct {
+	StopTogether bool
+	OnStopFunc   func()
+}
+
+type optionsMailbox struct {
+	AsChan                bool
+	Capacity              int
+	MinCapacity           int
+	StopAfterReceivingAll bool
 }
 
 func newOptions[T ~func(o *options)](opts []T) options {

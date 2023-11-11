@@ -60,10 +60,10 @@ func NewMailboxes[T any](count int, opt ...MailboxOption) []Mailbox[T] {
 // will never block, all messages are going to be queued and Actors on
 // receiving end of the Mailbox will get all messages in FIFO order.
 func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
-	mOpts := newOptions(opt).Mailbox
+	options := newOptions(opt).Mailbox
 
-	if mOpts.AsChan {
-		c := make(chan T, mOpts.Capacity)
+	if options.AsChan {
+		c := make(chan T, options.Capacity)
 
 		return &mailbox[T]{
 			Actor:    Idle(OptOnStop(func() { close(c) })),
@@ -75,8 +75,7 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	var (
 		sendC    = make(chan T)
 		receiveC = make(chan T)
-		queue    = newQueue[T](mOpts.Capacity, mOpts.MinCapacity)
-		w        = newMailboxWorker(sendC, receiveC, queue)
+		w        = newMailboxWorker(sendC, receiveC, options)
 	)
 
 	return &mailbox[T]{
@@ -109,33 +108,40 @@ type mailboxWorker[T any] struct {
 	receiveC chan T
 	sendC    chan T
 	queue    *queue[T]
+	options  optionsMailbox
 }
 
 func newMailboxWorker[T any](
 	sendC,
 	receiveC chan T,
-	queue *queue[T],
+	options optionsMailbox,
 ) *mailboxWorker[T] {
+	queue := newQueue[T](options.Capacity, options.MinCapacity)
+
 	return &mailboxWorker[T]{
 		sendC:    sendC,
 		receiveC: receiveC,
 		queue:    queue,
+		options:  options,
 	}
 }
 
 func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
 	if w.queue.IsEmpty() {
 		select {
+		case <-c.Done():
+			return WorkerEnd
+
 		case value := <-w.sendC:
 			w.queue.PushBack(value)
 			return WorkerContinue
-
-		case <-c.Done():
-			return WorkerEnd
 		}
 	}
 
 	select {
+	case <-c.Done():
+		return WorkerEnd
+
 	case w.receiveC <- w.queue.Front():
 		w.queue.PopFront()
 		return WorkerContinue
@@ -143,13 +149,20 @@ func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
 	case value := <-w.sendC:
 		w.queue.PushBack(value)
 		return WorkerContinue
-
-	case <-c.Done():
-		return WorkerEnd
 	}
 }
 
 func (w *mailboxWorker[T]) OnStop() {
+	// close sendC to prevent anyone from writing to this mailbox
 	close(w.sendC)
+
+	// close receiveC channel after all data from queue is received
+	if w.options.StopAfterReceivingAll {
+		for !w.queue.IsEmpty() {
+			fmt.Printf(".")
+			w.receiveC <- w.queue.PopFront()
+		}
+	}
+
 	close(w.receiveC)
 }

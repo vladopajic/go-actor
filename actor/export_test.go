@@ -4,7 +4,10 @@ const (
 	MinQueueCapacity = minQueueCapacity
 )
 
-type ActorImpl = actor
+type (
+	ActorImpl      = actor
+	OptionsMailbox = optionsMailbox
+)
 
 func NewActorImpl(w Worker, opt ...Option) *ActorImpl {
 	a := New(w, opt...)
@@ -38,9 +41,13 @@ func NewZeroOptions() options {
 func NewMailboxWorker[T any](
 	sendC,
 	receiveC chan T,
-	queue *queue[T],
+	mOpts optionsMailbox,
 ) *mailboxWorker[T] {
-	return newMailboxWorker(sendC, receiveC, queue)
+	return newMailboxWorker(sendC, receiveC, mOpts)
+}
+
+func (w *mailboxWorker[T]) Queue() *queue[T] {
+	return w.queue
 }
 
 func NewQueue[T any](capacity, minimum int) *queue[T] {

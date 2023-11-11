@@ -82,13 +82,13 @@ func (w *worker) DoWork(c Context) WorkerStatus {
 func New(w Worker, opt ...Option) Actor {
 	return &actor{
 		worker:  w,
-		options: newOptions(opt),
+		options: newOptions(opt).Actor,
 	}
 }
 
 type actor struct {
 	worker            Worker
-	options           options
+	options           optionsActor
 	ctx               *context
 	workEndedSigC     chan struct{}
 	workerRunning     bool
@@ -152,7 +152,7 @@ func (a *actor) onStart() {
 		w.OnStart(a.ctx)
 	}
 
-	if fn := a.options.Actor.OnStartFunc; fn != nil {
+	if fn := a.options.OnStartFunc; fn != nil {
 		fn(a.ctx)
 	}
 }
@@ -162,7 +162,7 @@ func (a *actor) onStop() {
 		w.OnStop()
 	}
 
-	if fn := a.options.Actor.OnStopFunc; fn != nil {
+	if fn := a.options.OnStopFunc; fn != nil {
 		fn()
 	}
 }
