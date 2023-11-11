@@ -60,6 +60,6 @@ func (q *queue[T]) Cap() int {
 	return q.q.Cap()
 }
 
-func RandInt32(t *testing.T) int32 {
+func RandInt32(t *testing.T) int32 { //nolint:thelper // this is just export
 	return randInt32(t)
 }
