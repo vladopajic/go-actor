@@ -55,6 +55,8 @@ func NewMailboxes[T any](count int, opt ...MailboxOption) []Mailbox[T] {
 	return mm
 }
 
+const mbxChanBufferCap = 64
+
 // NewMailbox returns new local Mailbox implementation.
 // Mailbox is much like native go channel, except that writing to the Mailbox
 // will never block, all messages are going to be queued and Actors on
@@ -73,8 +75,8 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	}
 
 	var (
-		sendC    = make(chan T)
-		receiveC = make(chan T)
+		sendC    = make(chan T, mbxChanBufferCap)
+		receiveC = make(chan T, mbxChanBufferCap)
 		w        = newMailboxWorker(sendC, receiveC, options)
 	)
 
@@ -160,6 +162,10 @@ func (w *mailboxWorker[T]) OnStop() {
 	if w.options.StopAfterReceivingAll {
 		for !w.queue.IsEmpty() {
 			w.receiveC <- w.queue.PopFront()
+		}
+
+		for msg := range w.sendC {
+			w.receiveC <- msg
 		}
 	}
 
