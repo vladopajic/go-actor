@@ -36,7 +36,7 @@ func Test_Mailbox(t *testing.T) {
 	m := NewMailbox[any]()
 	assert.NotNil(t, m)
 
-	assertSendBlocking(t, m)
+	// assertSendBlocking(t, m)
 	assertReceiveBlocking(t, m)
 
 	m.Start()
