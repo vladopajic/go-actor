@@ -32,7 +32,7 @@ Without re-usable design principles codebase of complex system can become hard t
 `go-actor`'s base abstraction layer only has three interfaces:
 
 - `actor.Actor` is anything that implements `Start()` and `Stop()` methods. Actors created using `actor.New(actor.Worker)` function will create preferred actor implementation which will on start spawn dedicated goroutine to perform work of supplied `actor.Worker`.
-  - `actor.Worker` encapsulates actor's executable logic. This is the only interface which developers need to write in order to describe behavior of actors.
+- `actor.Worker` encapsulates actor's executable logic. This is the only interface which developers need to write in order to describe behavior of actors.
 - `actor.Mailbox` is an interface for message transport mechanisms between actors. Mailboxes are created using the `actor.NewMailbox(...)` function.
 
 
