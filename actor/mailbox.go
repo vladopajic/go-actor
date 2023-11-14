@@ -1,6 +1,10 @@
 package actor
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+	"sync/atomic"
+)
 
 // Mailbox is interface for message transport mechanism between Actors.
 type Mailbox[T any] interface {
@@ -67,7 +71,7 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	if options.AsChan {
 		c := make(chan T, options.Capacity)
 
-		return &mailbox[T]{
+		return &mailboxSync[T]{
 			Actor:    Idle(OptOnStop(func() { close(c) })),
 			sendC:    c,
 			receiveC: c,
@@ -75,30 +79,100 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	}
 
 	var (
-		sendC    = make(chan T, mbxChanBufferCap)
-		receiveC = make(chan T, mbxChanBufferCap)
-		w        = newMailboxWorker(sendC, receiveC, options)
+		sendC       = make(chan T, mbxChanBufferCap)
+		receiveC    = make(chan T, mbxChanBufferCap)
+		w           = newMailboxWorker(sendC, receiveC, options)
+		sendHandler = &atomic.Value{}
 	)
 
+	sendHandler.Store(creatPanicHandler[T]("could not send to Mailbox that was not started"))
+
 	return &mailbox[T]{
-		Actor:    New(w),
-		sendC:    sendC,
-		receiveC: receiveC,
+		actor:       New(w),
+		sendC:       sendC,
+		receiveC:    receiveC,
+		sendHandler: sendHandler,
 	}
 }
 
-type mailbox[T any] struct {
+type mailboxSync[T any] struct {
 	Actor
 	sendC    chan<- T
 	receiveC <-chan T
 }
 
-func (m *mailbox[T]) Send(ctx Context, msg T) error {
+func (m *mailboxSync[T]) Send(ctx Context, msg T) error {
 	select {
 	case m.sendC <- msg:
 		return nil
 	case <-ctx.Done():
 		return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
+	}
+}
+
+func (m *mailboxSync[T]) ReceiveC() <-chan T {
+	return m.receiveC
+}
+
+type sendHandler[T any] func(ctx Context, msg T) error
+
+type mailbox[T any] struct {
+	actor    Actor
+	sendC    chan<- T
+	receiveC <-chan T
+
+	running     bool
+	lock        sync.Mutex
+	sendHandler *atomic.Value
+}
+
+func (m *mailbox[T]) Start() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if m.running {
+		return
+	}
+
+	m.running = true
+	m.sendHandler.Store(createSendHandler(m.sendC))
+	m.actor.Start()
+}
+
+func (m *mailbox[T]) Stop() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if !m.running {
+		return
+	}
+
+	m.running = false
+	m.sendHandler.Store(
+		creatPanicHandler[T]("could not send to Mailbox after it has been stopped"),
+	)
+	m.actor.Stop()
+}
+
+func (m *mailbox[T]) Send(ctx Context, msg T) error {
+	h := m.sendHandler.Load().(sendHandler[T]) //nolint:forcetypeassert // relax
+	return h(ctx, msg)
+}
+
+func creatPanicHandler[T any](msg string) sendHandler[T] {
+	return func(_ Context, _ T) error {
+		panic(msg) //nolint:forbidigo // panic is intentional
+	}
+}
+
+func createSendHandler[T any](sendC chan<- T) sendHandler[T] {
+	return func(ctx Context, msg T) error {
+		select {
+		case sendC <- msg:
+			return nil
+		case <-ctx.Done():
+			return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
+		}
 	}
 }
 

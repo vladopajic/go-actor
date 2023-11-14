@@ -36,7 +36,7 @@ func Test_Mailbox(t *testing.T) {
 	m := NewMailbox[any]()
 	assert.NotNil(t, m)
 
-	// assertSendBlocking(t, m)
+	assertSendPanics(t, m)
 	assertReceiveBlocking(t, m)
 
 	m.Start()
@@ -247,12 +247,18 @@ func assertSendReceive(t *testing.T, m Mailbox[any], val any) {
 	assert.Equal(t, val, <-m.ReceiveC())
 }
 
-func assertMailboxChannelsClosed(t *testing.T, m Mailbox[any]) {
+func assertSendPanics(t *testing.T, m Mailbox[any]) {
 	t.Helper()
 
 	assert.Panics(t, func() {
 		m.Send(ContextStarted(), `👹`) //nolint:errcheck // this line panics
 	})
+}
+
+func assertMailboxChannelsClosed(t *testing.T, m Mailbox[any]) {
+	t.Helper()
+
+	assertSendPanics(t, m)
 
 	_, ok := <-m.ReceiveC()
 	assert.False(t, ok)
