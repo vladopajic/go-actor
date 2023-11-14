@@ -1,6 +1,7 @@
 package actor_test
 
 import (
+	"fmt"
 	"io"
 	"testing"
 )
@@ -27,3 +28,5 @@ type errReader struct{}
 func (r errReader) Read(b []byte) (int, error) {
 	return 0, io.ErrUnexpectedEOF
 }
+
+func tostr(v any) string { return fmt.Sprintf("%v", v) }

@@ -41,9 +41,9 @@ func Test_Mailbox(t *testing.T) {
 
 	m.Start()
 
-	// Send values via SendC() channel, then assert that values are received
+	// Send values via Send() method, then assert that values are received
 	// on ReceiveC() channel.
-	// It is important to first send all data to SendC() channel to simulate excessive
+	// It is important to first send all data to Send() method to simulate excessive
 	// incoming messages on this Mailbox.
 
 	for i := 0; i < sendMessagesCount; i++ {
@@ -61,6 +61,41 @@ func Test_Mailbox(t *testing.T) {
 
 	// After Mailbox is stopped assert that all channels are closed
 	assertMailboxChannelsClosed(t, m)
+}
+
+func Test_Mailbox_StartStop(t *testing.T) {
+	t.Parallel()
+
+	m := NewMailbox[any]()
+
+	m.Start()
+	m.Start()
+
+	assertSendReceive(t, m, `🌹`)
+
+	m.Stop()
+	m.Stop()
+
+	assertMailboxChannelsClosed(t, m)
+}
+
+func Test_Mailbox_SendWithEndedCtx(t *testing.T) {
+	t.Parallel()
+
+	m := NewMailbox[any]()
+
+	m.Start()
+	defer m.Stop()
+
+	// Assert that sending with canceled context will end with error.
+	// Since sendC has some buffer it is possible that some attempts will succeed.
+	for {
+		err := m.Send(ContextEnded(), `🌹`)
+		if err != nil {
+			assert.ErrorIs(t, err, ContextEnded().Err())
+			break
+		}
+	}
 }
 
 func Test_FromMailboxes(t *testing.T) {
@@ -179,6 +214,15 @@ func Test_MailboxOptAsChan(t *testing.T) {
 
 		assertMailboxChannelsClosed(t, m)
 	})
+
+	t.Run("send with canceld context", func(t *testing.T) {
+		t.Parallel()
+
+		m := NewMailbox[any](OptAsChan())
+
+		err := m.Send(ContextEnded(), `🌹`)
+		assert.ErrorIs(t, err, ContextEnded().Err())
+	})
 }
 
 // This test asserts that Mailbox will end only after all messages have been received.
@@ -191,7 +235,7 @@ func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
 		t.Helper()
 
 		for i := 0; i < messagesCount; i++ {
-			assert.NoError(t, m.Send(ContextStarted(), `🥥`))
+			assert.NoError(t, m.Send(ContextStarted(), `🥥`+tostr(i)))
 		}
 	}
 	assertGotAllMessages := func(m Mailbox[any]) {
@@ -200,7 +244,7 @@ func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
 		gotMessages := 0
 
 		for msg := range m.ReceiveC() {
-			assert.Equal(t, `🥥`, msg)
+			assert.Equal(t, `🥥`+tostr(gotMessages), msg)
 			gotMessages++
 		}
 
