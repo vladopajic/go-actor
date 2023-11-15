@@ -207,7 +207,11 @@ func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
 			return WorkerEnd
 
 		case value := <-w.sendC:
-			w.queue.PushBack(value)
+			if len(w.receiveC) < mbxChanBufferCap {
+				w.receiveC <- value
+			} else {
+				w.queue.PushBack(value)
+			}
 			return WorkerContinue
 		}
 	}
