@@ -212,6 +212,7 @@ func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
 			} else {
 				w.queue.PushBack(value)
 			}
+
 			return WorkerContinue
 		}
 	}
