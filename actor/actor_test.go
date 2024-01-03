@@ -126,11 +126,11 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 
 		a.OnStart()
 		assert.Equal(t, `🌞`, <-w.onStartC)
-		assert.Len(t, w.onStartC, 0)
+		assert.Empty(t, w.onStartC)
 
 		a.OnStop()
 		assert.Equal(t, `🌚`, <-w.onStopC)
-		assert.Len(t, w.onStopC, 0)
+		assert.Empty(t, w.onStopC)
 	}
 
 	{ // Assert that actor will call callbacks passed by options
@@ -140,12 +140,12 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 		go a.OnStart()
 		readySigC <- struct{}{}
 		assert.Equal(t, `🌞`, <-onStartC)
-		assert.Len(t, onStartC, 0)
+		assert.Empty(t, onStartC)
 
 		go a.OnStop()
 		readySigC <- struct{}{}
 		assert.Equal(t, `🌚`, <-onStopC)
-		assert.Len(t, onStopC, 0)
+		assert.Empty(t, onStopC)
 	}
 
 	{
@@ -157,24 +157,24 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 		go a.OnStart()
 
 		assert.Equal(t, `🌞`, <-w.onStartC)
-		assert.Len(t, w.onStartC, 0)
-		assert.Len(t, onStartC, 0)
+		assert.Empty(t, w.onStartC)
+		assert.Empty(t, onStartC)
 
 		readySigC <- struct{}{}
 		assert.Equal(t, `🌞`, <-onStartC)
-		assert.Len(t, w.onStartC, 0)
-		assert.Len(t, onStartC, 0)
+		assert.Empty(t, w.onStartC)
+		assert.Empty(t, onStartC)
 
 		go a.OnStop()
 
 		assert.Equal(t, `🌚`, <-w.onStopC)
-		assert.Len(t, w.onStopC, 0)
-		assert.Len(t, onStopC, 0)
+		assert.Empty(t, w.onStopC)
+		assert.Empty(t, onStopC)
 
 		readySigC <- struct{}{}
 		assert.Equal(t, `🌚`, <-onStopC)
-		assert.Len(t, w.onStopC, 0)
-		assert.Len(t, onStopC, 0)
+		assert.Empty(t, w.onStopC)
+		assert.Empty(t, onStopC)
 	}
 }
 
@@ -249,7 +249,7 @@ func Test_Actor_ContextEndedAfterStop(t *testing.T) {
 	a := New(w,
 		OptOnStart(func(c Context) {
 			assertContextStarted(t, c)
-			assert.True(t, c == w.ctx)
+			assert.Equal(t, c, w.ctx)
 		}),
 		OptOnStop(func() {
 			// When OnStop() is called assert that context has ended
@@ -299,13 +299,13 @@ func Test_Idle_Options(t *testing.T) {
 	assert.Equal(t, `🌞`, <-onStartC)
 	assertContextStarted(t, ctx)
 	a.Start() // Should have no effect
-	assert.Len(t, onStartC, 0)
+	assert.Empty(t, onStartC)
 
 	a.Stop()
 	assert.Equal(t, `🌚`, <-onStopC)
 	assertContextEnded(t, ctx)
 	a.Stop() // Should have no effect
-	assert.Len(t, onStopC, 0)
+	assert.Empty(t, onStopC)
 }
 
 func newWorker() *worker {

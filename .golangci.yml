@@ -30,6 +30,7 @@ linters:
     - funlen
     - gochecknoglobals
     - gochecknoinits
+    - gochecksumtype
     - gocognit
     - goconst
     - gocritic
@@ -62,6 +63,7 @@ linters:
     - nolintlint
     - nonamedreturns
     - paralleltest
+    - perfsprint
     - prealloc
     - predeclared
     - promlinter
@@ -71,6 +73,7 @@ linters:
     - stylecheck
     - tagliatelle
     - tenv
+    - testifylint
     - testpackage
     - thelper
     - tparallel
@@ -83,6 +86,8 @@ linters:
     - wsl
 
 linters-settings:
+  testifylint: 
+    enable-all: true
   depguard:
       rules:
         main:
@@ -134,6 +139,15 @@ issues:
       linters:
         - funlen        ## Function length is okay due to many tests cases
         - wrapcheck     ## No need to check wrapping errors in tests
+
+    - path: _test\.go   ## Enable dot-imports in tests
+      text: "dot-imports"
+      linters:
+        - revive
+    
+    - text: "require-error" ## Option to disable this error does not work
+      linters:
+        - testifylint
 
     - path: export_test\.go
       linters:

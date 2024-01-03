@@ -1,11 +1,11 @@
 GO ?= go
 GOBIN ?= $$($(GO) env GOPATH)/bin
 GOLANGCI_LINT ?= $(GOBIN)/golangci-lint
-GOLANGCI_LINT_VERSION ?= v1.54.2
+GOLANGCI_LINT_VERSION ?= v1.55.2
 TEST_COVERAGE ?= $(GOBIN)/go-test-coverage
 
 .PHONY: install-golangcilint
-get-golangcilint:
+install-golangcilint:
 	test -f $(GOLANGCI_LINT) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$($(GO) env GOPATH)/bin $(GOLANGCI_LINT_VERSION)
 
 # Runs lint on entire repo
