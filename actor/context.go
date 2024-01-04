@@ -14,7 +14,7 @@ type Context = gocontext.Context
 // ErrStopped is the error returned by Context.Err when the Actor is stopped.
 var ErrStopped = errors.New("actor stopped")
 
-//nolint:gochecknoglobals
+//nolint:gochecknoglobals // these are singleton values
 var (
 	contextStarted = newContext()
 

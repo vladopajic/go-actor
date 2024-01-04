@@ -3,11 +3,6 @@ run:
 
 linters:
   enable:
-    # - exhaustivestruct (too exhaustive)
-    # - gci
-    # - godot (too nit picking)
-    # - ireturn  (we like when function returns interface)
-    # - varnamelen  (we can handle this in code review step)
     - asasalint
     - asciicheck
     - bidichk
@@ -15,10 +10,11 @@ linters:
     - containedctx
     - contextcheck
     - cyclop
-    - depguard
+    - decorder
     - dogsled
     - dupl
     - durationcheck
+    - dupword
     - errcheck
     - errchkjson
     - errname
@@ -28,6 +24,7 @@ linters:
     - forbidigo
     - forcetypeassert
     - funlen
+    - gocheckcompilerdirectives
     - gochecknoglobals
     - gochecknoinits
     - gochecksumtype
@@ -48,11 +45,15 @@ linters:
     - gosec
     - gosimple
     - govet
+    - grouper
     - importas
+    - inamedparam
+    - interfacebloat
     - ineffassign
     - lll
+    - loggercheck
     - maintidx
-    - makezero
+    - mirror
     - misspell
     - nakedret
     - nestif
@@ -62,15 +63,20 @@ linters:
     - noctx
     - nolintlint
     - nonamedreturns
+    - nosprintfhostport
     - paralleltest
     - perfsprint
     - prealloc
     - predeclared
     - promlinter
+    - protogetter
     - reassign
     - revive
+    - sloglint
+    - sqlclosecheck
     - staticcheck
     - stylecheck
+    - tagalign
     - tagliatelle
     - tenv
     - testifylint
@@ -81,11 +87,26 @@ linters:
     - unconvert
     - unparam
     - unused
+    - usestdlibvars
+    - wastedassign 
     - whitespace
     - wrapcheck
     - wsl
+    - zerologlint
 
 linters-settings:
+  errcheck:
+    check-blank: true
+    disable-default-exclusions: true
+  errchkjson:
+    report-no-exported: true
+  dupl:
+    threshold: 120
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        yaml: kebab
   testifylint: 
     enable-all: true
   depguard:
@@ -112,8 +133,20 @@ linters-settings:
         - 'os\.Exit*(# Do not exit)?'
         - p: ^fmt\.Print*$
           msg: Do not commit print statements.
-  gomoddirectives:
-    retract-allow-no-explanation: true
+  funlen:
+    ignore-comments: true
+  gocognit:
+    min-complexity: 20
+  gocyclo:
+    min-complexity: 20
+  goconst:
+    numbers: true
+  grouper:
+    import-require-single-import: true
+  unparam:
+    check-exported: true
+  nolintlint:
+    require-explanation: true
   maintidx:
     under: 40
   misspell:
@@ -122,16 +155,18 @@ linters-settings:
     check-shadowing: true
     enable-all: true
     disable:
-      - fieldalignment
+     - fieldalignment
   lll:
-    line-length: 96
+    line-length: 100
     tab-width: 1
   nlreturn:
     block-size: 5
   goimports:
     local-prefixes: github.com/vladopajic/go-actor
+  tenv:
+    all: true
   wsl:
-    enforce-err-cuddling: true
+    force-err-cuddling: true
 
 issues:
   exclude-rules:

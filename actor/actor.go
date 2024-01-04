@@ -42,7 +42,7 @@ type Worker interface {
 }
 
 // WorkerFunc is signature of Worker's DoWork function.
-type WorkerFunc = func(c Context) WorkerStatus
+type WorkerFunc = func(ctx Context) WorkerStatus
 
 // StartableWorker defines optional interface which Worker can implement
 type StartableWorker interface {
@@ -52,7 +52,7 @@ type StartableWorker interface {
 	// Context is provided in case when Actor is stopped early and OnStop should terminated
 	// with initialization. This is same Context as one which will be provided to DoWork method
 	// in later stages of Worker lifecycle.
-	OnStart(Context)
+	OnStart(ctx Context)
 }
 
 // StoppableWorker defines optional interface which Worker can implement
@@ -74,8 +74,8 @@ type worker struct {
 	fn WorkerFunc
 }
 
-func (w *worker) DoWork(c Context) WorkerStatus {
-	return w.fn(c)
+func (w *worker) DoWork(ctx Context) WorkerStatus {
+	return w.fn(ctx)
 }
 
 // New returns new Actor with specified Worker and Options.
@@ -220,7 +220,7 @@ func Noop() Actor {
 	return noopActorInstance
 }
 
-//nolint:gochecknoglobals
+//nolint:gochecknoglobals // this is singleton values
 var noopActorInstance = &noopActor{}
 
 type noopActor struct{}
