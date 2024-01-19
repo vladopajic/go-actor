@@ -116,4 +116,20 @@ func testCombinedOptions(t *testing.T) {
 		assert.Empty(t, opts.Actor)
 		assert.Empty(t, opts.Mailbox)
 	}
+
+	{ // Assert that OnStartCombined will be set
+		opts := NewOptions(OptOnStartCombined(func(Context) {}))
+		assert.NotNil(t, opts.Combined.OnStartFunc)
+
+		assert.Empty(t, opts.Actor)
+		assert.Empty(t, opts.Mailbox)
+	}
+
+	{ // Assert that OnStopCombined will be set
+		opts := NewOptions(OptOnStopCombined(func() {}))
+		assert.NotNil(t, opts.Combined.OnStopFunc)
+
+		assert.Empty(t, opts.Actor)
+		assert.Empty(t, opts.Mailbox)
+	}
 }

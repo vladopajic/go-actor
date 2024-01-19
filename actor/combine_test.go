@@ -75,16 +75,17 @@ func Test_Combine_OptStopTogether(t *testing.T) {
 	}
 }
 
-func Test_Combine_OptOnStop(t *testing.T) {
+func Test_Combine_OptOnStopOptOnStart(t *testing.T) {
 	t.Parallel()
 
 	const actorsCount = 5
 
+	onStatC, onStartOpt := createCombinedOnStartOption(t, 1)
 	onStopC, onStopOpt := createCombinedOnStopOption(t, 1)
 	actors := createActors(actorsCount)
 
 	a := Combine(actors...).
-		WithOptions(onStopOpt).
+		WithOptions(onStopOpt, onStartOpt).
 		Build()
 
 	a.Start()
@@ -94,6 +95,7 @@ func Test_Combine_OptOnStop(t *testing.T) {
 	a.Stop() // should have no effect
 	a.Stop() // should have no effect
 	assert.Equal(t, `🌚`, <-onStopC)
+	assert.Equal(t, `🌞`, <-onStatC)
 }
 
 func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
@@ -143,14 +145,29 @@ func createActor(i int, opts ...Option) Actor {
 func createCombinedOnStopOption(t *testing.T, count int) (<-chan any, CombinedOption) {
 	t.Helper()
 
-	onStopC := make(chan any, count)
-	onStopFunc := func() {
+	c := make(chan any, count)
+	fn := func() {
 		select {
-		case onStopC <- `🌚`:
+		case c <- `🌚`:
 		default:
 			t.Fatal("onStopFunc should be called only once")
 		}
 	}
 
-	return onStopC, OptOnStopCombined(onStopFunc)
+	return c, OptOnStopCombined(fn)
+}
+
+func createCombinedOnStartOption(t *testing.T, count int) (<-chan any, CombinedOption) {
+	t.Helper()
+
+	c := make(chan any, count)
+	fn := func(_ Context) {
+		select {
+		case c <- `🌞`:
+		default:
+			t.Fatal("onStart should be called only once")
+		}
+	}
+
+	return c, OptOnStartCombined(fn)
 }
