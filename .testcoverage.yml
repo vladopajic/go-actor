@@ -4,6 +4,4 @@
 profile: cover.out
 local-prefix: "github.com/vladopajic/go-actor"
 threshold:
-  file: 100
-  package: 100
   total: 100

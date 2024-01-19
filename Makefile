@@ -28,8 +28,20 @@ tidy:
 install-go-test-coverage:
 	go install github.com/vladopajic/go-test-coverage/v2@latest
 
-# Check test coverage
-.PHONY: check-coverage
-check-coverage: install-go-test-coverage
+
+# Generates test coverage profile
+.PHONY: generate-coverage
+generate-coverage:
 	go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+
+# Runs test coverage check
+.PHONY: check-coverage
+check-coverage: generate-coverage
+check-coverage: install-go-test-coverage
 	$(TEST_COVERAGE) -config=./.testcoverage.yml
+
+# View coverage profile
+.PHONY: view-coverage
+view-coverage: generate-coverage
+	go tool cover -html=cover.out -o=cover.html
+	xdg-open cover.html
