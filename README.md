@@ -45,29 +45,29 @@ Dive into [examples](https://github.com/vladopajic/go-actor-examples) to see `go
 // Producer will create incremented number on every 1 second interval and
 // consumer will print whatever number it receives.
 func main() {
-	mailbox := actor.NewMailbox[int]()
+	mbx := actor.NewMailbox[int]()
 
 	// Produce and consume workers are created with same mailbox
 	// so that produce worker can send messages directly to consume worker
-	pw := &produceWorker{mailbox: mailbox}
-	cw1 := &consumeWorker{mailbox: mailbox, id: 1}
+	p := actor.New(&producerWorker{mailbox: mbx})
+	c1 := actor.New(&consumerWorker{mailbox: mbx, id: 1})
 
 	// Note: Example creates two consumers for the sake of demonstration
 	// since having one or more consumers will produce the same result. 
 	// Message on stdout will be written by first consumer that reads from mailbox.
-	cw2 := &consumeWorker{mailbox: mailbox, id: 2}
+	c2 := actor.New(&consumerWorker{mailbox: mbx, id: 2})
 
-	// Create actors using these workers and combine them to singe actor
-	a := actor.Combine(
-		mailbox,
-		actor.New(pw),
-		actor.New(cw1),
-		actor.New(cw2),
-	).Build()
-
-	// Finally all actors are started and stopped at once
+	// Combine all actors to singe actor so we can start and stop all at once
+	a := actor.Combine(mbx, p, c1, c2).Build()
 	a.Start()
 	defer a.Stop()
+	
+	// Stdout output:
+	// consumed 1      (worker 1)
+	// consumed 2      (worker 2)
+	// consumed 3      (worker 1)
+	// consumed 4      (worker 2)
+	// ...
 
 	select {}
 }
@@ -129,3 +129,6 @@ Design decisions are documented [here](./docs/design_decisions.md).
 All contributions are useful, whether it is a simple typo, a more complex change, or just pointing out an issue. We welcome any contribution so feel free to open PR or issue. 
 
 Continue reading [here](./docs/contributing.md).
+
+
+Happy coding 🌞
