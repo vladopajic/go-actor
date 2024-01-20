@@ -26,6 +26,7 @@ func (b *CombineBuilder) Build() Actor {
 	a := &combinedActor{
 		actors:       b.actors,
 		onStopFunc:   b.options.Combined.OnStopFunc,
+		onStartFunc:  b.options.Combined.OnStartFunc,
 		stopTogether: b.options.Combined.StopTogether,
 		stopping:     &atomic.Bool{},
 	}
@@ -44,8 +45,10 @@ func (b *CombineBuilder) WithOptions(opt ...CombinedOption) *CombineBuilder {
 type combinedActor struct {
 	actors       []Actor
 	onStopFunc   func()
+	onStartFunc  func(Context)
 	stopTogether bool
 
+	ctx          *context
 	runningCount atomic.Int32
 	running      bool
 	runningLock  sync.Mutex
@@ -70,6 +73,11 @@ func (a *combinedActor) onActorStopped() {
 	if a.stopTogether && a.stopping.CompareAndSwap(false, true) {
 		// Run stop in goroutine because wrapped actor
 		// should not wait for other actors to stop.
+		//
+		// Also if a.Stop() is called from same gorutine it would
+		// be recoursive call without exit condition. Therfore
+		// it is need to call a.Stop() from other goroutine,
+		// regardless of first invariant.
 		go a.Stop()
 	}
 }
@@ -80,6 +88,12 @@ func (a *combinedActor) Stop() {
 	if !a.running {
 		a.runningLock.Unlock()
 		return
+	}
+
+	if ctx := a.ctx; ctx != nil {
+		ctx.end()
+
+		a.ctx = nil
 	}
 
 	a.running = false
@@ -98,10 +112,17 @@ func (a *combinedActor) Start() {
 		return
 	}
 
+	ctx := newContext()
+	a.ctx = ctx
+
 	a.stopping.Store(false)
 	a.running = true
 
 	a.runningLock.Unlock()
+
+	if fn := a.onStartFunc; fn != nil {
+		fn(ctx)
+	}
 
 	for _, actor := range a.actors {
 		a.runningCount.Add(1)
