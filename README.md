@@ -116,9 +116,11 @@ func (w *consumeWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 - [super](https://github.com/vladopajic/go-super-actor) is addon abstraction which aims to unify testing of actor's and worker's business logic.
 - [commence](https://github.com/vladopajic/go-actor-commence) is addon which gives mechanism for waiting on actors execution to commence.
 
-## Best practices
+## Pro tips
 
 To enhance the code quality of projects that heavily rely on the actor model and utilize the `go-actor` library, it's recommended to adhere to [best practices](./docs/best_practices.md).
+
+Reading about [common hurdles](./docs/common_hurdles.md), where the most frequent issues are documented, is also advisable.
 
 ## Design decisions
 
