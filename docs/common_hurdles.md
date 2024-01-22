@@ -24,8 +24,8 @@ func (w *consumeWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 
 		return actor.WorkerContinue
     
-    default:  // <----------------------- warning: this worker will never block! default case is undesirable!
-        return actor.WorkerContinue
+	default:  // <----------------------- warning: this worker will never block! default case is undesirable!
+		return actor.WorkerContinue
 	}
 }
 ```
