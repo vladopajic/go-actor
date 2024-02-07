@@ -53,7 +53,7 @@ func Test_Combine_OptStopTogether(t *testing.T) {
 
 	const actorsCount = 5 * 2
 
-	for i := 0; i < actorsCount/2+1; i++ {
+	for i := range actorsCount/2 + 1 {
 		onStartC := make(chan any, actorsCount)
 		onStopC := make(chan any, actorsCount)
 		onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
@@ -103,7 +103,7 @@ func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
 
 	const actorsCount = 5 * 2
 
-	for i := 0; i < actorsCount/2+1; i++ {
+	for i := range actorsCount/2 + 1 {
 		onStopC, onStopOpt := createCombinedOnStopOption(t, 2)
 		actors := createActors(actorsCount / 2)
 
@@ -127,7 +127,7 @@ func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
 func createActors(count int, opts ...Option) []Actor {
 	actors := make([]Actor, count)
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		actors[i] = createActor(i, opts...)
 	}
 

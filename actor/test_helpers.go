@@ -35,7 +35,7 @@ func AssertStartStopAtRandom(tb testing.TB, a Actor) {
 		return
 	}
 
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		if randInt32(tb)%2 == 0 {
 			a.Start()
 		} else {
@@ -94,7 +94,7 @@ func randInt32WithReader(tb testing.TB, randReader io.Reader) int32 {
 	}
 
 	result := int32(0)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		result <<= 8
 		result += int32(b[i])
 	}

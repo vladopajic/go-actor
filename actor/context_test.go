@@ -36,7 +36,7 @@ func Test_Context_Stopping(t *testing.T) {
 func Test_Context_NewInstance(t *testing.T) {
 	t.Parallel()
 
-	assert.NotSame(t, NewContext(), NewContext())
+	assert.NotSame(t, NewContext(), NewContext()) //nolint:testifylint // relax
 }
 
 func Test_Context_ContextStarted(t *testing.T) {
@@ -45,7 +45,7 @@ func Test_Context_ContextStarted(t *testing.T) {
 	assertContextStarted(t, ContextStarted())
 	assertContextStringer(t, ContextStarted())
 	assertNoDeadline(t, ContextStarted())
-	assert.Same(t, ContextStarted(), ContextStarted())
+	assert.Same(t, ContextStarted(), ContextStarted()) //nolint:testifylint // relax
 }
 
 func Test_Context_ContextEnded(t *testing.T) {
@@ -54,7 +54,7 @@ func Test_Context_ContextEnded(t *testing.T) {
 	assertContextEnded(t, ContextEnded())
 	assertContextStringer(t, ContextEnded())
 	assertNoDeadline(t, ContextStarted())
-	assert.Same(t, ContextEnded(), ContextEnded())
+	assert.Same(t, ContextEnded(), ContextEnded()) //nolint:testifylint // relax
 }
 
 func Test_Context_Value(t *testing.T) {
@@ -63,6 +63,7 @@ func Test_Context_Value(t *testing.T) {
 	assertNoValue(t, func() Context {
 		endedCtx := NewContext()
 		endedCtx.End()
+
 		return endedCtx
 	}())
 	assertNoValue(t, NewContext())

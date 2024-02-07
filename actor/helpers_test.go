@@ -7,7 +7,7 @@ import (
 )
 
 func drainC(c <-chan any, count int) {
-	for i := 0; i < count; i++ {
+	for range count {
 		<-c
 	}
 }

@@ -26,7 +26,7 @@ func Test_NewWorker(t *testing.T) {
 	w := NewWorker(workerFunc)
 	assert.NotNil(t, w)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		assert.Equal(t, WorkerContinue, w.DoWork(ctx))
 		assert.Equal(t, `🛠️`, <-workC)
 	}
@@ -57,7 +57,7 @@ func Test_Actor_Restart(t *testing.T) {
 	w := newWorker()
 	a := New(w)
 
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		a.Start()
 
 		assertDoWork(t, w.doWorkC, i*workIterationsPerAssert)
@@ -85,14 +85,14 @@ func Test_Actor_MultipleStartStop(t *testing.T) {
 	)
 
 	// Calling Start() multiple times should have same effect as calling it once
-	for i := 0; i < count; i++ {
+	for range count {
 		a.Start()
 	}
 
 	assertDoWork(t, w.doWorkC, 0)
 
 	// Calling Stop() multiple times should have same effect as calling it once
-	for i := 0; i < count; i++ {
+	for range count {
 		a.Stop()
 	}
 
@@ -139,11 +139,13 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 
 		go a.OnStart()
 		readySigC <- struct{}{}
+
 		assert.Equal(t, `🌞`, <-onStartC)
 		assert.Empty(t, onStartC)
 
 		go a.OnStop()
 		readySigC <- struct{}{}
+
 		assert.Equal(t, `🌚`, <-onStopC)
 		assert.Empty(t, onStopC)
 	}
@@ -161,6 +163,7 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 		assert.Empty(t, onStartC)
 
 		readySigC <- struct{}{}
+
 		assert.Equal(t, `🌞`, <-onStartC)
 		assert.Empty(t, w.onStartC)
 		assert.Empty(t, onStartC)
@@ -172,6 +175,7 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 		assert.Empty(t, onStopC)
 
 		readySigC <- struct{}{}
+
 		assert.Equal(t, `🌚`, <-onStopC)
 		assert.Empty(t, w.onStopC)
 		assert.Empty(t, onStopC)
@@ -207,6 +211,7 @@ func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
 			}
 
 			p <- workIteration
+
 			workIteration++
 
 			return WorkerContinue
@@ -341,6 +346,7 @@ func (w *worker) DoWork(c Context) WorkerStatus {
 		}
 
 		p <- w.workIteration
+
 		w.workIteration++
 
 		return WorkerContinue

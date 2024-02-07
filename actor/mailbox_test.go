@@ -46,11 +46,11 @@ func Test_Mailbox(t *testing.T) {
 	// It is important to first send all data to Send() method to simulate excessive
 	// incoming messages on this Mailbox.
 
-	for i := 0; i < sendMessagesCount; i++ {
+	for i := range sendMessagesCount {
 		assert.NoError(t, m.Send(ContextStarted(), i))
 	}
 
-	for i := 0; i < sendMessagesCount; i++ {
+	for i := range sendMessagesCount {
 		assert.Equal(t, <-m.ReceiveC(), i)
 	}
 
@@ -149,7 +149,7 @@ func Test_FanOut(t *testing.T) {
 
 	// Produce data on inMbx
 	go func() {
-		for i := 0; i < sendMessagesCount; i++ {
+		for i := range sendMessagesCount {
 			assert.NoError(t, inMbx.Send(ContextStarted(), i))
 		}
 	}()
@@ -157,9 +157,10 @@ func Test_FanOut(t *testing.T) {
 	// Assert that correct data is received by fanMbxx
 	for _, m := range fanMbxx {
 		go func(m Mailbox[any]) {
-			for i := 0; i < sendMessagesCount; i++ {
+			for i := range sendMessagesCount {
 				assert.Equal(t, i, <-m.ReceiveC())
 			}
+
 			wg.Done()
 		}(m)
 	}
@@ -234,7 +235,7 @@ func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
 	sendMessages := func(m Mailbox[any]) {
 		t.Helper()
 
-		for i := 0; i < messagesCount; i++ {
+		for i := range messagesCount {
 			assert.NoError(t, m.Send(ContextStarted(), `🥥`+tostr(i)))
 		}
 	}
@@ -245,6 +246,7 @@ func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
 
 		for msg := range m.ReceiveC() {
 			assert.Equal(t, `🥥`+tostr(gotMessages), msg)
+
 			gotMessages++
 		}
 
@@ -328,7 +330,7 @@ func assertSendBlocking(t *testing.T, m Mailbox[any]) {
 	go func() {
 		err := m.Send(ctx, `🌹`)
 		if err == nil {
-			assert.FailNow(t, "should not be able to send")
+			assert.FailNow(t, "should not be able to send") //nolint:testifylint // relax
 		}
 
 		close(testDoneSigC)
