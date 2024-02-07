@@ -63,7 +63,7 @@ func Test_RandInt32WithReader(t *testing.T) {
 	t.Parallel()
 
 	v := make(map[int32]struct{})
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		v[RandInt32WithReader(t, rand.Reader)] = struct{}{}
 	}
 
