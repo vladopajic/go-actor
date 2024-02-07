@@ -160,6 +160,7 @@ func Test_FanOut(t *testing.T) {
 			for i := range sendMessagesCount {
 				assert.Equal(t, i, <-m.ReceiveC())
 			}
+
 			wg.Done()
 		}(m)
 	}
@@ -245,6 +246,7 @@ func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
 
 		for msg := range m.ReceiveC() {
 			assert.Equal(t, `🥥`+tostr(gotMessages), msg)
+
 			gotMessages++
 		}
 
@@ -328,7 +330,7 @@ func assertSendBlocking(t *testing.T, m Mailbox[any]) {
 	go func() {
 		err := m.Send(ctx, `🌹`)
 		if err == nil {
-			assert.FailNow(t, "should not be able to send")
+			assert.FailNow(t, "should not be able to send") //nolint:testifylint // relax
 		}
 
 		close(testDoneSigC)

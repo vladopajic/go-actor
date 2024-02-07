@@ -139,11 +139,13 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 
 		go a.OnStart()
 		readySigC <- struct{}{}
+
 		assert.Equal(t, `🌞`, <-onStartC)
 		assert.Empty(t, onStartC)
 
 		go a.OnStop()
 		readySigC <- struct{}{}
+
 		assert.Equal(t, `🌚`, <-onStopC)
 		assert.Empty(t, onStopC)
 	}
@@ -161,6 +163,7 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 		assert.Empty(t, onStartC)
 
 		readySigC <- struct{}{}
+
 		assert.Equal(t, `🌞`, <-onStartC)
 		assert.Empty(t, w.onStartC)
 		assert.Empty(t, onStartC)
@@ -172,6 +175,7 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 		assert.Empty(t, onStopC)
 
 		readySigC <- struct{}{}
+
 		assert.Equal(t, `🌚`, <-onStopC)
 		assert.Empty(t, w.onStopC)
 		assert.Empty(t, onStopC)
@@ -207,6 +211,7 @@ func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
 			}
 
 			p <- workIteration
+
 			workIteration++
 
 			return WorkerContinue
@@ -341,6 +346,7 @@ func (w *worker) DoWork(c Context) WorkerStatus {
 		}
 
 		p <- w.workIteration
+
 		w.workIteration++
 
 		return WorkerContinue
