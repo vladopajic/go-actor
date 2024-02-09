@@ -6,7 +6,7 @@ To enhance the code quality of projects that heavily rely on the actor model and
 
 Projects that fully relay on actor model and `go-actor` library shouldn't use any synchronization primitives from `sync` package. Therefore repositories based on `go-actor` could add linter that will warn them if `sync` package is used, eg:
 
-```
+```yml
 linters-settings:
   forbidigo:
       forbid:
@@ -23,7 +23,7 @@ While the general rule is to avoid `sync` package usage in actor-based code, the
 
 Workers should always respond to `Context.Done()` channel and return `actor.WorkerEnd` status in order to end it's actor. As a rule of thumb it's advised to always list this case first since it should be included in every `select` statement.
 
-```
+```go
 func (w *worker) DoWork(ctx actor.Context) actor.WorkerStatus {
 	select {
 	case <-ctx.Done():
