@@ -74,8 +74,8 @@ func NewFooActor() *fooActor {
 
 	return &fooActor{
 		mbx: 	mbx,
-		Actor: 	actor.Combine(mbx, a1, a2).Build()  // <------- combine all actors to single actor and initialize embeded actor of fooActor struct.
-	}												//			when calling fooActor.Start() it will start all actors at once.
+		Actor: 	actor.Combine(mbx, a1, a2).Build()	// combine all actors to single actor and initialize embeded actor of fooActor struct.
+	}							// when calling fooActor.Start() it will start all actors at once.
 }
 
 func (f *fooActor) OnMessage(ctx context.Context, msg any) error {
