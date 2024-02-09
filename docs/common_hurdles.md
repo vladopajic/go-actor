@@ -25,12 +25,12 @@ func NewFooActor() *fooActor {
 	}
 }
 
-func(f *fooActor) Start() { // <--- warning: calling fooActor.Start() will override fooActor.Actor.Start() method.
-	...  					//		therfore calling this method will not execute worker that was itended
-}							//		to be excuted with fooActor.
-							//		if this method is necessery then make sure to call `f.Actor.Start()` manually here.
+func(f *fooActor) Start() {	//  warning: calling fooActor.Start() will override fooActor.Actor.Start() method.
+	...  		    	//  therfore calling this method will not execute worker that was itended
+}				//  to be excuted with fooActor.
+				//  if this method is necessery then make sure to call `f.Actor.Start()` manually here.
 
-func(f *fooActor) Stop() { // <---- similar problem as described above.
+func(f *fooActor) Stop() { 	//  similar problem as described above.
 	...
 }
 
