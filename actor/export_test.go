@@ -55,8 +55,8 @@ func (w *mailboxWorker[T]) Queue() *queue[T] {
 	return w.queue
 }
 
-func NewQueue[T any](capacity, minimum int) *queue[T] {
-	return newQueue[T](capacity, minimum)
+func NewQueue[T any](capacity int) *queue[T] {
+	return newQueue[T](capacity)
 }
 
 func (q *queue[T]) Cap() int {

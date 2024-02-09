@@ -56,34 +56,6 @@ func testMailboxOptions(t *testing.T) {
 	{ // Assert that OptCapacity will be set
 		opts := NewOptions(OptCapacity(16))
 		assert.Equal(t, 16, opts.Mailbox.Capacity)
-		assert.Equal(t, 0, opts.Mailbox.MinCapacity)
-
-		assert.Empty(t, opts.Actor)
-		assert.Empty(t, opts.Combined)
-	}
-
-	{ // Assert that OptMinCapacity will be set
-		opts := NewOptions(OptMinCapacity(32))
-		assert.Equal(t, 0, opts.Mailbox.Capacity)
-		assert.Equal(t, 32, opts.Mailbox.MinCapacity)
-
-		assert.Empty(t, opts.Actor)
-		assert.Empty(t, opts.Combined)
-	}
-
-	{ // Assert that OptCapacity and OptMinCapacity will be set
-		opts := NewOptions(OptCapacity(16), OptMinCapacity(32))
-		assert.Equal(t, 16, opts.Mailbox.Capacity)
-		assert.Equal(t, 32, opts.Mailbox.MinCapacity)
-
-		assert.Empty(t, opts.Actor)
-		assert.Empty(t, opts.Combined)
-	}
-
-	{ // Assert that OptCapacity and OptMinCapacity will be set
-		opts := NewOptions(OptMailbox(16, 32))
-		assert.Equal(t, 16, opts.Mailbox.Capacity)
-		assert.Equal(t, 32, opts.Mailbox.MinCapacity)
 
 		assert.Empty(t, opts.Actor)
 		assert.Empty(t, opts.Combined)

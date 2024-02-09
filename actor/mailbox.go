@@ -59,12 +59,17 @@ func NewMailboxes[T any](count int, opt ...MailboxOption) []Mailbox[T] {
 	return mm
 }
 
-const mbxChanBufferCap = 64
+const (
+	mbxChanBufferCap = 64
+	minQueueCapacity = mbxChanBufferCap
+)
 
 // NewMailbox returns new local Mailbox implementation.
-// Mailbox is much like native go channel, except that writing to the Mailbox
-// will never block, all messages are going to be queued and Actors on
-// receiving end of the Mailbox will get all messages in FIFO order.
+//
+// Default Mailbox closely resembles a native Go channel, with the key distinction that
+// writing to the Mailbox will never cause blocking, and all messages are queued without
+// limitations. Mailbox can also behave exactly the same as native Go channel when option
+// `OptAsChan` is used.
 func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	options := newOptions(opt).Mailbox
 
@@ -190,7 +195,7 @@ func newMailboxWorker[T any](
 	receiveC chan T,
 	options optionsMailbox,
 ) *mailboxWorker[T] {
-	queue := newQueue[T](options.Capacity, options.MinCapacity)
+	queue := newQueue[T](options.Capacity)
 
 	return &mailboxWorker[T]{
 		sendC:    sendC,

@@ -50,8 +50,8 @@ type StartableWorker interface {
 	// initialize Worker as it will be called only once.
 	//
 	// Context is provided in case when Actor is stopped early and OnStop should terminated
-	// with initialization. This is same Context as one which will be provided to DoWork method
-	// in later stages of Worker lifecycle.
+	// with initialization. This is same Context as one which will be provided to DoWork
+	// method in later stages of Worker lifecycle.
 	OnStart(ctx Context)
 }
 

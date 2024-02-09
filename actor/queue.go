@@ -4,9 +4,8 @@ import (
 	queueImpl "github.com/gammazero/deque"
 )
 
-const minQueueCapacity = 64
-
-func newQueue[T any](capacity, minimum int) *queue[T] {
+func newQueue[T any](capacity int) *queue[T] {
+	minimum := capacity
 	if minimum < minQueueCapacity {
 		minimum = minQueueCapacity
 	}
