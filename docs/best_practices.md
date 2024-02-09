@@ -24,18 +24,66 @@ While the general rule is to avoid `sync` package usage in actor-based code, the
 Workers should always respond to `Context.Done()` channel and return `actor.WorkerEnd` status in order to end it's actor. As a rule of thumb it's advised to always list this case first since it should be included in every `select` statement.
 
 ```go
-func (w *worker) DoWork(ctx actor.Context) actor.WorkerStatus {
+func (w *fooWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 	select {
-	case <-ctx.Done():
+	case <-ctx.Done(): // <----------------------- handle ctx.Done() first
 		return actor.WorkerEnd
-	case <-w.fooMbx.ReceiveC():
-		handleFoo()
-	case <-w.barMbx.ReceiveC():
-		handleBar()
+
+	case msg := <-w.mbx.ReceiveC():
+		handleFoo(msg)
 	}
 }
 ```
- 
+
+## Check channel closed indicator in `DoWork`
+
+Every case statement in `DoWork` should handle case when channel is closed. In these cases worker should end execution; or it can perform any other logic that is necessery.
+
+```go
+func (w *fooWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
+	select {
+	case <-ctx.Done():
+		return actor.WorkerEnd
+
+	case msg, ok := <-w.mbx.ReceiveC():
+		if !ok { // <----------------------- handle channel close (mailbox stop) case
+			return actor.WorkerEnd
+		}
+
+		handleFoo(msg)
+	}
+}
+```
+
+## Combine multiple actors to singe actor
+
+`actor.Combine(...)` is vary handy to combine multiple actors to single actor.
+
+```go
+type fooActor struct {
+	actor.Actor
+	mbx actor.Mailbox[any]
+	...
+}
+
+func NewFooActor() *fooActor {
+	mbx := actor.NewMailbox[any]()
+	
+	a1 := actor.New(&fooWorker{mbx: mbx})
+	a2 := actor.New(&fooWorker{mbx: mbx})
+
+	return &fooActor{
+		mbx: 	mbx,
+		Actor: 	actor.Combine(mbx, a1, a2).Build()  // <------- combine all actors to single actor and initialize embeded actor of fooActor struct.
+	}												//			when calling fooActor.Start() it will start all actors at once.
+}
+
+func (f *fooActor) OnMessage(ctx context.Context, msg any) error {
+	return f.mbx.Send(ctx, msg)
+}
+
+```
+
 ---
 
-`// page is not yet complete`
+This page is not yet complete.

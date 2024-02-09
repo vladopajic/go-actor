@@ -8,6 +8,34 @@ One of the most common hurdles is the case where actors are not started. This is
 
 Never forget that `actor.Mailbox` is also an actor, and it needs to be started.
 
+**Embeded Actor interface is overriden**
+
+When embeding `actor.Actor` interface make sure not to override methods of this interface in structre that has embeded it. Otherwise make sure to call embeded actor's Start() and Stop() methods. 
+
+```go
+type fooActor struct {
+	actor.Actor
+	...
+}
+
+func NewFooActor() *fooActor {
+	return &fooActor{
+		Actor: actor.New(&fooWorker{...})
+		...
+	}
+}
+
+func(f *fooActor) Start() { // <--- warning: calling fooActor.Start() will override fooActor.Actor.Start() method.
+	...  					//		therfore calling this method will not execute worker that was itended
+}							//		to be excuted with fooActor.
+							//		if this method is necessery then make sure to call `f.Actor.Start()` manually here.
+
+func(f *fooActor) Stop() { // <---- similar problem as described above.
+	...
+}
+
+```
+
 ## Default case is undesirable
 
 Workers should always block when there isn't anything to work on; therefore, their `select` statements shouldn't have a `default` case. If workers do not block, they will simply waste computation cycles.
@@ -32,4 +60,4 @@ func (w *consumeWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 
 ---
 
-// Your contribution is valuable; if you have encountered any challenges, please share your experiences.
+Your contribution is valuable; if you have encountered any challenges, please share your experiences.
