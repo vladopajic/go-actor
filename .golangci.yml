@@ -157,7 +157,7 @@ linters-settings:
     disable:
      - fieldalignment
   lll:
-    line-length: 100
+    line-length: 90
     tab-width: 1
   nlreturn:
     block-size: 5

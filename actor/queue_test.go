@@ -11,7 +11,7 @@ import (
 func TestQueue_Basic(t *testing.T) {
 	t.Parallel()
 
-	q := NewQueue[int](0, 0)
+	q := NewQueue[int](0)
 
 	assert.Equal(t, 0, q.Cap())
 	assert.Equal(t, 0, q.Len())
@@ -53,8 +53,8 @@ func TestQueue_Cap(t *testing.T) {
 	t.Parallel()
 
 	{
-		q := NewQueue[any](0, 10)
-		assert.Equal(t, 0, q.Cap())
+		q := NewQueue[any](10)
+		assert.Equal(t, MinQueueCapacity, q.Cap())
 		assert.Equal(t, 0, q.Len())
 
 		q.PushBack(`🌊`)
@@ -64,20 +64,14 @@ func TestQueue_Cap(t *testing.T) {
 	}
 
 	{
-		q := NewQueue[any](10, 10)
+		q := NewQueue[any](10)
 		assert.Equal(t, MinQueueCapacity, q.Cap())
 		assert.Equal(t, 0, q.Len())
 	}
 
 	{
-		q := NewQueue[int](MinQueueCapacity*2, 10)
+		q := NewQueue[any](MinQueueCapacity * 2)
 		assert.Equal(t, MinQueueCapacity*2, q.Cap())
-		assert.Equal(t, 0, q.Len())
-	}
-
-	{
-		q := NewQueue[any](0, MinQueueCapacity*2)
-		assert.Equal(t, 0, q.Cap())
 		assert.Equal(t, 0, q.Len())
 
 		q.PushBack(`🌊`)

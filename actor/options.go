@@ -22,32 +22,16 @@ func OptOnStop(f func()) Option {
 	}
 }
 
-// OptCapacity sets initial Mailbox queue capacity.
-// Value must be power of 2.
+// OptCapacity sets Mailbox queue capacity.
+// When `OptAsChan` is used together with `OptCapacity` capacity value
+// will set be set to underlaying channel.
 func OptCapacity(capacity int) MailboxOption {
 	return func(o *options) {
 		o.Mailbox.Capacity = capacity
 	}
 }
 
-// OptMinCapacity sets minimum Mailbox queue capacity.
-// Value must be power of 2.
-func OptMinCapacity(minCapacity int) MailboxOption {
-	return func(o *options) {
-		o.Mailbox.MinCapacity = minCapacity
-	}
-}
-
-// OptMailbox sets all Mailbox capacity options at once.
-func OptMailbox(capacity, minCapacity int) MailboxOption {
-	return func(o *options) {
-		o.Mailbox.Capacity = capacity
-		o.Mailbox.MinCapacity = minCapacity
-	}
-}
-
-// OptAsChan makes Mailbox to function as wrapper for
-// native go channel.
+// OptAsChan transforms the Mailbox into a wrapper for the native Go channel.
 func OptAsChan() MailboxOption {
 	return func(o *options) {
 		o.Mailbox.AsChan = true
@@ -112,7 +96,6 @@ type optionsCombined struct {
 type optionsMailbox struct {
 	AsChan                bool
 	Capacity              int
-	MinCapacity           int
 	StopAfterReceivingAll bool
 }
 
