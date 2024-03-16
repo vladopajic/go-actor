@@ -11,11 +11,13 @@
 
 `go-actor` is tiny library for writing concurrent programs in Go using actor model.
 
+
 ## Motivation
 
 Intention of go-actor is to bring [actor model](https://en.wikipedia.org/wiki/Actor_model) closer to Go developers and to provide design pattern needed to build scalable and high performing concurrent programs.
 
 Without re-usable design principles codebase of complex system can become hard to maintain. Codebase written using Golang can highly benefit from design principles based on actor model as goroutines and channels naturally translate to actors and mailboxes.
+
 
 ## Advantage
 
@@ -24,7 +26,7 @@ Without re-usable design principles codebase of complex system can become hard t
 - System can be designed without the use of mutex. This can give performance gains as overlocking is not rare in complex components.
 - Optimal for Golang's goroutine scheduler
 - Legacy codebase can transition to actor based design because components modelled with go-actor have a simple interface which could be integrated anywhere.
-
+- It offers zero overhead, ensuring optimal performance in highly concurrent environments.
 
 
 ## Abstractions
@@ -110,11 +112,13 @@ func (w *consumeWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 }
 ```
 
+
 ## Addons
 `go-actor` is intended to be a tiny library with lean interfaces and basic mechanism providing core building blocks. However, developers may build on top of it and extend it's functionality with user or domain specific addon abstractions. This section lists addon abstractions for `go-actor` which could be used in addition to it. 
 
 - [super](https://github.com/vladopajic/go-super-actor) is addon abstraction which aims to unify testing of actor's and worker's business logic.
 - [commence](https://github.com/vladopajic/go-actor-commence) is addon which gives mechanism for waiting on actors execution to commence.
+
 
 ## Pro tips
 
@@ -122,9 +126,11 @@ To enhance the code quality of projects that heavily rely on the actor model and
 
 Reading about [common hurdles](./docs/common_hurdles.md), where the most frequent issues are documented, is also advisable.
 
+
 ## Design decisions
 
 Design decisions are documented [here](./docs/design_decisions.md).
+
 
 ## Versioning
 
@@ -133,6 +139,7 @@ The `go-actor` library adopts a versioning scheme structured as `x.y.z`.
 Initially, the library will utilize the format `0.y.z` as it undergoes refinement until it attains a level of stability where fundamental interfaces and core principles no longer necessitate significant alterations. 
 Within this semantic, the `y` component signifies the presence of backward-compatible changes. It is advisable for developers to review the release notes carefully to gain insight into these modifications.
 Furthermore, the final component, `z`, denotes releases incorporating changes that lack backward compatibility. 
+
 
 ## Contribution
 
