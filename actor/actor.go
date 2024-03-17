@@ -38,7 +38,7 @@ type Worker interface {
 	// WorkerStatus is returned indicating if Actor should continue executing this Worker.
 	// Actor will check this status and stop execution if Worker has no more work, otherwise
 	// proceed execution.
-	DoWork(c Context) WorkerStatus
+	DoWork(ctx Context) WorkerStatus
 }
 
 // WorkerFunc is signature of Worker's DoWork function.

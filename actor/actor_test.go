@@ -252,9 +252,9 @@ func Test_Actor_ContextEndedAfterStop(t *testing.T) {
 
 	w := newWorker()
 	a := New(w,
-		OptOnStart(func(c Context) {
-			assertContextStarted(t, c)
-			assert.Equal(t, c, w.ctx)
+		OptOnStart(func(ctx Context) {
+			assertContextStarted(t, ctx)
+			assert.Equal(t, ctx, w.ctx)
 		}),
 		OptOnStop(func() {
 			// When OnStop() is called assert that context has ended
@@ -335,9 +335,9 @@ type worker struct {
 	onStopC       chan any
 }
 
-func (w *worker) DoWork(c Context) WorkerStatus {
+func (w *worker) DoWork(ctx Context) WorkerStatus {
 	select {
-	case <-c.Done():
+	case <-ctx.Done():
 		return WorkerEnd
 
 	case p, ok := <-w.doWorkC:
@@ -353,8 +353,8 @@ func (w *worker) DoWork(c Context) WorkerStatus {
 	}
 }
 
-func (w *worker) OnStart(c Context) {
-	w.ctx = c // saving ref to context so it can be asserted in tests
+func (w *worker) OnStart(ctx Context) {
+	w.ctx = ctx // saving ref to context so it can be asserted in tests
 
 	select {
 	case w.onStartC <- `🌞`:

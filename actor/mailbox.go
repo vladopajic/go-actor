@@ -205,10 +205,10 @@ func newMailboxWorker[T any](
 	}
 }
 
-func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
+func (w *mailboxWorker[T]) DoWork(ctx Context) WorkerStatus {
 	if w.queue.IsEmpty() {
 		select {
-		case <-c.Done():
+		case <-ctx.Done():
 			return WorkerEnd
 
 		case value := <-w.sendC:
@@ -223,7 +223,7 @@ func (w *mailboxWorker[T]) DoWork(c Context) WorkerStatus {
 	}
 
 	select {
-	case <-c.Done():
+	case <-ctx.Done():
 		return WorkerEnd
 
 	case w.receiveC <- w.queue.Front():
