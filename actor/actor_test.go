@@ -108,13 +108,13 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 
 	readySigC := make(chan any)
 	onStartC, onStopC := make(chan any, 1), make(chan any, 1)
-	onStartFn := func(c Context) { <-readySigC; onStartC <- `🌞` }
+	onStartFn := func(_ Context) { <-readySigC; onStartC <- `🌞` }
 	onStopFn := func() { <-readySigC; onStopC <- `🌚` }
 
 	{
 		// Nothing should happen when calling OnStart and OnStop
 		// when callbacks are not defined (no panic should occur)
-		w := NewWorker(func(c Context) WorkerStatus { return WorkerContinue })
+		w := NewWorker(func(_ Context) WorkerStatus { return WorkerContinue })
 		a := NewActorImpl(w)
 		a.OnStart()
 		a.OnStop()
@@ -134,7 +134,7 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 	}
 
 	{ // Assert that actor will call callbacks passed by options
-		w := NewWorker(func(c Context) WorkerStatus { return WorkerContinue })
+		w := NewWorker(func(_ Context) WorkerStatus { return WorkerContinue })
 		a := NewActorImpl(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
 
 		go a.OnStart()

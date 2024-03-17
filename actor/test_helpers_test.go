@@ -43,7 +43,7 @@ func Test_AssertWorkerEndSig(t *testing.T) {
 
 	// Test expected to fail becaue worker didn't return end singal
 	tw = &tWrapper{T: t}
-	AssertWorkerEndSig(tw, NewWorker(func(c Context) WorkerStatus { return WorkerContinue }))
+	AssertWorkerEndSig(tw, NewWorker(func(_ Context) WorkerStatus { return WorkerContinue }))
 	assert.True(t, tw.hadError)
 }
 
