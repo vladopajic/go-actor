@@ -12,9 +12,9 @@ jobs:
         with:
           go-version-file: go.mod
       - name: test
-        run: go test -timeout=3s -race -count=10 -shuffle=on -failfast ./...
+        run: make test
       - name: generate test coverage
-        run: go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+        run: make generate-coverage
       - name: check test coverage
         uses: vladopajic/go-test-coverage@v2
         with:
