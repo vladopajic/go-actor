@@ -75,12 +75,12 @@ func main() {
 }
 
 // produceWorker will produce incremented number on 1 second interval
-type produceWorker struct {
+type producerWorker struct {
 	mailbox actor.MailboxSender[int]
 	num  int
 }
 
-func (w *produceWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
+func (w *producerWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 	select {
 	case <-ctx.Done():
 		return actor.WorkerEnd
@@ -94,12 +94,12 @@ func (w *produceWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 }
 
 // consumeWorker will consume numbers received on mailbox
-type consumeWorker struct {
+type consumerWorker struct {
 	mailbox actor.MailboxReceiver[int]
 	id  int
 }
 
-func (w *consumeWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
+func (w *consumerWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 	select {
 	case <-ctx.Done():
 		return actor.WorkerEnd
