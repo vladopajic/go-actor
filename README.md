@@ -74,7 +74,7 @@ func main() {
 	select {}
 }
 
-// produceWorker will produce incremented number on 1 second interval
+// producerWorker will produce incremented number on 1 second interval
 type producerWorker struct {
 	mailbox actor.MailboxSender[int]
 	num  int
