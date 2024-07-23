@@ -86,7 +86,8 @@ func randInt32(tb testing.TB) int32 {
 func randInt32WithReader(tb testing.TB, randReader io.Reader) int32 {
 	tb.Helper()
 
-	b := make([]byte, 4) //nolint:gomnd // 4 bytes = int32
+	const byteSize = 4
+	b := make([]byte, byteSize)
 
 	_, err := randReader.Read(b)
 	if err != nil {
@@ -94,7 +95,7 @@ func randInt32WithReader(tb testing.TB, randReader io.Reader) int32 {
 	}
 
 	result := int32(0)
-	for i := range 4 {
+	for i := range byteSize {
 		result <<= 8
 		result += int32(b[i])
 	}

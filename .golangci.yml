@@ -15,6 +15,7 @@ linters:
     - dupl
     - durationcheck
     - dupword
+    - err113
     - errcheck
     - errchkjson
     - errname
@@ -33,12 +34,10 @@ linters:
     - gocritic
     - gocyclo
     - godox
-    - goerr113
     - gofmt
     - gofumpt
     - goheader
     - goimports
-    - gomnd
     - gomoddirectives
     - gomodguard
     - goprintffuncname
@@ -55,6 +54,7 @@ linters:
     - maintidx
     - mirror
     - misspell
+    - mnd
     - nakedret
     - nestif
     - nilerr
@@ -152,7 +152,6 @@ linters-settings:
   misspell:
     locale: US
   govet:
-    check-shadowing: true
     enable-all: true
     disable:
      - fieldalignment
