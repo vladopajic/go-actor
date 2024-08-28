@@ -10,6 +10,7 @@ linters:
     - containedctx
     - contextcheck
     - cyclop
+    - copyloopvar
     - decorder
     - dogsled
     - dupl
@@ -21,7 +22,6 @@ linters:
     - errname
     - errorlint
     - exhaustive
-    - exportloopref
     - forbidigo
     - forcetypeassert
     - funlen
