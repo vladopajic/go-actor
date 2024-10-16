@@ -90,7 +90,7 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 		sendHandler = &atomic.Value{}
 	)
 
-	sendHandler.Store(creatPanicHandler[T]("unable to send to a non-started Mailbox"))
+	sendHandler.Store(createPanicHandler[T]("unable to send to a non-started Mailbox"))
 
 	return &mailbox[T]{
 		actor:       New(w),
@@ -153,7 +153,7 @@ func (m *mailbox[T]) Stop() {
 	}
 
 	m.running = false
-	m.sendHandler.Store(creatPanicHandler[T]("unable to send to a stopped Mailbox"))
+	m.sendHandler.Store(createPanicHandler[T]("unable to send to a stopped Mailbox"))
 	m.actor.Stop()
 }
 
@@ -162,7 +162,7 @@ func (m *mailbox[T]) Send(ctx Context, msg T) error {
 	return h(ctx, msg)
 }
 
-func creatPanicHandler[T any](msg string) sendHandler[T] {
+func createPanicHandler[T any](msg string) sendHandler[T] {
 	return func(_ Context, _ T) error {
 		panic(msg) //nolint:forbidigo // panic is intentional
 	}

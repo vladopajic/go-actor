@@ -74,8 +74,8 @@ func (a *combinedActor) onActorStopped() {
 		// Run stop in goroutine because wrapped actor
 		// should not wait for other actors to stop.
 		//
-		// Also if a.Stop() is called from same gorutine it would
-		// be recoursive call without exit condition. Therfore
+		// Also if a.Stop() is called from same goroutine it would
+		// be recursive call without exit condition. Therefore
 		// it is need to call a.Stop() from other goroutine,
 		// regardless of first invariant.
 		go a.Stop()

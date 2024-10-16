@@ -275,10 +275,10 @@ func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
 		m.Start()
 		sendMessages(m)
 
-		// This time we start gorotune which will read all messages from mailbox instead of
+		// This time we start goroutine which will read all messages from mailbox instead of
 		// stopping in separate goroutine.
-		// There are no guaranees that this gorutine will finish after Stop is called, so
-		// it could be the case that this gorotuine has received all messages from mailbox,
+		// There are no guaranies that this goroutine will finish after Stop is called, so
+		// it could be the case that this goroutine has received all messages from mailbox,
 		// even before mailbox was stopped. Which wouldn't correctly assert this feature.
 		go assertGotAllMessages(m)
 

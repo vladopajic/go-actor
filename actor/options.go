@@ -24,7 +24,7 @@ func OptOnStop(f func()) Option {
 
 // OptCapacity sets Mailbox queue capacity.
 // When `OptAsChan` is used together with `OptCapacity` capacity value
-// will set be set to underlaying channel.
+// will set be set to underlying channel.
 func OptCapacity(capacity int) MailboxOption {
 	return func(o *options) {
 		o.Mailbox.Capacity = capacity
