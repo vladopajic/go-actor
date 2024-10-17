@@ -42,6 +42,8 @@ Without re-usable design principles codebase of complex system can become hard t
 
 Dive into [examples](https://github.com/vladopajic/go-actor-examples) to see `go-actor` in action.
 
+It is strongly recommended to review examples, as they will greatly enhance your understanding.
+
 ```go
 // This example will demonstrate how to create actors for producer-consumer use case.
 // Producer will create incremented number on every 1 second interval and
