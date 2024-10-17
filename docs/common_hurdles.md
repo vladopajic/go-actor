@@ -8,9 +8,9 @@ One of the most common hurdles is the case where actors are not started. This is
 
 Never forget that `actor.Mailbox` is also an actor, and it needs to be started.
 
-**Embeded Actor interface is overriden**
+**Embedded Actor interface is overridden**
 
-When embeding `actor.Actor` interface make sure not to override methods of this interface in structre that has embeded it. Otherwise make sure to call embeded actor's Start() and Stop() methods. 
+When embedding `actor.Actor` interface make sure not to override methods of this interface in structure that has embedded it. Otherwise make sure to call embedded actor's Start() and Stop() methods. 
 
 ```go
 type fooActor struct {
@@ -26,9 +26,9 @@ func NewFooActor() *fooActor {
 }
 
 func(f *fooActor) Start() {	//  warning: calling fooActor.Start() will override fooActor.Actor.Start() method.
-	...  		    	//  therfore calling this method will not execute worker that was itended
-}				//  to be excuted with fooActor.
-				//  if this method is necessery then make sure to call `f.Actor.Start()` manually here.
+	...  		    	//  therefore calling this method will not execute worker that was intended
+}				//  to be executed with fooActor.
+				//  if this method is necessary then make sure to call `f.Actor.Start()` manually here.
 
 func(f *fooActor) Stop() { 	//  similar problem as described above.
 	...

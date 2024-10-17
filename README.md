@@ -9,40 +9,38 @@
 
 ![goactor-cover](https://user-images.githubusercontent.com/4353513/185381081-2e2a07f3-c13a-4946-a250-b2cbe6588f60.png)
 
-`go-actor` is tiny library for writing concurrent programs in Go using actor model.
+`go-actor` is a lightweight library for writing concurrent programs in Go using the Actor model.
 
 
 ## Motivation
 
-Intention of go-actor is to bring [actor model](https://en.wikipedia.org/wiki/Actor_model) closer to Go developers and to provide design pattern needed to build scalable and high performing concurrent programs.
+The goal of go-actor is to bring the [actor model](https://en.wikipedia.org/wiki/Actor_model) closer to Go developers by providing a design pattern that facilitates the development of scalable and high-performance concurrent applications.
 
-Without re-usable design principles codebase of complex system can become hard to maintain. Codebase written using Golang can highly benefit from design principles based on actor model as goroutines and channels naturally translate to actors and mailboxes.
-
+Without reusable design principles, maintaining a complex codebase can be challenging. Golang's unique concurrency model, based on goroutines and channels, naturally aligns with the actor model, making it an ideal fit for building actor-based programs.
 
 ## Advantage
 
-- Entire codebase can be modelled with the same design principles where the actor is the universal primitive. Example: in microservice architected systems each service is an actor which reacts and sends messages to other services (actors). Services themselves could be made of multiple components (actors) which interact with other components by responding and sending messages.
-- Golang’s goroutines and channels naturally translate to actors and mailboxes.
-- System can be designed without the use of mutex. This can give performance gains as overlocking is not rare in complex components.
-- Optimal for Golang's goroutine scheduler
-- Legacy codebase can transition to actor based design because components modelled with go-actor have a simple interface which could be integrated anywhere.
-- It offers zero overhead, ensuring optimal performance in highly concurrent environments.
+- **Unified Design Principles**: Model the entire codebase using the same principles, where each actor is a fundamental building block.
+- **Natural Fit with Go**: Leverage Go's goroutines and channels, which directly translate to actors and mailboxes.
+- **Avoid Mutexes**: Design systems without the need for mutexes, reducing the potential for deadlocks and improving performance in complex components.
+- **Optimal Scheduling**: Enhance performance by optimizing for Go's goroutine scheduler.
+-  **Easy Transition**: Legacy codebases can transition to an actor-based design due to the simple interfaces provided by go-actor, allowing for seamless integration.
+- **Zero Overhead**: Ensure optimal performance in highly concurrent environments.
 
 
 ## Abstractions
 
-`go-actor`'s base abstraction layer only has three interfaces:
+The core abstraction layer of go-actor consists of three primary interfaces:
 
-- `actor.Actor` is anything that implements `Start()` and `Stop()` methods. Actors created using `actor.New(actor.Worker)` function will create preferred actor implementation which will on start spawn dedicated goroutine to perform work of supplied `actor.Worker`.
-- `actor.Worker` encapsulates actor's executable logic. This is the only interface which developers need to write in order to describe behavior of actors.
-- `actor.Mailbox` is an interface for message transport mechanisms between actors. Mailboxes are created using the `actor.NewMailbox(...)` function.
+- `actor.Actor`: Represents any entity that implements the `Start()` and `Stop()` methods. Actors created using the `actor.New(actor.Worker)` function spawn a dedicated goroutine to execute the supplied `actor.Worker`.
+- `actor.Worker`: Encapsulates the executable logic of an actor. This is the primary interface developers need to implement to define an actor's behavior.
+- `actor.Mailbox`: An interface for message transport mechanisms between actors, created using the `actor.NewMailbox(...)` function.
 
 
 ## Examples
 
-Dive into [examples](https://github.com/vladopajic/go-actor-examples) to see `go-actor` in action.
+Explore the [examples](https://github.com/vladopajic/go-actor-examples) repository to see `go-actor` in action. Reviewing these examples is highly recommended, as they will greatly enhance your understanding of the library.
 
-It is strongly recommended to review examples, as they will greatly enhance your understanding.
 
 ```go
 // This example will demonstrate how to create actors for producer-consumer use case.
@@ -115,23 +113,21 @@ func (w *consumerWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 ```
 
 
-## Addons
-`go-actor` is intended to be a tiny library with lean interfaces and basic mechanism providing core building blocks. However, developers may build on top of it and extend it's functionality with user or domain specific addon abstractions. This section lists addon abstractions for `go-actor` which could be used in addition to it. 
+## Add-ons
 
-- [super](https://github.com/vladopajic/go-super-actor) is addon abstraction which aims to unify testing of actor's and worker's business logic.
-- [commence](https://github.com/vladopajic/go-actor-commence) is addon which gives mechanism for waiting on actors execution to commence.
+While `go-actor` is designed to be a minimal library with lean interfaces, developers can extend its functionality with domain-specific add-ons. Some notable add-ons include:
 
-
-## Pro tips
-
-To enhance the code quality of projects that heavily rely on the actor model and utilize the `go-actor` library, it's recommended to adhere to [best practices](./docs/best_practices.md).
-
-Reading about [common hurdles](./docs/common_hurdles.md), where the most frequent issues are documented, is also advisable.
+- [super](https://github.com/vladopajic/go-super-actor): An add-on for unifying the testing of actors and workers.
+- [commence](https://github.com/vladopajic/go-actor-commence): An add-on that provides a mechanism for waiting for actor execution to begin.
 
 
-## Design decisions
+## Pro Tips
 
-Design decisions are documented [here](./docs/design_decisions.md).
+To enhance code quality in projects that heavily rely on the actor model with `go-actor`, consider adhering to [best practices](./docs/best_practices.md) and reviewing [common hurdles](./docs/common_hurdles.md) for frequently encountered issues.
+
+## Design Decisions
+
+You can find detailed design decisions [here](./docs/design_decisions.md).
 
 
 ## Versioning
