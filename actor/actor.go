@@ -4,21 +4,33 @@ import (
 	"sync"
 )
 
-// Actor is computational entity that executes Worker in individual goroutine.
+// Actor represents a computational entity that manages the execution of a Worker
+// in a dedicated goroutine. Each Actor is responsible for handling the lifecycle
+// of a Worker, including starting and stopping its execution.
 type Actor interface {
-	// Start spawns new goroutine and begins Worker execution.
+	// Start launches a new goroutine to begin the execution of the associated Worker.
 	//
-	// Execution will last until Stop() method is called or Worker returned
-	// status indicating that Worker has ended (there is no more work).
+	// The Worker will continue running until one of the following conditions occurs:
+	// 1. The Stop() method is called, signaling the Worker to terminate.
+	// 2. The Worker completes its task and returns a WorkerEnd status, indicating
+	//    there is no more work to process.
+	//
+	// This method is non-blocking and returns immediately after spawning the goroutine.
 	Start()
 
-	// Stop sends signal to Worker to stop execution. Method will block
-	// until Worker finishes.
+	// Stop gracefully signals the Worker to stop execution.
+	//
+	// This method will block the calling goroutine until the Worker has fully terminated
+	// its execution. It ensures that any ongoing operations in the Worker are completed
+	// or properly interrupted before the Worker stops.
+	//
+	// Stop can be called at any time after Start has been invoked. If Stop is called
+	// on an Actor that has not yet been started, the call has no effect.
 	Stop()
 }
 
-// WorkerStatus is returned by Worker's DoWork function indicating if Actor should
-// continue executing Worker.
+// WorkerStatus represents the status code returned by a Worker's DoWork function,
+// which indicates whether the Actor should continue executing the Worker or terminate it.
 type WorkerStatus int8
 
 const (
@@ -26,46 +38,68 @@ const (
 	WorkerEnd      WorkerStatus = 2
 )
 
-// Worker is entity which encapsulates Actor's executable logic.
+// Worker represents an entity that encapsulates the executable logic within an Actor.
 //
-// Worker's implementation should listen on messages sent via Mailboxes and preform
-// actions by sending new messages or creating new actors.
+// A Worker is responsible for processing incoming messages sent via Mailboxes
+// and performing actions by sending messages or spawning new Actors. It defines
+// the core unit of work for an Actor, determining how tasks are processed and managed.
 type Worker interface {
-	// DoWork function is encapsulating single executable unit of work for this Worker.
+	// DoWork defines a single unit of executable work for the Worker.
 	//
-	// Context is provided so Worker can listen and respond on stop signal sent from Actor.
+	// The method takes a Context parameter, which allows the Worker to listen for
+	// stop signals initiated by the Actor. This context helps manage graceful shutdowns
+	// and interruptive workloads.
 	//
-	// WorkerStatus is returned indicating if Actor should continue executing this Worker.
-	// Actor will check this status and stop execution if Worker has no more work, otherwise
-	// proceed execution.
+	// The method returns a WorkerStatus value, which indicates whether the Actor
+	// should continue running this Worker or stop. If the Worker returns a status
+	// signaling completion `WorkerEnd`, the Actor will terminate the Worker; otherwise,
+	// the Actor will continue executing subsequent work.
 	DoWork(ctx Context) WorkerStatus
 }
 
-// WorkerFunc is signature of Worker's DoWork function.
+// WorkerFunc defines the function signature for a Worker's DoWork method.
 type WorkerFunc = func(ctx Context) WorkerStatus
 
-// StartableWorker defines optional interface which Worker can implement
+// StartableWorker defines an optional interface that a Worker can implement
+// to perform initialization tasks before its main work begins.
+//
+// Implementing this interface allows a Worker to execute setup or initialization
+// logic exactly once, before the first call to DoWork.
 type StartableWorker interface {
-	// OnStart is called right before DoWork() is called for first time. It can be used to
-	// initialize Worker as it will be called only once.
+	// OnStart is invoked immediately before the first call to DoWork().
 	//
-	// Context is provided in case when Actor is stopped early and OnStop should terminated
-	// with initialization. This is same Context as one which will be provided to DoWork
-	// method in later stages of Worker lifecycle.
+	// This method is intended for any setup or initialization that the Worker
+	// needs before starting its main execution. It is called only once during
+	// the Worker’s lifecycle.
+	//
+	// The same Context provided to DoWork is passed to OnStart, allowing the Worker
+	// to handle early termination signals in case the Actor is stopped during
+	// initialization.
 	OnStart(ctx Context)
 }
 
-// StoppableWorker defines optional interface which Worker can implement
+// StoppableWorker defines an optional interface that a Worker can implement
+// to perform cleanup or resource release after its execution completes.
+//
+// By implementing this interface, a Worker can define custom logic to release resources
+// or perform any necessary finalization tasks once it has finished its work.
 type StoppableWorker interface {
-	// OnStop is called after last DoWork() returns. It can be used to release all
-	// resources occupied by Worker.
+	// OnStop is invoked after the final call to DoWork() returns.
 	//
-	// Context is not proved as at this point as it was already ended.
+	// This method is intended for cleaning up or releasing any resources held by
+	// the Worker during its lifecycle. It is called after the Worker has completed
+	// its execution and the Actor has no further tasks for it.
+	//
+	// A Context is not provided because the Worker’s context has already been
+	// canceled or completed by the time OnStop is called.
 	OnStop()
 }
 
-// NewWorker returns basic Worker implementation which delegates
-// DoWork to supplied WorkerFunc.
+// NewWorker creates and returns a basic implementation of the Worker interface.
+//
+// This function takes a WorkerFunc as an argument, which defines the core logic
+// of the Worker. The returned Worker will delegate its DoWork method to the
+// provided WorkerFunc, allowing the caller to specify the work logic.
 func NewWorker(fn WorkerFunc) Worker {
 	return &worker{fn}
 }
@@ -78,7 +112,8 @@ func (w *worker) DoWork(ctx Context) WorkerStatus {
 	return w.fn(ctx)
 }
 
-// New returns new Actor with specified Worker and Options.
+// New creates and returns a new Actor with the specified Worker and
+// optional configuration.
 func New(w Worker, opt ...Option) Actor {
 	return &actor{
 		worker:  w,
@@ -167,7 +202,12 @@ func (a *actor) onStop() {
 	}
 }
 
-// Idle returns new Actor without Worker.
+// Idle creates and returns a new Actor that does not have an associated Worker.
+//
+// This function is useful in scenarios where an Actor is needed solely for its
+// OnStart and OnStop functionalities, without executing any actual work.
+// The returned Actor can manage initialization and cleanup logic, allowing for
+// customizable behavior based on the provided options.
 func Idle(opt ...Option) Actor {
 	return &idleActor{
 		options: newOptions(opt),
@@ -216,6 +256,12 @@ func (a *idleActor) Stop() {
 }
 
 // Noop returns no-op Actor.
+//
+// This function provides an Actor that does not perform any actions or operations.
+// It is particularly useful in scenarios where an Actor interface needs to be
+// implemented, but you want to avoid the overhead of defining custom logic.
+// By embedding this no-op Actor in a structure, you can easily satisfy the
+// Actor interface without additional implementation details.
 func Noop() Actor {
 	return noopActorInstance
 }

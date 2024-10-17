@@ -7,8 +7,16 @@ import (
 	"time"
 )
 
-// Context is provided to Worker so they can listen and respond
-// on stop signal sent from Actor.
+// Context is a type alias for gocontext.Context.
+//
+// This Context is provided to Workers, allowing them to listen for and
+// respond to stop signals sent by the Actor. It enables Workers to manage
+// their execution flow, facilitating graceful termination and cancellation
+// of ongoing tasks when the Actor is instructed to stop.
+//
+// Using Context allows Workers to check for cancellation signals and handle
+// cleanup operations appropriately, ensuring that resources are released
+// and tasks are completed in a controlled manner.
 type Context = gocontext.Context
 
 // ErrStopped is the error returned by Context.Err when the Actor is stopped.
@@ -29,14 +37,22 @@ var (
 	}()
 )
 
-// ContextStarted returns Context representing started state for Actor.
-// It is typically used in tests for passing to Worker.DoWork() function.
+// ContextStarted returns a Context representing the started state of an Actor.
+//
+// This function is typically used in testing scenarios to provide a Context
+// that indicates the Actor has begun execution. It can be passed to the
+// Worker.DoWork() function to simulate the active state of an Actor during
+// unit tests or integration tests.
 func ContextStarted() Context {
 	return contextStarted
 }
 
-// ContextStarted returns Context representing ended state for Actor.
-// It is typically used in tests for passing to Worker.DoWork() function.
+// ContextEnded returns a Context representing the ended state of an Actor.
+//
+// This function is primarily used in testing scenarios to provide a Context
+// that indicates the Actor has finished execution. It can be passed to the
+// Worker.DoWork() function to simulate the inactive state of an Actor during
+// unit tests or integration tests.
 func ContextEnded() Context {
 	return contextEnded
 }
@@ -78,7 +94,7 @@ func (c *context) Err() error {
 	return err
 }
 
-//nolint:revive // needed to implement context.Context
+//nolint:revive // needed to satisfy context.Context interface
 func (*context) Value(key any) any {
 	return nil
 }

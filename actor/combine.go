@@ -5,11 +5,13 @@ import (
 	"sync/atomic"
 )
 
-// Combine returns builder which is used to create single Actor that combines all
-// specified actors into one.
+// Combine returns a builder that creates a single Actor by combining multiple
+// specified Actors into one.
 //
-// Calling Start or Stop function on combined Actor will invoke respective
-// function on all underlying Actors.
+// This function allows you to aggregate multiple Actor instances, enabling
+// collective management of their lifecycles. When the Start or Stop methods
+// are called on the combined Actor, the respective method will be invoked on
+// all underlying Actors in the order they were provided.
 func Combine(actors ...Actor) *CombineBuilder {
 	return &CombineBuilder{
 		actors: actors,
@@ -21,7 +23,12 @@ type CombineBuilder struct {
 	options options
 }
 
-// Build returns combined Actor.
+// Build returns the combined Actor created by the CombineBuilder.
+//
+// This method finalizes the configuration and returns a new Actor instance
+// that integrates all the Actors specified during the building process.
+// The returned Actor will manage the lifecycle of each underlying Actor,
+// allowing you to start or stop them collectively.
 func (b *CombineBuilder) Build() Actor {
 	a := &combinedActor{
 		actors:       b.actors,
@@ -36,7 +43,12 @@ func (b *CombineBuilder) Build() Actor {
 	return a
 }
 
-// WithOptions adds options for combined actor.
+// WithOptions adds configuration options for the combined Actor.
+//
+// This method allows you to specify one or more CombinedOption settings
+// that customize the behavior of the combined Actor. The provided options
+// will be applied to the Actor when it is built, allowing for fine-tuning
+// of its lifecycle management and behavior.
 func (b *CombineBuilder) WithOptions(opt ...CombinedOption) *CombineBuilder {
 	b.options = newOptions(opt)
 	return b

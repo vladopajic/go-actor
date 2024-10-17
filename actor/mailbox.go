@@ -13,19 +13,25 @@ type Mailbox[T any] interface {
 	MailboxReceiver[T]
 }
 
-// MailboxSender is interface for sender bits of Mailbox.
+// MailboxSender is an interface that defines the sending capabilities of a Mailbox.
 type MailboxSender[T any] interface {
-	// Send message via mailbox.
+	// Send sends a message via the mailbox.
 	Send(ctx Context, msg T) error
 }
 
-// MailboxReceiver is interface for receiver bits of Mailbox.
+// MailboxReceiver is an interface that defines the receiving capabilities of a Mailbox.
 type MailboxReceiver[T any] interface {
-	// ReceiveC returns channel where data can be received.
+	// ReceiveC returns a channel from which messages can be received.
 	ReceiveC() <-chan T
 }
 
-// FromMailboxes creates single Actor combining actors of supplied Mailboxes.
+// FromMailboxes creates a single Actor by combining the Actors associated
+// with the supplied Mailboxes.
+//
+// This helper function serves a similar purpose to the Combine function,
+// allowing you to consolidate multiple Mailbox Actors into one. The resulting
+// Actor can be started and stopped as a single unit, managing the lifecycles
+// of all underlying Mailboxes collectively.
 func FromMailboxes[T any](mm []Mailbox[T]) Actor {
 	a := make([]Actor, len(mm))
 	for i, m := range mm {
@@ -35,8 +41,14 @@ func FromMailboxes[T any](mm []Mailbox[T]) Actor {
 	return Combine(a...).Build()
 }
 
-// FanOut spawns new goroutine in which messages received by receiveC are forwarded
-// to senders. Spawned goroutine will be active while receiveC is open.
+// FanOut spawns a new goroutine that forwards messages received from the
+// provided receiveC channel to multiple mailbox senders.
+//
+// This function listens for incoming messages on the receiveC channel and
+// forwards each message to all specified mailbox senders in the senders
+// slice. The spawned goroutine will remain active as long as the receiveC
+// channel is open, ensuring that all messages are dispatched until the
+// channel is closed.
 func FanOut[T any, MS MailboxSender[T]](receiveC <-chan T, senders []MS) {
 	ctx := ContextStarted()
 
@@ -49,7 +61,13 @@ func FanOut[T any, MS MailboxSender[T]](receiveC <-chan T, senders []MS) {
 	}(receiveC, senders)
 }
 
-// NewMailboxes returns slice of new Mailbox instances with specified count.
+// NewMailboxes returns a slice of newly created Mailbox instances,
+// with the specified count.
+//
+// This function generates multiple Mailbox instances, allowing for easy creation
+// of a collection of mailboxes that can be used for message passing between
+// Actors. Each Mailbox is configured with optional settings provided through
+// MailboxOption.
 func NewMailboxes[T any](count int, opt ...MailboxOption) []Mailbox[T] {
 	mm := make([]Mailbox[T], count)
 	for i := range count {
@@ -64,12 +82,16 @@ const (
 	minQueueCapacity = mbxChanBufferCap
 )
 
-// NewMailbox returns new local Mailbox implementation.
+// NewMailbox returns a new local Mailbox implementation.
 //
-// Default Mailbox closely resembles a native Go channel, with the key distinction that
-// writing to the Mailbox will never cause blocking, and all messages are queued without
-// limitations. Mailbox can also behave exactly the same as native Go channel when option
-// `OptAsChan` is used.
+// The default Mailbox closely resembles a native Go channel, with the key
+// distinction that writing to the Mailbox will never block. All messages
+// sent to the Mailbox are queued without limitations, ensuring that send
+// operations do not cause the sender to wait.
+//
+// Additionally, when the `OptAsChan` option is used, the Mailbox can
+// behave identically to a native Go channel, allowing for seamless
+// integration with existing code that utilizes channels.
 func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	options := newOptions(opt).Mailbox
 
