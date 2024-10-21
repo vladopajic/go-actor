@@ -37,7 +37,7 @@ func (w *fooWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 
 ## Check channel closed indicator in `DoWork`
 
-Every case statement in `DoWork` should handle case when channel is closed. In these cases worker should end execution; or it can perform any other logic that is necessery.
+Every case statement in `DoWork` should handle case when channel is closed. In these cases worker should end execution; or it can perform any other logic that is necessary.
 
 ```go
 func (w *fooWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
