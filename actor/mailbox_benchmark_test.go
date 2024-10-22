@@ -44,6 +44,7 @@ func benchmarkMailbox(b *testing.B, mbx Mailbox[any]) {
 		for range b.N {
 			<-mbx.ReceiveC()
 		}
+
 		close(doneC)
 	}()
 
