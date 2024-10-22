@@ -38,13 +38,19 @@ func benchmarkMailbox(b *testing.B, mbx Mailbox[any]) {
 	mbx.Start()
 	defer mbx.Stop()
 
+	doneC := make(chan any)
+
 	go func() {
-		for range mbx.ReceiveC() { //nolint:revive // relax
+		for range b.N {
+			<-mbx.ReceiveC()
 		}
+		close(doneC)
 	}()
 
 	ctx := ContextStarted()
 	for range b.N {
 		mbx.Send(ctx, `🌞`) //nolint:errcheck // error should never happen
 	}
+
+	<-doneC
 }
