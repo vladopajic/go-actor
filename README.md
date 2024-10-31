@@ -119,6 +119,7 @@ While `go-actor` is designed to be a minimal library with lean interfaces, devel
 
 - [super](https://github.com/vladopajic/go-super-actor): An add-on for unifying the testing of actors and workers.
 - [commence](https://github.com/vladopajic/go-actor-commence): An add-on that provides a mechanism for waiting for actor execution to begin.
+- [netbox](https://github.com/vladopajic/go-actor-netbox): Mailbox implemented with different network functionality.
 
 
 ## Pro Tips
