@@ -51,6 +51,14 @@ func AssertStartStopAtRandom(tb testing.TB, a Actor) {
 func AssertWorkerEndSig(tb testing.TB, aw any) {
 	tb.Helper()
 
+	AssertWorkerEndSigAfterIterations(tb, aw, 1)
+}
+
+// AssertWorkerEndSigAfterIterations test asserts that worker will respond
+// to context.Done() signal after specified iterations count.
+func AssertWorkerEndSigAfterIterations(tb testing.TB, aw any, iterations int) {
+	tb.Helper()
+
 	if aw == nil {
 		tb.Error("actor or worker should not be nil")
 		return
@@ -72,10 +80,14 @@ func AssertWorkerEndSig(tb testing.TB, aw any) {
 		return
 	}
 
-	status := w.DoWork(ContextEnded())
-	if status != WorkerEnd {
-		tb.Error("worker should end when context has ended")
+	for range iterations {
+		status := w.DoWork(ContextEnded())
+		if status == WorkerEnd {
+			return
+		}
 	}
+
+	tb.Error("worker should end when context has ended")
 }
 
 func randInt32(tb testing.TB) int32 {
