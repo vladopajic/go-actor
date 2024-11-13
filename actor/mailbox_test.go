@@ -1,6 +1,7 @@
 package actor_test
 
 import (
+	gocontext "context"
 	"sync"
 	"testing"
 	"time"
@@ -59,8 +60,6 @@ func Test_Mailbox(t *testing.T) {
 
 	m.Stop()
 
-	// After Mailbox is stopped assert that all channels are closed
-	assertMailboxChannelsClosed(t, m)
 }
 
 func Test_Mailbox_StartStop(t *testing.T) {
@@ -76,7 +75,6 @@ func Test_Mailbox_StartStop(t *testing.T) {
 	m.Stop()
 	m.Stop()
 
-	assertMailboxChannelsClosed(t, m)
 }
 
 func Test_Mailbox_SendWithEndedCtx(t *testing.T) {
@@ -96,6 +94,20 @@ func Test_Mailbox_SendWithEndedCtx(t *testing.T) {
 			break
 		}
 	}
+}
+
+func Test_Mailbox_SendWithStoppedMailbox(t *testing.T) {
+	t.Parallel()
+
+	m := NewMailbox[any]()
+
+	m.Start()
+
+	err := m.Send(gocontext.Background(), `🌹`)
+	assert.NoError(t, err)
+	m.Stop()
+	err = m.Send(gocontext.Background(), `🌹`)
+	assert.NoError(t, err)
 }
 
 func Test_FromMailboxes(t *testing.T) {
@@ -119,10 +131,6 @@ func Test_FromMailboxes(t *testing.T) {
 
 	a.Stop()
 
-	// After combined Agent is stopped all Mailboxes should stop executing
-	for _, m := range mm {
-		assertMailboxChannelsClosed(t, m)
-	}
 }
 
 func Test_FanOut(t *testing.T) {
@@ -199,7 +207,6 @@ func Test_MailboxOptAsChan(t *testing.T) {
 
 		m.Stop()
 
-		assertMailboxChannelsClosed(t, m)
 	})
 
 	t.Run("non zero cap", func(t *testing.T) {
@@ -213,7 +220,6 @@ func Test_MailboxOptAsChan(t *testing.T) {
 
 		m.Stop()
 
-		assertMailboxChannelsClosed(t, m)
 	})
 
 	t.Run("send with canceld context", func(t *testing.T) {
@@ -299,15 +305,6 @@ func assertSendPanics(t *testing.T, m Mailbox[any]) {
 	assert.Panics(t, func() {
 		m.Send(ContextStarted(), `👹`) //nolint:errcheck // this line panics
 	})
-}
-
-func assertMailboxChannelsClosed(t *testing.T, m Mailbox[any]) {
-	t.Helper()
-
-	assertSendPanics(t, m)
-
-	_, ok := <-m.ReceiveC()
-	assert.False(t, ok)
 }
 
 func assertReceiveBlocking(t *testing.T, m Mailbox[any]) {

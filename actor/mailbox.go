@@ -175,7 +175,7 @@ func (m *mailbox[T]) Stop() {
 	}
 
 	m.running = false
-	m.sendHandler.Store(createPanicHandler[T]("unable to send to a stopped Mailbox"))
+	m.sendHandler.Store(createNoopHandler[T]())
 	m.actor.Stop()
 }
 
@@ -187,6 +187,12 @@ func (m *mailbox[T]) Send(ctx Context, msg T) error {
 func createPanicHandler[T any](msg string) sendHandler[T] {
 	return func(_ Context, _ T) error {
 		panic(msg) //nolint:forbidigo // panic is intentional
+	}
+}
+
+func createNoopHandler[T any]() sendHandler[T] {
+	return func(_ Context, _ T) error {
+		return nil
 	}
 }
 
