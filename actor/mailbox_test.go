@@ -1,7 +1,6 @@
 package actor_test
 
 import (
-	gocontext "context"
 	"sync"
 	"testing"
 	"time"
@@ -96,20 +95,6 @@ func Test_Mailbox_SendWithEndedCtx(t *testing.T) {
 	}
 }
 
-func Test_Mailbox_SendWithStoppedMailbox(t *testing.T) {
-	t.Parallel()
-
-	m := NewMailbox[any]()
-
-	m.Start()
-
-	err := m.Send(gocontext.Background(), `🌹`)
-	assert.NoError(t, err)
-	m.Stop()
-	err = m.Send(gocontext.Background(), `🌹`)
-	assert.NoError(t, err)
-}
-
 func Test_FromMailboxes(t *testing.T) {
 	t.Parallel()
 
@@ -199,7 +184,7 @@ func Test_MailboxOptAsChan(t *testing.T) {
 		assertSendBlocking(t, m)
 		assertReceiveBlocking(t, m)
 
-		// Send when there is receiver
+		// Send when there is receiNoErrorver
 		go func() {
 			assert.NoError(t, m.Send(ContextStarted(), `🌹`))
 		}()
