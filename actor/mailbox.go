@@ -145,15 +145,25 @@ func (m *mailboxSync[T]) Stop() {
 }
 
 func (m *mailboxSync[T]) Send(ctx Context, msg T) error {
-	m.ongoingSend.Add(1)
-	isSendStopped, err := handleSend(m.state.Load(), m.stopSigC, m.c, ctx, msg)
-	m.ongoingSend.Add(-1)
-
-	if isSendStopped {
-		m.closeReceiveC()
+	state := m.state.Load()
+	if state == mbxStateNotStarted {
+		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxNotStarted)
+	} else if state == mbxStateStopped {
+		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxStopped)
 	}
 
-	return err
+	m.ongoingSend.Add(1)
+	defer m.ongoingSend.Add(-1)
+
+	select {
+	case <-m.stopSigC:
+		defer m.closeReceiveC()
+		return fmt.Errorf("Mailbox.Send canceled: %w", ErrMailboxStopped)
+	case <-ctx.Done():
+		return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
+	case m.c <- msg:
+		return nil
+	}
 }
 
 func (m *mailboxSync[T]) closeReceiveC() {
@@ -176,7 +186,6 @@ func newMailboxAsync[T any](options optionsMailbox) *mailbox[T] {
 		actor:    New(newMailboxWorker(sendC, receiveC, options)),
 		sendC:    sendC,
 		receiveC: receiveC,
-		stopSigC: make(chan struct{}),
 		state:    &atomic.Int32{},
 	}
 }
@@ -185,7 +194,6 @@ type mailbox[T any] struct {
 	actor    Actor
 	sendC    chan T
 	receiveC <-chan T
-	stopSigC chan struct{}
 	state    *atomic.Int32
 }
 
@@ -197,14 +205,24 @@ func (m *mailbox[T]) Start() {
 
 func (m *mailbox[T]) Stop() {
 	if m.state.CompareAndSwap(mbxStateRunning, mbxStateStopped) {
-		close(m.stopSigC)
 		m.actor.Stop()
 	}
 }
 
 func (m *mailbox[T]) Send(ctx Context, msg T) error {
-	_, err := handleSend(m.state.Load(), m.stopSigC, m.sendC, ctx, msg)
-	return err
+	state := m.state.Load()
+	if state == mbxStateNotStarted {
+		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxNotStarted)
+	} else if state == mbxStateStopped {
+		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxStopped)
+	}
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
+	case m.sendC <- msg:
+		return nil
+	}
 }
 
 func (m *mailbox[T]) ReceiveC() <-chan T {
@@ -278,27 +296,4 @@ func (w *mailboxWorker[T]) OnStop() {
 	}
 
 	close(w.receiveC)
-}
-
-func handleSend[T any](
-	state mbxState,
-	mbxStopSig <-chan struct{},
-	sendC chan T,
-	msgCtx Context,
-	msg T,
-) (bool, error) {
-	if state == mbxStateNotStarted {
-		return false, fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxNotStarted)
-	} else if state == mbxStateStopped {
-		return false, fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxStopped)
-	}
-
-	select {
-	case <-mbxStopSig:
-		return true, fmt.Errorf("Mailbox.Send canceled: %w", ErrMailboxStopped)
-	case <-msgCtx.Done():
-		return false, fmt.Errorf("Mailbox.Send canceled: %w", msgCtx.Err())
-	case sendC <- msg:
-		return false, nil
-	}
 }
