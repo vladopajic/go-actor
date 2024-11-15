@@ -3,6 +3,7 @@ package actor
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
 )
 
@@ -109,9 +110,10 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 
 func newMailboxSync[T any](options optionsMailbox) *mailboxSync[T] {
 	return &mailboxSync[T]{
-		c:        make(chan T, options.Capacity),
-		stopSigC: make(chan struct{}),
-		state:    &atomic.Int32{},
+		c:           make(chan T, options.Capacity),
+		stopSigC:    make(chan struct{}),
+		state:       &atomic.Int32{},
+		ongoingSend: &atomic.Int64{},
 	}
 }
 
@@ -124,9 +126,11 @@ const (
 )
 
 type mailboxSync[T any] struct {
-	c        chan T
-	stopSigC chan struct{}
-	state    *atomic.Int32
+	c           chan T
+	stopSigC    chan struct{}
+	state       *atomic.Int32
+	ongoingSend *atomic.Int64
+	closeOnce   sync.Once
 }
 
 func (m *mailboxSync[T]) Start() {
@@ -136,13 +140,26 @@ func (m *mailboxSync[T]) Start() {
 func (m *mailboxSync[T]) Stop() {
 	if m.state.CompareAndSwap(mbxStateRunning, mbxStateStopped) {
 		close(m.stopSigC)
-		close(m.c)
+		m.closeReceiveC()
 	}
 }
 
 func (m *mailboxSync[T]) Send(ctx Context, msg T) error {
-	s := m.state.Load()
-	return handleSend(s, m.stopSigC, m.c, ctx, msg)
+	m.ongoingSend.Add(1)
+	isSendStopped, err := handleSend(m.state.Load(), m.stopSigC, m.c, ctx, msg)
+	m.ongoingSend.Add(-1)
+
+	if isSendStopped {
+		m.closeReceiveC()
+	}
+
+	return err
+}
+
+func (m *mailboxSync[T]) closeReceiveC() {
+	if m.ongoingSend.Load() == 0 {
+		m.closeOnce.Do(func() { close(m.c) })
+	}
 }
 
 func (m *mailboxSync[T]) ReceiveC() <-chan T {
@@ -186,8 +203,8 @@ func (m *mailbox[T]) Stop() {
 }
 
 func (m *mailbox[T]) Send(ctx Context, msg T) error {
-	s := m.state.Load()
-	return handleSend(s, m.stopSigC, m.sendC, ctx, msg)
+	_, err := handleSend(m.state.Load(), m.stopSigC, m.sendC, ctx, msg)
+	return err
 }
 
 func (m *mailbox[T]) ReceiveC() <-chan T {
@@ -269,19 +286,19 @@ func handleSend[T any](
 	sendC chan T,
 	msgCtx Context,
 	msg T,
-) error {
+) (bool, error) {
 	if state == mbxStateNotStarted {
-		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxNotStarted)
+		return false, fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxNotStarted)
 	} else if state == mbxStateStopped {
-		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxStopped)
+		return false, fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxStopped)
 	}
 
 	select {
 	case <-mbxStopSig:
-		return fmt.Errorf("Mailbox.Send canceled: %w", ErrMailboxStopped)
+		return true, fmt.Errorf("Mailbox.Send canceled: %w", ErrMailboxStopped)
 	case <-msgCtx.Done():
-		return fmt.Errorf("Mailbox.Send canceled: %w", msgCtx.Err())
+		return false, fmt.Errorf("Mailbox.Send canceled: %w", msgCtx.Err())
 	case sendC <- msg:
-		return nil
+		return false, nil
 	}
 }
