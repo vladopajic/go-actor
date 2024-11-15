@@ -219,8 +219,10 @@ func createNoopHandler[T any]() sendHandler[T] {
 			// This needs to be run in a separate goroutine
 			// to avoid blocking the caller, to simulate a normal call.
 			go s.Notify(fmt.Errorf("unable to send to a stopped Mailbox"))
+			// The error will come from the notify command, this prevents from sending on a closed channel.
+			return nil
 		}
-		return nil
+		return fmt.Errorf("unable to send to a stopped Mailbox")
 	}
 }
 

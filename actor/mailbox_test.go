@@ -204,7 +204,6 @@ func Test_MailboxOptAsChan(t *testing.T) {
 		assertMailboxChannelsClosed(t, m)
 
 	})
-
 	t.Run("non zero cap", func(t *testing.T) {
 		t.Parallel()
 
@@ -298,8 +297,8 @@ func Test_MailboxOptDontPanicOnStop(t *testing.T) {
 	assertSendReceive(t, m, "test")
 
 	m.Stop()
-	// This should not panic.
-	assert.NoError(t, m.Send(ContextStarted(), "send to no where"))
+	// This should not panic but instead return error.
+	assert.Error(t, m.Send(ContextStarted(), "send to no where"))
 }
 
 func assertSendReceive(t *testing.T, m Mailbox[any], val any) {
