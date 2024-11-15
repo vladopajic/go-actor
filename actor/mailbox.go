@@ -153,8 +153,7 @@ type mailbox[T any] struct {
 	actor    Actor
 	sendC    chan<- T
 	receiveC <-chan T
-	underlying Go channels
-	// for the Mailbox are not closed when the Mailbox is stopped
+
 	running         bool
 	lock            sync.Mutex
 	sendHandler     *atomic.Value
