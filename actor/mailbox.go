@@ -100,7 +100,7 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 
 		return &mailboxSync[T]{
 			Actor: Idle(OptOnStop(func() {
-				// If KeepChannelsOpen is false (default), close the channel
+				// If DontPanicOnStop is false (default), close the channel
 				if !options.DontPanicOnStop {
 					close(c)
 				}
