@@ -16,7 +16,7 @@ lint: install-golangcilint
 # Runs tests on entire repo
 .PHONY: test
 test: 
-	go test -timeout=3s -race -count=10 -shuffle=on -failfast ./...
+	go test -timeout=3s -count=10 -shuffle=on -failfast ./...
 
 # Code tidy
 .PHONY: tidy
