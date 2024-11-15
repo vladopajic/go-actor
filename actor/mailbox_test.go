@@ -215,7 +215,7 @@ func Test_MailboxOptAsChan(t *testing.T) {
 		assertMailboxStopped(t, m)
 	})
 
-	t.Run("send with canceld context", func(t *testing.T) {
+	t.Run("send with canceled context", func(t *testing.T) {
 		t.Parallel()
 
 		m := NewMailbox[any](OptAsChan())
@@ -233,7 +233,7 @@ func Test_MailboxOptAsChan(t *testing.T) {
 		m.Start()
 
 		go func() {
-			assert.Error(t, m.Send(ContextStarted(), `🌹`))
+			assert.ErrorIs(t, m.Send(ContextStarted(), `🌹`), ErrMailboxStopped)
 			close(testDoneC)
 		}()
 

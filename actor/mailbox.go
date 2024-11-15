@@ -84,9 +84,8 @@ const (
 )
 
 var (
-	ErrMailboxNotStarted          = errors.New("unable to send to a non-started Mailbox")
-	ErrMailboxStopped             = errors.New("unable to send to a stopped Mailbox")
-	ErrMailboxSendCanceledStopped = errors.New("Mailbox.Send canceled: Mailbox stopped")
+	ErrMailboxNotStarted = errors.New("Mailbox is non-started")
+	ErrMailboxStopped    = errors.New("Mailbox is stopped")
 )
 
 // NewMailbox returns a new local Mailbox implementation.
@@ -275,7 +274,9 @@ func newSendHandler[T any]() *atomic.Value {
 }
 
 func createErrorHandler[T any](err error) sendHandler[T] {
-	return func(_ Context, _ T) error { return err }
+	return func(_ Context, _ T) error {
+		return fmt.Errorf("failed to Mailbox.Send: %w", err)
+	}
 }
 
 func createSendHandler[T any](sendC chan<- T) sendHandler[T] {
@@ -295,7 +296,7 @@ func createSendHandlerWithCtx[T any](mbxCtx Context, sendC chan<- T) sendHandler
 		case sendC <- msg:
 			return nil
 		case <-mbxCtx.Done():
-			return ErrMailboxSendCanceledStopped
+			return fmt.Errorf("Mailbox.Send canceled: %w", ErrMailboxStopped)
 		case <-ctx.Done():
 			return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
 		}
