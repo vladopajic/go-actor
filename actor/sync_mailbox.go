@@ -26,7 +26,7 @@ func (sm *SyncMailbox[T]) ReceiveC() <-chan *Callback[T] {
 }
 
 func (sm *SyncMailbox[T]) Send(ctx gocontext.Context, value T) error {
-	done := make(chan error)
+	done := make(chan error, 1)
 	defer close(done)
 	err := sm.mbx.Send(ctx, &Callback[T]{
 		Value: value,
