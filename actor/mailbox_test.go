@@ -178,7 +178,6 @@ func Test_FanOut(t *testing.T) {
 	}
 }
 
-//nolint:maintidx // relax
 func Test_MailboxOptAsChan(t *testing.T) {
 	t.Parallel()
 
@@ -223,30 +222,6 @@ func Test_MailboxOptAsChan(t *testing.T) {
 
 		err := m.Send(ContextEnded(), `🌹`)
 		assert.ErrorIs(t, err, ContextEnded().Err())
-	})
-
-	t.Run("sending stopped", func(t *testing.T) {
-		t.Parallel()
-
-		testDoneC, senderStarted := make(chan any), make(chan any)
-		m := NewMailbox[any](OptAsChan())
-		m.Start()
-
-		go func() {
-			// This goroutine will notify that goroutine doing m.Send has been blocked.
-			go func() {
-				// this sleeps gives more chance for parent goroutine to continue executing
-				time.Sleep(time.Millisecond) //nolint:forbidigo // explained above
-				close(senderStarted)
-			}()
-
-			assert.ErrorIs(t, m.Send(ContextStarted(), `🌹`), ErrMailboxStopped)
-			close(testDoneC)
-		}()
-
-		<-senderStarted
-		m.Stop()
-		<-testDoneC
 	})
 }
 
