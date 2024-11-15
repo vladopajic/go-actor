@@ -197,8 +197,8 @@ func (m *mailbox[T]) ReceiveC() <-chan T {
 type mailboxWorker[T any] struct {
 	receiveC chan T
 	sendC    chan T
-	queue    *queue[T]
 	options  optionsMailbox
+	queue    *queue[T]
 }
 
 func newMailboxWorker[T any](
@@ -206,13 +206,11 @@ func newMailboxWorker[T any](
 	receiveC chan T,
 	options optionsMailbox,
 ) *mailboxWorker[T] {
-	queue := newQueue[T](options.Capacity)
-
 	return &mailboxWorker[T]{
 		sendC:    sendC,
 		receiveC: receiveC,
-		queue:    queue,
 		options:  options,
+		queue:    newQueue[T](options.Capacity),
 	}
 }
 
