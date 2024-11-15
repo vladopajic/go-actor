@@ -36,7 +36,7 @@ func Test_Mailbox(t *testing.T) {
 	m := NewMailbox[any]()
 	assert.NotNil(t, m)
 
-	assertSendPanics(t, m)
+	assert.Error(t, m.Send(ContextStarted(), `👹`))
 	assertReceiveBlocking(t, m)
 
 	m.Start()
@@ -60,7 +60,7 @@ func Test_Mailbox(t *testing.T) {
 	m.Stop()
 
 	// After Mailbox is stopped assert that all channels are closed
-	assertMailboxChannelsClosed(t, m)
+	assertMailboxStopped(t, m)
 }
 
 func Test_Mailbox_StartStop(t *testing.T) {
@@ -76,7 +76,7 @@ func Test_Mailbox_StartStop(t *testing.T) {
 	m.Stop()
 	m.Stop()
 
-	assertMailboxChannelsClosed(t, m)
+	assertMailboxStopped(t, m)
 }
 
 func Test_Mailbox_SendWithEndedCtx(t *testing.T) {
@@ -121,7 +121,7 @@ func Test_FromMailboxes(t *testing.T) {
 
 	// After combined Agent is stopped all Mailboxes should stop executing
 	for _, m := range mm {
-		assertMailboxChannelsClosed(t, m)
+		assertMailboxStopped(t, m)
 	}
 }
 
@@ -199,7 +199,7 @@ func Test_MailboxOptAsChan(t *testing.T) {
 
 		m.Stop()
 
-		assertMailboxChannelsClosed(t, m)
+		assertMailboxStopped(t, m)
 	})
 
 	t.Run("non zero cap", func(t *testing.T) {
@@ -213,7 +213,7 @@ func Test_MailboxOptAsChan(t *testing.T) {
 
 		m.Stop()
 
-		assertMailboxChannelsClosed(t, m)
+		assertMailboxStopped(t, m)
 	})
 
 	t.Run("send with canceld context", func(t *testing.T) {
@@ -293,18 +293,10 @@ func assertSendReceive(t *testing.T, m Mailbox[any], val any) {
 	assert.Equal(t, val, <-m.ReceiveC())
 }
 
-func assertSendPanics(t *testing.T, m Mailbox[any]) {
+func assertMailboxStopped(t *testing.T, m Mailbox[any]) {
 	t.Helper()
 
-	assert.Panics(t, func() {
-		m.Send(ContextStarted(), `👹`) //nolint:errcheck // this line panics
-	})
-}
-
-func assertMailboxChannelsClosed(t *testing.T, m Mailbox[any]) {
-	t.Helper()
-
-	assertSendPanics(t, m)
+	assert.ErrorIs(t, m.Send(ContextStarted(), `👹`), ErrMailboxStopped)
 
 	_, ok := <-m.ReceiveC()
 	assert.False(t, ok)

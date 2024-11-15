@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -82,6 +83,11 @@ const (
 	minQueueCapacity = mbxChanBufferCap
 )
 
+var (
+	ErrMailboxNotStarted = errors.New("unable to send to a non-started Mailbox")
+	ErrMailboxStopped    = errors.New("unable to send to a stopped Mailbox")
+)
+
 // NewMailbox returns a new local Mailbox implementation.
 //
 // The default Mailbox closely resembles a native Go channel, with the key
@@ -97,11 +103,16 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 
 	if options.AsChan {
 		c := make(chan T, options.Capacity)
+		sendHandler := &atomic.Value{}
+		sendHandler.Store(createSendHandler(c))
 
 		return &mailboxSync[T]{
-			Actor:    Idle(OptOnStop(func() { close(c) })),
-			sendC:    c,
-			receiveC: c,
+			Actor: Idle(OptOnStop(func() {
+				close(c)
+				sendHandler.Store(createErrorHandler[T](ErrMailboxStopped))
+			})),
+			receiveC:    c,
+			sendHandler: sendHandler,
 		}
 	}
 
@@ -112,7 +123,7 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 		sendHandler = &atomic.Value{}
 	)
 
-	sendHandler.Store(createPanicHandler[T]("unable to send to a non-started Mailbox"))
+	sendHandler.Store(createErrorHandler[T](ErrMailboxNotStarted))
 
 	return &mailbox[T]{
 		actor:       New(w),
@@ -124,17 +135,13 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 
 type mailboxSync[T any] struct {
 	Actor
-	sendC    chan<- T
-	receiveC <-chan T
+	receiveC    <-chan T
+	sendHandler *atomic.Value
 }
 
 func (m *mailboxSync[T]) Send(ctx Context, msg T) error {
-	select {
-	case m.sendC <- msg:
-		return nil
-	case <-ctx.Done():
-		return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
-	}
+	h := m.sendHandler.Load().(sendHandler[T]) //nolint:forcetypeassert // relax
+	return h(ctx, msg)
 }
 
 func (m *mailboxSync[T]) ReceiveC() <-chan T {
@@ -175,7 +182,7 @@ func (m *mailbox[T]) Stop() {
 	}
 
 	m.running = false
-	m.sendHandler.Store(createPanicHandler[T]("unable to send to a stopped Mailbox"))
+	m.sendHandler.Store(createErrorHandler[T](ErrMailboxStopped))
 	m.actor.Stop()
 }
 
@@ -184,10 +191,8 @@ func (m *mailbox[T]) Send(ctx Context, msg T) error {
 	return h(ctx, msg)
 }
 
-func createPanicHandler[T any](msg string) sendHandler[T] {
-	return func(_ Context, _ T) error {
-		panic(msg) //nolint:forbidigo // panic is intentional
-	}
+func createErrorHandler[T any](err error) sendHandler[T] {
+	return func(_ Context, _ T) error { return err }
 }
 
 func createSendHandler[T any](sendC chan<- T) sendHandler[T] {
