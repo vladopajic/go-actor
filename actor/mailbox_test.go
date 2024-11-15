@@ -193,7 +193,7 @@ func Test_MailboxOptAsChan(t *testing.T) {
 		assertSendBlocking(t, m)
 		assertReceiveBlocking(t, m)
 
-		// Send when there is receiNoErrorver
+		// Send when there is receiver
 		go func() {
 			assert.NoError(t, m.Send(ContextStarted(), `🌹`))
 		}()
@@ -293,7 +293,7 @@ func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
 func Test_MailboxOptKeepChannelsOpen(t *testing.T) {
 	t.Parallel()
 
-	m := NewMailbox[any](OptOnKeepChannelOpen())
+	m := NewMailbox[any](OptDontPanicOnStop())
 	m.Start()
 	assertSendReceive(t, m, "test")
 

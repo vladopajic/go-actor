@@ -78,8 +78,8 @@ func testMailboxOptions(t *testing.T) {
 	}
 
 	{ // Assert that OptStopAfterReceivingAll will be set
-		opts := NewOptions(OptOnKeepChannelOpen())
-		assert.True(t, opts.Mailbox.KeepChannelsOpen)
+		opts := NewOptions(OptDontPanicOnStop())
+		assert.True(t, opts.Mailbox.DontPanicOnStop)
 
 		assert.Empty(t, opts.Actor)
 		assert.Empty(t, opts.Combined)

@@ -45,7 +45,7 @@ func Test_SyncMailbox_Basic(t *testing.T) {
 func Test_SyncMailbox_OptionsKeepChannelsOpen(t *testing.T) {
 	t.Parallel()
 
-	m := NewSyncMailbox[string](OptOnKeepChannelOpen())
+	m := NewSyncMailbox[string](OptDontPanicOnStop())
 	assert.NotNil(t, m)
 
 	m.Start()
@@ -72,7 +72,7 @@ func Test_SyncMailbox_StopBeforeSend(t *testing.T) {
 func Test_SyncMailbox_StopBeforeSendWithOptKeepChannelsOpen(t *testing.T) {
 	t.Parallel()
 
-	m := NewSyncMailbox[string](OptOnKeepChannelOpen())
+	m := NewSyncMailbox[string](OptDontPanicOnStop())
 	assert.NotNil(t, m)
 
 	m.Start()

@@ -130,11 +130,10 @@ func OptOnStartCombined(f func(Context)) CombinedOption {
 	}
 }
 
-// OptOnKeepChannelOpen ensures that the underlying Go channels
-// for the Mailbox are not closed when the Mailbox is stopped.
-func OptOnKeepChannelOpen() MailboxOption {
+// OptDontPanicOnStop ensures that the mailbox doesn't panic when stopped.
+func OptDontPanicOnStop() MailboxOption {
 	return func(o *options) {
-		o.Mailbox.KeepChannelsOpen = true
+		o.Mailbox.DontPanicOnStop = true
 	}
 }
 
@@ -167,7 +166,7 @@ type optionsMailbox struct {
 	AsChan                bool
 	Capacity              int
 	StopAfterReceivingAll bool
-	KeepChannelsOpen      bool
+	DontPanicOnStop       bool
 }
 
 func newOptions[T ~func(o *options)](opts []T) options {

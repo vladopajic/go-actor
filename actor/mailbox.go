@@ -101,7 +101,7 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 		return &mailboxSync[T]{
 			Actor: Idle(OptOnStop(func() {
 				// If KeepChannelsOpen is false (default), close the channel
-				if !options.KeepChannelsOpen {
+				if !options.DontPanicOnStop {
 					close(c)
 				}
 			})),
@@ -120,11 +120,11 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	sendHandler.Store(createPanicHandler[T]("unable to send to a non-started Mailbox"))
 
 	return &mailbox[T]{
-		actor:            New(w),
-		sendC:            sendC,
-		receiveC:         receiveC,
-		sendHandler:      sendHandler,
-		keepChannelsOpen: options.KeepChannelsOpen,
+		actor:           New(w),
+		sendC:           sendC,
+		receiveC:        receiveC,
+		sendHandler:     sendHandler,
+		dontPanicOnStop: options.DontPanicOnStop,
 	}
 }
 
@@ -153,11 +153,12 @@ type mailbox[T any] struct {
 	actor    Actor
 	sendC    chan<- T
 	receiveC <-chan T
-
-	running          bool
-	lock             sync.Mutex
-	sendHandler      *atomic.Value
-	keepChannelsOpen bool
+	underlying Go channels
+	// for the Mailbox are not closed when the Mailbox is stopped
+	running         bool
+	lock            sync.Mutex
+	sendHandler     *atomic.Value
+	dontPanicOnStop bool
 }
 
 func (m *mailbox[T]) Start() {
@@ -182,7 +183,7 @@ func (m *mailbox[T]) Stop() {
 	}
 
 	m.running = false
-	if m.keepChannelsOpen {
+	if m.dontPanicOnStop {
 		m.sendHandler.Store(createNoopHandler[T]())
 	} else {
 		m.sendHandler.Store(createPanicHandler[T]("unable to send to a stopped Mailbox"))
