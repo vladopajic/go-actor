@@ -84,8 +84,9 @@ const (
 )
 
 var (
-	ErrMailboxNotStarted = errors.New("unable to send to a non-started Mailbox")
-	ErrMailboxStopped    = errors.New("unable to send to a stopped Mailbox")
+	ErrMailboxNotStarted          = errors.New("unable to send to a non-started Mailbox")
+	ErrMailboxStopped             = errors.New("unable to send to a stopped Mailbox")
+	ErrMailboxSendCanceledStopped = errors.New("Mailbox.Send canceled: Mailbox stopped")
 )
 
 // NewMailbox returns a new local Mailbox implementation.
@@ -102,41 +103,54 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	options := newOptions(opt).Mailbox
 
 	if options.AsChan {
-		c := make(chan T, options.Capacity)
-		sendHandler := &atomic.Value{}
-		sendHandler.Store(createSendHandler(c))
-
-		return &mailboxSync[T]{
-			Actor: Idle(OptOnStop(func() {
-				close(c)
-				sendHandler.Store(createErrorHandler[T](ErrMailboxStopped))
-			})),
-			receiveC:    c,
-			sendHandler: sendHandler,
-		}
+		return newMailboxSync[T](options)
 	}
 
-	var (
-		sendC       = make(chan T, mbxChanBufferCap)
-		receiveC    = make(chan T, mbxChanBufferCap)
-		w           = newMailboxWorker(sendC, receiveC, options)
-		sendHandler = &atomic.Value{}
-	)
+	return newMailboxAsync[T](options)
+}
 
-	sendHandler.Store(createErrorHandler[T](ErrMailboxNotStarted))
-
-	return &mailbox[T]{
-		actor:       New(w),
-		sendC:       sendC,
-		receiveC:    receiveC,
-		sendHandler: sendHandler,
+func newMailboxSync[T any](options optionsMailbox) *mailboxSync[T] {
+	return &mailboxSync[T]{
+		c:           make(chan T, options.Capacity),
+		sendHandler: newSendHandler[T](),
 	}
 }
 
 type mailboxSync[T any] struct {
-	Actor
-	receiveC    <-chan T
+	c           chan T
+	ctx         *context
+	running     bool
+	lock        sync.Mutex
 	sendHandler *atomic.Value
+}
+
+func (m *mailboxSync[T]) Start() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if m.running {
+		return
+	}
+
+	m.running = true
+
+	m.ctx = newContext()
+	m.sendHandler.Store(createSendHandlerWithCtx(m.ctx, m.c))
+}
+
+func (m *mailboxSync[T]) Stop() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if !m.running {
+		return
+	}
+
+	m.running = false
+
+	m.sendHandler.Store(createErrorHandler[T](ErrMailboxStopped))
+	m.ctx.end()
+	close(m.c)
 }
 
 func (m *mailboxSync[T]) Send(ctx Context, msg T) error {
@@ -145,10 +159,22 @@ func (m *mailboxSync[T]) Send(ctx Context, msg T) error {
 }
 
 func (m *mailboxSync[T]) ReceiveC() <-chan T {
-	return m.receiveC
+	return m.c
 }
 
-type sendHandler[T any] func(ctx Context, msg T) error
+func newMailboxAsync[T any](options optionsMailbox) *mailbox[T] {
+	var (
+		sendC    = make(chan T, mbxChanBufferCap)
+		receiveC = make(chan T, mbxChanBufferCap)
+	)
+
+	return &mailbox[T]{
+		actor:       New(newMailboxWorker(sendC, receiveC, options)),
+		sendC:       sendC,
+		receiveC:    receiveC,
+		sendHandler: newSendHandler[T](),
+	}
+}
 
 type mailbox[T any] struct {
 	actor    Actor
@@ -189,21 +215,6 @@ func (m *mailbox[T]) Stop() {
 func (m *mailbox[T]) Send(ctx Context, msg T) error {
 	h := m.sendHandler.Load().(sendHandler[T]) //nolint:forcetypeassert // relax
 	return h(ctx, msg)
-}
-
-func createErrorHandler[T any](err error) sendHandler[T] {
-	return func(_ Context, _ T) error { return err }
-}
-
-func createSendHandler[T any](sendC chan<- T) sendHandler[T] {
-	return func(ctx Context, msg T) error {
-		select {
-		case sendC <- msg:
-			return nil
-		case <-ctx.Done():
-			return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
-		}
-	}
 }
 
 func (m *mailbox[T]) ReceiveC() <-chan T {
@@ -279,4 +290,41 @@ func (w *mailboxWorker[T]) OnStop() {
 	}
 
 	close(w.receiveC)
+}
+
+type sendHandler[T any] func(ctx Context, msg T) error
+
+func newSendHandler[T any]() *atomic.Value {
+	sendHandler := &atomic.Value{}
+	sendHandler.Store(createErrorHandler[T](ErrMailboxNotStarted))
+
+	return sendHandler
+}
+
+func createErrorHandler[T any](err error) sendHandler[T] {
+	return func(_ Context, _ T) error { return err }
+}
+
+func createSendHandler[T any](sendC chan<- T) sendHandler[T] {
+	return func(ctx Context, msg T) error {
+		select {
+		case sendC <- msg:
+			return nil
+		case <-ctx.Done():
+			return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
+		}
+	}
+}
+
+func createSendHandlerWithCtx[T any](mbxCtx Context, sendC chan<- T) sendHandler[T] {
+	return func(ctx Context, msg T) error {
+		select {
+		case sendC <- msg:
+			return nil
+		case <-mbxCtx.Done():
+			return ErrMailboxSendCanceledStopped
+		case <-ctx.Done():
+			return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
+		}
+	}
 }

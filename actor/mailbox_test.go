@@ -178,6 +178,7 @@ func Test_FanOut(t *testing.T) {
 	}
 }
 
+//nolint:maintidx // relax
 func Test_MailboxOptAsChan(t *testing.T) {
 	t.Parallel()
 
@@ -185,7 +186,6 @@ func Test_MailboxOptAsChan(t *testing.T) {
 		t.Parallel()
 
 		m := NewMailbox[any](OptAsChan())
-
 		m.Start()
 
 		assertSendBlocking(t, m)
@@ -206,7 +206,6 @@ func Test_MailboxOptAsChan(t *testing.T) {
 		t.Parallel()
 
 		m := NewMailbox[any](OptAsChan(), OptCapacity(1))
-
 		m.Start()
 
 		assertSendReceive(t, m, `🌹`)
@@ -220,9 +219,26 @@ func Test_MailboxOptAsChan(t *testing.T) {
 		t.Parallel()
 
 		m := NewMailbox[any](OptAsChan())
+		m.Start()
 
 		err := m.Send(ContextEnded(), `🌹`)
 		assert.ErrorIs(t, err, ContextEnded().Err())
+	})
+
+	t.Run("sending stopped", func(t *testing.T) {
+		t.Parallel()
+
+		testDoneC := make(chan any)
+		m := NewMailbox[any](OptAsChan())
+		m.Start()
+
+		go func() {
+			assert.Error(t, m.Send(ContextStarted(), `🌹`))
+			close(testDoneC)
+		}()
+
+		m.Stop()
+		<-testDoneC
 	})
 }
 
