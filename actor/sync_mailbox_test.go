@@ -42,7 +42,7 @@ func Test_SyncMailbox_Basic(t *testing.T) {
 	assert.Equal(t, []string{"hello", "world"}, received)
 }
 
-func Test_SyncMailbox_OptionsKeepChannelsOpen(t *testing.T) {
+func Test_SyncMailbox_OptionsDontPanicOnStop(t *testing.T) {
 	t.Parallel()
 
 	m := NewSyncMailbox[string](OptDontPanicOnStop())
@@ -69,7 +69,7 @@ func Test_SyncMailbox_StopBeforeSend(t *testing.T) {
 	})
 }
 
-func Test_SyncMailbox_StopBeforeSendWithOptKeepChannelsOpen(t *testing.T) {
+func Test_SyncMailbox_StopBeforeSendWithOptDontPanicOnStop(t *testing.T) {
 	t.Parallel()
 
 	m := NewSyncMailbox[string](OptDontPanicOnStop())

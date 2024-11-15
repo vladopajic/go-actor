@@ -290,7 +290,7 @@ func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
 	})
 }
 
-func Test_MailboxOptKeepChannelsOpen(t *testing.T) {
+func Test_MailboxOptDontPanicOnStop(t *testing.T) {
 	t.Parallel()
 
 	m := NewMailbox[any](OptDontPanicOnStop())
