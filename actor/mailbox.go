@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -82,6 +83,11 @@ const (
 	minQueueCapacity = mbxChanBufferCap
 )
 
+var (
+	ErrMailboxNotStarted = errors.New("Mailbox is non started")
+	ErrMailboxStopped    = errors.New("Mailbox is stopped")
+)
+
 // NewMailbox returns a new local Mailbox implementation.
 //
 // The default Mailbox closely resembles a native Go channel, with the key
@@ -96,108 +102,126 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	options := newOptions(opt).Mailbox
 
 	if options.AsChan {
-		c := make(chan T, options.Capacity)
-
-		return &mailboxSync[T]{
-			Actor:    Idle(OptOnStop(func() { close(c) })),
-			sendC:    c,
-			receiveC: c,
-		}
+		return newMailboxSync[T](options)
 	}
 
-	var (
-		sendC       = make(chan T, mbxChanBufferCap)
-		receiveC    = make(chan T, mbxChanBufferCap)
-		w           = newMailboxWorker(sendC, receiveC, options)
-		sendHandler = &atomic.Value{}
-	)
+	return newMailboxAsync[T](options)
+}
 
-	sendHandler.Store(createPanicHandler[T]("unable to send to a non-started Mailbox"))
-
-	return &mailbox[T]{
-		actor:       New(w),
-		sendC:       sendC,
-		receiveC:    receiveC,
-		sendHandler: sendHandler,
+func newMailboxSync[T any](options optionsMailbox) *mailboxSync[T] {
+	return &mailboxSync[T]{
+		c:           make(chan T, options.Capacity),
+		stopSigC:    make(chan struct{}),
+		state:       &atomic.Int32{},
+		ongoingSend: &atomic.Int64{},
 	}
 }
 
+type mbxState = int32
+
+const (
+	mbxStateNotStarted mbxState = 0
+	mbxStateRunning    mbxState = 1
+	mbxStateStopped    mbxState = 2
+)
+
 type mailboxSync[T any] struct {
-	Actor
-	sendC    chan<- T
-	receiveC <-chan T
+	c           chan T
+	stopSigC    chan struct{}
+	state       *atomic.Int32
+	ongoingSend *atomic.Int64
+	closeOnce   sync.Once
+}
+
+func (m *mailboxSync[T]) Start() {
+	m.state.CompareAndSwap(mbxStateNotStarted, mbxStateRunning)
+}
+
+func (m *mailboxSync[T]) Stop() {
+	if m.state.CompareAndSwap(mbxStateRunning, mbxStateStopped) {
+		close(m.stopSigC)
+		m.closeReceiveC()
+	}
 }
 
 func (m *mailboxSync[T]) Send(ctx Context, msg T) error {
+	state := m.state.Load()
+	if state == mbxStateNotStarted {
+		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxNotStarted)
+	} else if state == mbxStateStopped {
+		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxStopped)
+	}
+
+	m.ongoingSend.Add(1)
+	defer m.ongoingSend.Add(-1)
+
 	select {
-	case m.sendC <- msg:
-		return nil
+	case <-m.stopSigC:
+		defer m.closeReceiveC()
+		return fmt.Errorf("Mailbox.Send canceled: %w", ErrMailboxStopped)
 	case <-ctx.Done():
 		return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
+	case m.c <- msg:
+		return nil
+	}
+}
+
+func (m *mailboxSync[T]) closeReceiveC() {
+	if m.ongoingSend.Load() == 0 {
+		m.closeOnce.Do(func() { close(m.c) })
 	}
 }
 
 func (m *mailboxSync[T]) ReceiveC() <-chan T {
-	return m.receiveC
+	return m.c
 }
 
-type sendHandler[T any] func(ctx Context, msg T) error
+func newMailboxAsync[T any](options optionsMailbox) *mailbox[T] {
+	var (
+		sendC    = make(chan T, mbxChanBufferCap)
+		receiveC = make(chan T, mbxChanBufferCap)
+	)
+
+	return &mailbox[T]{
+		actor:    New(newMailboxWorker(sendC, receiveC, options)),
+		sendC:    sendC,
+		receiveC: receiveC,
+		state:    &atomic.Int32{},
+	}
+}
 
 type mailbox[T any] struct {
 	actor    Actor
-	sendC    chan<- T
+	sendC    chan T
 	receiveC <-chan T
-
-	running     bool
-	lock        sync.Mutex
-	sendHandler *atomic.Value
+	state    *atomic.Int32
 }
 
 func (m *mailbox[T]) Start() {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	if m.running {
-		return
+	if m.state.CompareAndSwap(mbxStateNotStarted, mbxStateRunning) {
+		m.actor.Start()
 	}
-
-	m.running = true
-	m.sendHandler.Store(createSendHandler(m.sendC))
-	m.actor.Start()
 }
 
 func (m *mailbox[T]) Stop() {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	if !m.running {
-		return
+	if m.state.CompareAndSwap(mbxStateRunning, mbxStateStopped) {
+		m.actor.Stop()
 	}
-
-	m.running = false
-	m.sendHandler.Store(createPanicHandler[T]("unable to send to a stopped Mailbox"))
-	m.actor.Stop()
 }
 
 func (m *mailbox[T]) Send(ctx Context, msg T) error {
-	h := m.sendHandler.Load().(sendHandler[T]) //nolint:forcetypeassert // relax
-	return h(ctx, msg)
-}
-
-func createPanicHandler[T any](msg string) sendHandler[T] {
-	return func(_ Context, _ T) error {
-		panic(msg) //nolint:forbidigo // panic is intentional
+	state := m.state.Load()
+	if state == mbxStateNotStarted {
+		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxNotStarted)
+	} else if state == mbxStateStopped {
+		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxStopped)
 	}
-}
 
-func createSendHandler[T any](sendC chan<- T) sendHandler[T] {
-	return func(ctx Context, msg T) error {
-		select {
-		case sendC <- msg:
-			return nil
-		case <-ctx.Done():
-			return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
-		}
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
+	case m.sendC <- msg:
+		return nil
 	}
 }
 
@@ -208,8 +232,8 @@ func (m *mailbox[T]) ReceiveC() <-chan T {
 type mailboxWorker[T any] struct {
 	receiveC chan T
 	sendC    chan T
-	queue    *queue[T]
 	options  optionsMailbox
+	queue    *queue[T]
 }
 
 func newMailboxWorker[T any](
@@ -217,13 +241,11 @@ func newMailboxWorker[T any](
 	receiveC chan T,
 	options optionsMailbox,
 ) *mailboxWorker[T] {
-	queue := newQueue[T](options.Capacity)
-
 	return &mailboxWorker[T]{
 		sendC:    sendC,
 		receiveC: receiveC,
-		queue:    queue,
 		options:  options,
+		queue:    newQueue[T](options.Capacity),
 	}
 }
 
