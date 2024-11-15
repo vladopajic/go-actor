@@ -1,10 +1,10 @@
-# Best practices
+# Best Practices for Using `go-actor`
 
-To enhance the code quality of projects that heavily rely on the actor model and utilize the `go-actor` library, it's recommended to adhere following best practices.
+To ensure optimal code quality in projects that leverage the actor model and the `go-actor` library, we recommend following these best practices.
 
-## Forget about `sync` package
+## Avoid the `sync` Package
 
-Projects that fully relay on actor model and `go-actor` library shouldn't use any synchronization primitives from `sync` package. Therefore repositories based on `go-actor` could add linter that will warn them if `sync` package is used, eg:
+Projects that rely on the actor model and the `go-actor` library should avoid using synchronization primitives from the `sync` package. Instead, the actor model itself should handle concurrency. To enforce this, repositories using `go-actor` can add a linter that warns when the `sync` package is used. Here’s an example configuration:
 
 ```yml
 linters-settings:
@@ -13,15 +13,15 @@ linters-settings:
         - 'sync.*(# sync package is forbidden)?'
 ```
 
-While the general rule is to avoid `sync` package usage in actor-based code, there might be specific situations where its use becomes necessary. In such cases, the linter can be temporarily disabled to accommodate these exceptional needs.
+While the general rule is to avoid the `sync` package in actor-based code, there may be specific situations where its use is unavoidable. In such cases, the linter can be temporarily disabled to accommodate these exceptions.
 
-## Use `goleak` library
+## Use the `goleak` Library
 
-[goleak](https://github.com/uber-go/goleak) is vary helpful library that detects goroutine leaks in unit tests. This can be helpful because it can identify actors that are still running after unit test have ended. Gracefully ending actors is important to test because it can identify various problems in implementation.
+The [goleak](https://github.com/uber-go/goleak) library is very helpful in detecting goroutine leaks during unit tests. This helps identify actors that remain active after a test has concluded, which can indicate issues with actor shutdown (stopping). Detecting and handling such leaks ensures graceful termination of actors and prevents potential performance issues in production.
 
-## Start select statements in `DoWork` with context
+## Begin `select` Statements in `DoWork` with Context Cancellation
 
-Workers should always respond to `Context.Done()` channel and return `actor.WorkerEnd` status in order to end it's actor. As a rule of thumb it's advised to always list this case first since it should be included in every `select` statement.
+Workers should always check the `Context.Done()` channel and return actor.WorkerEnd to terminate the actor. As a best practice, this case should be listed first in every select statement to ensure context cancellation is handled consistently.
 
 ```go
 func (w *fooWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
@@ -35,9 +35,10 @@ func (w *fooWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 }
 ```
 
-## Check channel closed indicator in `DoWork`
+## Handle Channel Closure in `DoWork`
 
-Every case statement in `DoWork` should handle case when channel is closed. In these cases worker should end execution; or it can perform any other logic that is necessary.
+Each select statement case in `DoWork` should account for scenarios where a channel might close. When this happens, the worker should gracefully end execution or perform any necessary cleanup actions.
+
 
 ```go
 func (w *fooWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
@@ -55,9 +56,9 @@ func (w *fooWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 }
 ```
 
-## Combine multiple actors to singe actor
+## Combine Multiple Actors into a Single Actor
 
-`actor.Combine(...)` is vary handy to combine multiple actors to single actor.
+The `actor.Combine(...).Build()` is particularly useful for combining multiple actors into a single actor instance. This can streamline actor management and reduce the complexity of handling multiple actors individually.
 
 ```go
 type fooActor struct {
@@ -74,8 +75,8 @@ func NewFooActor() *fooActor {
 
 	return &fooActor{
 		mbx: 	mbx,
-		Actor: 	actor.Combine(mbx, a1, a2).Build()	// combine all actors to single actor and initialize embeded actor of fooActor struct.
-	}							// when calling fooActor.Start() it will start all actors at once.
+		Actor: 	actor.Combine(mbx, a1, a2).Build()	// combines all actors into a single actor and initializes the embedded actor of fooActor
+	}							// calling fooActor.Start() will start all actors at once
 }
 
 func (f *fooActor) OnMessage(ctx context.Context, msg any) error {
@@ -84,6 +85,47 @@ func (f *fooActor) OnMessage(ctx context.Context, msg any) error {
 
 ```
 
+## Avoid Unnecessary Blocking in `DoWork`
+
+Sometimes, it’s necessary for `DoWork` to return a result, often achieved by sending a “promise-like” response channel along with data via the mailbox. For example:
+
+
+```go
+type request struct {
+	// ... some data
+	respC chan error
+}
+
+
+func (w *fooWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
+	select {
+	case <-ctx.Done():
+		return actor.WorkerEnd
+
+	case req, ok := <-w.mbx.ReceiveC(): // Mailbox[request]
+		if !ok {
+			return actor.WorkerEnd
+		}
+
+		err := handleFoo(req)
+		req.respC <- err  // <---- Worker can get blocked here
+	}
+}
+```
+
+For the best performance, avoid introducing unnecessary blocking in the worker. This can happen if `respC` is created without a buffer. In such a case, the worker will block until another goroutine reads from `respC`. This waiting time can cause inefficiencies.
+
+To prevent this, create `respC` with a buffer of size 1:
+
+```go
+req := request{ 
+	respC: make(chan error, 1) // <---- Buffer size of 1 prevents blocking
+}
+mbx.Send(ctx, req)
+err := <- req.respC
+```
+
+
 ---
 
-This page is not yet complete.
+This documentation is still under development and will be expanded with more best practices.
