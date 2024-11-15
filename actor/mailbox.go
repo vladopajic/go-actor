@@ -99,7 +99,12 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 		c := make(chan T, options.Capacity)
 
 		return &mailboxSync[T]{
-			Actor:    Idle(OptOnStop(func() { close(c) })),
+			Actor: Idle(OptOnStop(func() {
+				// If KeepChannelsOpen is false (default), close the channel
+				if !options.KeepChannelsOpen {
+					close(c)
+				}
+			})),
 			sendC:    c,
 			receiveC: c,
 		}
@@ -115,10 +120,11 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	sendHandler.Store(createPanicHandler[T]("unable to send to a non-started Mailbox"))
 
 	return &mailbox[T]{
-		actor:       New(w),
-		sendC:       sendC,
-		receiveC:    receiveC,
-		sendHandler: sendHandler,
+		actor:            New(w),
+		sendC:            sendC,
+		receiveC:         receiveC,
+		sendHandler:      sendHandler,
+		keepChannelsOpen: options.KeepChannelsOpen,
 	}
 }
 
@@ -148,9 +154,10 @@ type mailbox[T any] struct {
 	sendC    chan<- T
 	receiveC <-chan T
 
-	running     bool
-	lock        sync.Mutex
-	sendHandler *atomic.Value
+	running          bool
+	lock             sync.Mutex
+	sendHandler      *atomic.Value
+	keepChannelsOpen bool
 }
 
 func (m *mailbox[T]) Start() {
@@ -175,7 +182,11 @@ func (m *mailbox[T]) Stop() {
 	}
 
 	m.running = false
-	m.sendHandler.Store(createNoopHandler[T]())
+	if m.keepChannelsOpen {
+		m.sendHandler.Store(createNoopHandler[T]())
+	} else {
+		m.sendHandler.Store(createPanicHandler[T]("unable to send to a stopped Mailbox"))
+	}
 	m.actor.Stop()
 }
 
@@ -190,12 +201,6 @@ func createPanicHandler[T any](msg string) sendHandler[T] {
 	}
 }
 
-func createNoopHandler[T any]() sendHandler[T] {
-	return func(_ Context, _ T) error {
-		return nil
-	}
-}
-
 func createSendHandler[T any](sendC chan<- T) sendHandler[T] {
 	return func(ctx Context, msg T) error {
 		select {
@@ -204,6 +209,18 @@ func createSendHandler[T any](sendC chan<- T) sendHandler[T] {
 		case <-ctx.Done():
 			return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
 		}
+	}
+}
+
+func createNoopHandler[T any]() sendHandler[T] {
+	return func(_ Context, v T) error {
+		// Notify the callback.
+		if s, ok := any(v).(CallbackHook); ok {
+			// This needs to be run in a separate goroutine
+			// to avoid blocking the caller, to simulate a normal call.
+			go s.Notify(fmt.Errorf("unable to send to a stopped Mailbox"))
+		}
+		return nil
 	}
 }
 

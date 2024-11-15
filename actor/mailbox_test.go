@@ -292,6 +292,18 @@ func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
 	})
 }
 
+func Test_MailboxOptKeepChannelsOpen(t *testing.T) {
+	t.Parallel()
+
+	m := NewMailbox[any](OptOnKeepChannelOpen())
+	m.Start()
+	assertSendReceive(t, m, "test")
+
+	m.Stop()
+	// This should not panic.
+	assert.NoError(t, m.Send(ContextStarted(), "send to no where"))
+}
+
 func assertSendReceive(t *testing.T, m Mailbox[any], val any) {
 	t.Helper()
 
