@@ -84,7 +84,7 @@ const (
 )
 
 var (
-	ErrMailboxNotStarted = errors.New("Mailbox is non-started")
+	ErrMailboxNotStarted = errors.New("Mailbox is non started")
 	ErrMailboxStopped    = errors.New("Mailbox is stopped")
 )
 
