@@ -10,94 +10,6 @@ import (
 	. "github.com/vladopajic/go-actor/actor"
 )
 
-func Test_MailboxWorker_EndSignal(t *testing.T) {
-	t.Parallel()
-
-	sendC := make(chan any)
-	receiveC := make(chan any)
-	options := OptionsMailbox{}
-
-	w := NewMailboxWorker(sendC, receiveC, options)
-	assert.NotNil(t, w)
-
-	// Worker should signal end with empty queue
-	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
-
-	// Worker should signal end with non-empty queue
-	w.Queue().PushBack(`🌹`)
-	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
-}
-
-func Test_Mailbox(t *testing.T) {
-	t.Parallel()
-
-	const sendMessagesCount = 5000
-
-	m := NewMailbox[any]()
-	assert.NotNil(t, m)
-
-	assert.Error(t, m.Send(ContextStarted(), `👹`))
-	assertReceiveBlocking(t, m)
-
-	m.Start()
-
-	// Send values via Send() method, then assert that values are received
-	// on ReceiveC() channel.
-	// It is important to first send all data to Send() method to simulate excessive
-	// incoming messages on this Mailbox.
-
-	for i := range sendMessagesCount {
-		assert.NoError(t, m.Send(ContextStarted(), i))
-	}
-
-	for i := range sendMessagesCount {
-		assert.Equal(t, <-m.ReceiveC(), i)
-	}
-
-	// Assert that sending nil value should't cause panic
-	assertSendReceive(t, m, nil)
-
-	m.Stop()
-
-	// After Mailbox is stopped assert that all channels are closed
-	assertMailboxStopped(t, m)
-}
-
-func Test_Mailbox_StartStop(t *testing.T) {
-	t.Parallel()
-
-	m := NewMailbox[any]()
-
-	m.Start()
-	m.Start()
-
-	assertSendReceive(t, m, `🌹`)
-
-	m.Stop()
-	m.Stop()
-
-	assertMailboxStopped(t, m)
-}
-
-func Test_Mailbox_SendWithEndedCtx(t *testing.T) {
-	t.Parallel()
-
-	m := NewMailbox[any]()
-
-	m.Start()
-	defer m.Stop()
-
-	// Assert that sending with canceled context will end with error.
-	// Since sendC has some buffer it is possible that some attempts will succeed.
-	for {
-		err := m.Send(ContextEnded(), `🌹`)
-		if err != nil {
-			assert.ErrorIs(t, err, ContextEnded().Err())
-			break
-		}
-	}
-}
-
 func Test_FromMailboxes(t *testing.T) {
 	t.Parallel()
 
@@ -130,12 +42,12 @@ func Test_FanOut(t *testing.T) {
 
 	const (
 		sendMessagesCount = 100
-		fanoutCount       = 5
+		fanOutCount       = 5
 	)
 
 	wg := sync.WaitGroup{}
 	inMbx := NewMailbox[any]()
-	fanMbxx := NewMailboxes[any](fanoutCount)
+	fanMbxx := NewMailboxes[any](fanOutCount)
 
 	// Fan out inMbx
 	FanOut(inMbx.ReceiveC(), fanMbxx)
@@ -145,7 +57,7 @@ func Test_FanOut(t *testing.T) {
 	a.Start()
 	defer a.Stop()
 
-	wg.Add(fanoutCount)
+	wg.Add(fanOutCount)
 
 	// Produce data on inMbx
 	go func() {
@@ -178,90 +90,55 @@ func Test_FanOut(t *testing.T) {
 	}
 }
 
-func Test_Mailbox_AsChan(t *testing.T) {
+func Test_MailboxWorker_EndSignal(t *testing.T) {
 	t.Parallel()
 
-	t.Run("zero cap", func(t *testing.T) {
-		t.Parallel()
+	w := NewMailboxWorker(make(chan any), make(chan any), OptionsMailbox{})
+	assert.NotNil(t, w)
 
-		m := NewMailbox[any](OptAsChan())
-		m.Start()
+	// Worker should signal end with empty queue
+	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
 
-		assertSendBlocking(t, m)
-		assertReceiveBlocking(t, m)
+	// Worker should signal end with non-empty queue
+	w.Queue().PushBack(`🌹`)
+	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
+}
 
-		// Send when there is receiver
-		go func() {
-			assert.NoError(t, m.Send(ContextStarted(), `🌹`))
-		}()
-		assert.Equal(t, `🌹`, <-m.ReceiveC())
+func Test_Mailbox_Invariants(t *testing.T) {
+	t.Parallel()
 
-		m.Stop()
-
-		assertMailboxStopped(t, m)
-	})
-
-	t.Run("non zero cap", func(t *testing.T) {
-		t.Parallel()
-
-		m := NewMailbox[any](OptAsChan(), OptCapacity(1))
-		m.Start()
-
-		assertSendReceive(t, m, `🌹`)
-
-		m.Stop()
-
-		assertMailboxStopped(t, m)
-	})
-
-	t.Run("send with canceled context", func(t *testing.T) {
-		t.Parallel()
-
-		m := NewMailbox[any](OptAsChan())
-		m.Start()
-
-		err := m.Send(ContextEnded(), `🌹`)
-		assert.ErrorIs(t, err, ContextEnded().Err())
-	})
-
-	t.Run("send not started", func(t *testing.T) {
-		t.Parallel()
-
-		m := NewMailbox[any](OptAsChan())
-
-		err := m.Send(ContextStarted(), `🌹`)
-		assert.ErrorIs(t, err, ErrMailboxNotStarted)
+	AssertMailboxInvariantsBuffered(t, func() Mailbox[any] {
+		return NewMailbox[any]()
 	})
 }
 
-func Test_Mailbox_AsChan_SendStopped(t *testing.T) {
+func Test_Mailbox_MessageQueue(t *testing.T) {
 	t.Parallel()
 
-	testDoneC, senderBlockedC := make(chan any), make(chan any)
-	m := NewMailbox[any](OptAsChan())
+	const sendMessagesCount = 5000
+
+	m := NewMailbox[any]()
 	m.Start()
 
-	// Start goroutine that will send to mailbox, but since no one is waiting
-	// to receive data from it should receive sopped error after mailbox is stopped.
-	go func() {
-		// This goroutine will notify that goroutine doing m.Send has been blocked.
-		go func() {
-			// sleeps gives more chance for parent goroutine to continue executing
-			time.Sleep(time.Millisecond) //nolint:forbidigo // explained above
-			close(senderBlockedC)
-		}()
+	// Send values via Send() method, then assert that values are received
+	// on ReceiveC() channel.
+	// It is important to first send all data to Send() method to simulate excessive
+	// incoming messages on this Mailbox.
 
-		assert.ErrorIs(t, m.Send(ContextStarted(), `🌹`), ErrMailboxStopped)
-		close(testDoneC)
-	}()
+	for i := range sendMessagesCount {
+		assert.NoError(t, m.Send(ContextStarted(), i))
+	}
 
-	<-senderBlockedC
-	m.Stop() // stopping mailbox wile there is some goroutines trying to send
-	<-testDoneC
+	for i := range sendMessagesCount {
+		assert.Equal(t, <-m.ReceiveC(), i)
+	}
+
+	m.Stop()
+	assertMailboxStopped(t, m)
 }
 
 // This test asserts that Mailbox will end only after all messages have been received.
-func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
+func Test_Mailbox_OptEndAfterReceivingAll(t *testing.T) {
 	t.Parallel()
 
 	const messagesCount = 1000
@@ -318,6 +195,136 @@ func Test_Mailbox_OptEndAferReceivingAll(t *testing.T) {
 
 		m.Stop()
 	})
+}
+
+func Test_Mailbox_AsChan(t *testing.T) {
+	t.Parallel()
+
+	t.Run("zero cap", func(t *testing.T) {
+		t.Parallel()
+
+		m := NewMailbox[any](OptAsChan())
+
+		assert.ErrorIs(t, m.Send(ContextStarted(), `👹`), ErrMailboxNotStarted)
+
+		m.Start()
+
+		assertSendBlocking(t, m)
+		assertReceiveBlocking(t, m)
+
+		// Send when there is receiver
+		go func() {
+			assert.NoError(t, m.Send(ContextStarted(), `🌹`))
+		}()
+		assert.Equal(t, `🌹`, <-m.ReceiveC())
+
+		// Because send is blocking, it must return error when context is canceled
+		assert.ErrorIs(t, m.Send(ContextEnded(), `🌹`), ContextEnded().Err())
+
+		m.Stop()
+
+		assertMailboxStopped(t, m)
+	})
+
+	t.Run("non zero cap", func(t *testing.T) {
+		t.Parallel()
+
+		AssertMailboxInvariantsBuffered(t, func() Mailbox[any] {
+			return NewMailbox[any](OptAsChan(), OptCapacity(1))
+		})
+	})
+}
+
+func Test_Mailbox_AsChan_SendStopped(t *testing.T) {
+	t.Parallel()
+
+	testDoneC, senderBlockedC := make(chan any), make(chan any)
+	m := NewMailbox[any](OptAsChan())
+	m.Start()
+
+	// Start goroutine that will send to mailbox, but since no one is waiting
+	// to receive data from it should receive sopped error after mailbox is stopped.
+	go func() {
+		// This goroutine will notify that goroutine doing m.Send has been blocked.
+		go func() {
+			// sleeps gives more chance for parent goroutine to continue executing
+			time.Sleep(time.Millisecond) //nolint:forbidigo // explained above
+			close(senderBlockedC)
+		}()
+
+		assert.ErrorIs(t, m.Send(ContextStarted(), `🌹`), ErrMailboxStopped)
+		close(testDoneC)
+	}()
+
+	<-senderBlockedC
+	m.Stop() // stopping mailbox wile there is some goroutines trying to send
+	<-testDoneC
+}
+
+func AssertMailboxInvariantsBuffered(t *testing.T, mFact func() Mailbox[any]) {
+	t.Helper()
+
+	t.Run("basic invariants", func(t *testing.T) {
+		t.Parallel()
+
+		m := mFact()
+
+		// Should not be able to send as Mailbox is not started
+		assert.ErrorIs(t, m.Send(ContextStarted(), `👹`), ErrMailboxNotStarted)
+
+		// Should have not data to receive
+		assertReceiveBlocking(t, m)
+
+		m.Start()
+
+		// Should be able to send and receive value
+		assertSendReceive(t, m, `🌹`)
+
+		// Assert that sending nil value should't cause panic
+		assertSendReceive(t, m, nil)
+
+		assertSendWithCanceledCtx(t, m)
+
+		m.Stop()
+
+		// After Mailbox is stopped assert that all channels are closed
+		assertMailboxStopped(t, m)
+	})
+
+	t.Run("start-stop", func(t *testing.T) {
+		t.Parallel()
+
+		m := mFact()
+		m.Start()
+		m.Start()
+
+		assertSendReceive(t, m, `🌹`)
+
+		m.Stop()
+		m.Stop()
+
+		assertMailboxStopped(t, m)
+
+		m.Start() // Should have no effect
+		assertMailboxStopped(t, m)
+	})
+}
+
+func assertSendWithCanceledCtx(t *testing.T, m Mailbox[any]) {
+	t.Helper()
+
+	// Assert that sending with canceled context will end with error.
+	// Since sendC has some buffer it is possible that some attempts will succeed.
+	for {
+		err := m.Send(ContextEnded(), `🌹`)
+		if err != nil {
+			assert.ErrorIs(t, err, ContextEnded().Err())
+			return
+		}
+
+		// Drain message it went through
+		<-m.ReceiveC()
+	}
 }
 
 func assertSendReceive(t *testing.T, m Mailbox[any], val any) {
