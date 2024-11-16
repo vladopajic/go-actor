@@ -7,6 +7,16 @@ import (
 	"sync/atomic"
 )
 
+var (
+	// ErrMailboxNotStarted is an error returned by Mailbox.Send when sending is performed
+	// on a mailbox that has not been started.
+	ErrMailboxNotStarted = errors.New("Mailbox is not started")
+
+	// ErrMailboxStopped is an error returned by Mailbox.Send when sending is performed
+	// on a mailbox that has been stopped.
+	ErrMailboxStopped = errors.New("Mailbox is stopped")
+)
+
 // Mailbox is interface for message transport mechanism between Actors.
 type Mailbox[T any] interface {
 	Actor
@@ -78,16 +88,6 @@ func NewMailboxes[T any](count int, opt ...MailboxOption) []Mailbox[T] {
 	return mm
 }
 
-const (
-	mbxChanBufferCap = 64
-	minQueueCapacity = mbxChanBufferCap
-)
-
-var (
-	ErrMailboxNotStarted = errors.New("Mailbox is non started")
-	ErrMailboxStopped    = errors.New("Mailbox is stopped")
-)
-
 // NewMailbox returns a new local Mailbox implementation.
 //
 // The default Mailbox closely resembles a native Go channel, with the key
@@ -102,20 +102,16 @@ func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	options := newOptions(opt).Mailbox
 
 	if options.AsChan {
-		return newMailboxSync[T](options)
+		return newMailboxChan[T](options)
 	}
 
-	return newMailboxAsync[T](options)
+	return newMailbox[T](options)
 }
 
-func newMailboxSync[T any](options optionsMailbox) *mailboxSync[T] {
-	return &mailboxSync[T]{
-		c:           make(chan T, options.Capacity),
-		stopSigC:    make(chan struct{}),
-		state:       &atomic.Int32{},
-		ongoingSend: &atomic.Int64{},
-	}
-}
+const (
+	mbxChanBufferCap = 64
+	minQueueCapacity = mbxChanBufferCap
+)
 
 type mbxState = int32
 
@@ -125,7 +121,16 @@ const (
 	mbxStateStopped    mbxState = 2
 )
 
-type mailboxSync[T any] struct {
+func newMailboxChan[T any](options optionsMailbox) *mailboxChan[T] {
+	return &mailboxChan[T]{
+		c:           make(chan T, options.Capacity),
+		stopSigC:    make(chan struct{}),
+		state:       &atomic.Int32{},
+		ongoingSend: &atomic.Int64{},
+	}
+}
+
+type mailboxChan[T any] struct {
 	c           chan T
 	stopSigC    chan struct{}
 	state       *atomic.Int32
@@ -133,23 +138,23 @@ type mailboxSync[T any] struct {
 	closeOnce   sync.Once
 }
 
-func (m *mailboxSync[T]) Start() {
+func (m *mailboxChan[T]) Start() {
 	m.state.CompareAndSwap(mbxStateNotStarted, mbxStateRunning)
 }
 
-func (m *mailboxSync[T]) Stop() {
+func (m *mailboxChan[T]) Stop() {
 	if m.state.CompareAndSwap(mbxStateRunning, mbxStateStopped) {
 		close(m.stopSigC)
 		m.closeReceiveC()
 	}
 }
 
-func (m *mailboxSync[T]) Send(ctx Context, msg T) error {
+func (m *mailboxChan[T]) Send(ctx Context, msg T) error {
 	state := m.state.Load()
 	if state == mbxStateNotStarted {
-		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxNotStarted)
+		return fmt.Errorf("Mailbox.Send failed: %w", ErrMailboxNotStarted)
 	} else if state == mbxStateStopped {
-		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxStopped)
+		return fmt.Errorf("Mailbox.Send failed: %w", ErrMailboxStopped)
 	}
 
 	m.ongoingSend.Add(1)
@@ -166,17 +171,17 @@ func (m *mailboxSync[T]) Send(ctx Context, msg T) error {
 	}
 }
 
-func (m *mailboxSync[T]) closeReceiveC() {
+func (m *mailboxChan[T]) closeReceiveC() {
 	if m.ongoingSend.Load() == 0 {
 		m.closeOnce.Do(func() { close(m.c) })
 	}
 }
 
-func (m *mailboxSync[T]) ReceiveC() <-chan T {
+func (m *mailboxChan[T]) ReceiveC() <-chan T {
 	return m.c
 }
 
-func newMailboxAsync[T any](options optionsMailbox) *mailbox[T] {
+func newMailbox[T any](options optionsMailbox) *mailbox[T] {
 	var (
 		sendC    = make(chan T, mbxChanBufferCap)
 		receiveC = make(chan T, mbxChanBufferCap)
@@ -212,9 +217,9 @@ func (m *mailbox[T]) Stop() {
 func (m *mailbox[T]) Send(ctx Context, msg T) error {
 	state := m.state.Load()
 	if state == mbxStateNotStarted {
-		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxNotStarted)
+		return fmt.Errorf("Mailbox.Send failed: %w", ErrMailboxNotStarted)
 	} else if state == mbxStateStopped {
-		return fmt.Errorf("failed to Mailbox.Send: %w", ErrMailboxStopped)
+		return fmt.Errorf("Mailbox.Send failed: %w", ErrMailboxStopped)
 	}
 
 	select {
@@ -281,10 +286,9 @@ func (w *mailboxWorker[T]) DoWork(ctx Context) WorkerStatus {
 }
 
 func (w *mailboxWorker[T]) OnStop() {
-	// close sendC to prevent anyone from writing to this mailbox
 	close(w.sendC)
 
-	// close receiveC channel after all data from queue is received
+	// receiveC channel needs to receive after all data from queue before closing
 	if w.options.StopAfterReceivingAll {
 		for !w.queue.IsEmpty() {
 			w.receiveC <- w.queue.PopFront()

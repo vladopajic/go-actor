@@ -178,7 +178,7 @@ func Test_FanOut(t *testing.T) {
 	}
 }
 
-func Test_MailboxOptAsChan(t *testing.T) {
+func Test_Mailbox_AsChan(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero cap", func(t *testing.T) {
@@ -234,27 +234,29 @@ func Test_MailboxOptAsChan(t *testing.T) {
 	})
 }
 
-func TestMailboxSync_SendStopped(t *testing.T) {
+func Test_Mailbox_AsChan_SendStopped(t *testing.T) {
 	t.Parallel()
 
-	testDoneC, senderStarted := make(chan any), make(chan any)
+	testDoneC, senderBlockedC := make(chan any), make(chan any)
 	m := NewMailbox[any](OptAsChan())
 	m.Start()
 
+	// Start goroutine that will send to mailbox, but since no one is waiting
+	// to receive data from it should receive sopped error after mailbox is stopped.
 	go func() {
 		// This goroutine will notify that goroutine doing m.Send has been blocked.
 		go func() {
-			// this sleeps gives more chance for parent goroutine to continue executing
+			// sleeps gives more chance for parent goroutine to continue executing
 			time.Sleep(time.Millisecond) //nolint:forbidigo // explained above
-			close(senderStarted)
+			close(senderBlockedC)
 		}()
 
 		assert.ErrorIs(t, m.Send(ContextStarted(), `🌹`), ErrMailboxStopped)
 		close(testDoneC)
 	}()
 
-	<-senderStarted
-	m.Stop()
+	<-senderBlockedC
+	m.Stop() // stopping mailbox wile there is some goroutines trying to send
 	<-testDoneC
 }
 
