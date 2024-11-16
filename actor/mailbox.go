@@ -91,13 +91,17 @@ func NewMailboxes[T any](count int, opt ...MailboxOption) []Mailbox[T] {
 // NewMailbox returns a new local Mailbox implementation.
 //
 // The default Mailbox closely resembles a native Go channel, with the key
-// distinction that writing to the Mailbox will never block. All messages
+// distinction that sending to the Mailbox will never block. All messages
 // sent to the Mailbox are queued without limitations, ensuring that send
-// operations do not cause the sender to wait.
+// operations will never cause the sender to wait.
 //
-// Additionally, when the `OptAsChan` option is used, the Mailbox can
-// behave identically to a native Go channel, allowing for seamless
-// integration with existing code that utilizes channels.
+// When the `OptAsChan` option is used, the Mailbox can behave identically
+// to a native Go channel (buffered or unbuffered) with key exception that
+// sending and receiving from this kind of mailbox will never panic.
+// Sending to it can block only if underlying channel's buffer capacity is reached,
+// as controlled by `OptCapacity`.
+// Alternatively, when `OptCapacity(0)` or this option is not supplied, mailbox will
+// behave like unbuffered channel.
 func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	options := newOptions(opt).Mailbox
 
