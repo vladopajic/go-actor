@@ -5,7 +5,7 @@
 [![coverage](https://raw.githubusercontent.com/vladopajic/go-actor/badges/.badges/main/coverage.svg)](./.testcoverage.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/vladopajic/go-actor?cache=v1)](https://goreportcard.com/report/github.com/vladopajic/go-actor)
 [![GoDoc](https://godoc.org/github.com/vladopajic/go-actor?status.svg)](https://godoc.org/github.com/vladopajic/go-actor)
-[![Release](https://img.shields.io/github/release/vladopajic/go-actor.svg?style=flat-square)](https://github.com/vladopajic/go-actor/releases/latest)
+[![Release](https://img.shields.io/github/v/release/vladopajic/go-actor?color=%23007ec6)](https://github.com/vladopajic/go-actor/releases/latest)
 
 ![goactor-cover](https://user-images.githubusercontent.com/4353513/185381081-2e2a07f3-c13a-4946-a250-b2cbe6588f60.png)
 
