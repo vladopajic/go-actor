@@ -13,6 +13,11 @@ install-golangcilint:
 lint: install-golangcilint
 	$(GOLANGCI_LINT) run ./...
 
+# Runs benchmark on entire repo
+.PHONY: benchmark
+benchmark:
+	go test -benchmem -count 5 -run=^# -bench=. github.com/vladopajic/go-actor/actor
+
 # Runs tests on entire repo
 .PHONY: test
 test: 
