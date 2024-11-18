@@ -5,14 +5,11 @@ import (
 )
 
 func newQueue[T any](capacity int) *queue[T] {
-	minimum := capacity
-	if minimum < minQueueCapacity {
-		minimum = minQueueCapacity
-	}
+	q := &queueImpl.Deque[T]{}
+	q.SetBaseCap(max(minQueueCapacity, capacity))
+	q.Grow(capacity)
 
-	return &queue[T]{
-		q: queueImpl.New[T](capacity, minimum),
-	}
+	return &queue[T]{q}
 }
 
 type queue[T any] struct {
