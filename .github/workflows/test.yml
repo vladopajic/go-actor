@@ -1,5 +1,8 @@
 name: test
 on: [push]
+permissions:
+  contents: write
+  pull-requests: write
 jobs:
   test:
     name: test
@@ -11,13 +14,56 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      
       - name: test
         run: make test
+      
       - name: generate test coverage
         run: make generate-coverage
+      
       - name: check test coverage
+        id: coverage
         uses: vladopajic/go-test-coverage@v2
         with:
           config: ./.testcoverage.yml
           git-branch: badges
           git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
+      
+      # Post coverage report as comment
+      - name: find pull request ID
+        run: |
+          PR_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:${{ github.ref_name }}&state=open")
+          PR_ID=$(echo "$PR_DATA" | jq -r '.[0].number')
+          
+          if [ "$PR_ID" != "null" ]; then
+            echo "pull_request_id=$PR_ID" >> $GITHUB_ENV
+          else
+            echo "No open pull request found for this branch."
+          fi
+      - name: find if coverage report is already present
+        if: env.pull_request_id
+        uses: peter-evans/find-comment@v3
+        id: fc
+        with:
+          issue-number: ${{ env.pull_request_id }}
+          comment-author: 'github-actions[bot]'
+          body-includes: 'go-test-coverage report:'
+      - name: post coverage report
+        if: env.pull_request_id
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ env.pull_request_id }}
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          body: |
+            go-test-coverage report:
+            ```
+            ${{ fromJSON(steps.coverage.outputs.report) }}
+            ```
+          edit-mode: replace
+      
+      - name: "finally check coverage"
+        if: steps.coverage.outcome == 'failure'
+        shell: bash
+        run: echo "coverage check failed" && exit 1
