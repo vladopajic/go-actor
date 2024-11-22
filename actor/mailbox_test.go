@@ -26,7 +26,7 @@ func Test_FromMailboxes(t *testing.T) {
 
 	// After combined Agent is started all Mailboxes should be executing
 	for _, m := range mm {
-		assertSendReceive(t, m, `🌹`)
+		assertSendReceiveAsync(t, m, `🌹`)
 	}
 
 	a.Stop()
@@ -86,7 +86,7 @@ func Test_FanOut(t *testing.T) {
 
 	// Assert that Mailbox actor is still working
 	for _, m := range fanMbxx {
-		assertSendReceive(t, m, `🌹`)
+		assertSendReceiveAsync(t, m, `🌹`)
 	}
 }
 
@@ -107,7 +107,7 @@ func Test_MailboxWorker_EndSignal(t *testing.T) {
 func Test_Mailbox_Invariants(t *testing.T) {
 	t.Parallel()
 
-	AssertMailboxInvariantsBuffered(t, func() Mailbox[any] {
+	AssertMailboxInvariantsAsync(t, func() Mailbox[any] {
 		return NewMailbox[any]()
 	})
 }
@@ -204,32 +204,24 @@ func Test_Mailbox_AsChan(t *testing.T) {
 		t.Parallel()
 
 		m := NewMailbox[any](OptAsChan())
-
-		assert.ErrorIs(t, m.Send(ContextStarted(), `👹`), ErrMailboxNotStarted)
+		assertMailboxNotStarted(t, m)
 
 		m.Start()
 
 		assertSendBlocking(t, m)
 		assertReceiveBlocking(t, m)
-
-		// Send when there is receiver
-		go func() {
-			assert.NoError(t, m.Send(ContextStarted(), `🌹`))
-		}()
-		assert.Equal(t, `🌹`, <-m.ReceiveC())
-
-		// Because send is blocking, it must return error when context is canceled
-		assert.ErrorIs(t, m.Send(ContextEnded(), `🌹`), ContextEnded().Err())
+		assertSendWithCanceledCtx(t, m, true)
+		assertSendReceiveSync(t, m, `🌹`)
+		assertSendReceiveSync(t, m, nil)
 
 		m.Stop()
-
 		assertMailboxStopped(t, m)
 	})
 
 	t.Run("non zero cap", func(t *testing.T) {
 		t.Parallel()
 
-		AssertMailboxInvariantsBuffered(t, func() Mailbox[any] {
+		AssertMailboxInvariantsAsync(t, func() Mailbox[any] {
 			return NewMailbox[any](OptAsChan(), OptCapacity(1))
 		})
 	})
@@ -261,33 +253,21 @@ func Test_Mailbox_AsChan_SendStopped(t *testing.T) {
 	<-testDoneC
 }
 
-func AssertMailboxInvariantsBuffered(t *testing.T, mFact func() Mailbox[any]) {
+func AssertMailboxInvariantsAsync(t *testing.T, mFact func() Mailbox[any]) {
 	t.Helper()
 
 	t.Run("basic invariants", func(t *testing.T) {
 		t.Parallel()
 
 		m := mFact()
-
-		// Should not be able to send as Mailbox is not started
-		assert.ErrorIs(t, m.Send(ContextStarted(), `👹`), ErrMailboxNotStarted)
-
-		// Should have not data to receive
-		assertReceiveBlocking(t, m)
+		assertMailboxNotStarted(t, m)
 
 		m.Start()
-
-		// Should be able to send and receive value
-		assertSendReceive(t, m, `🌹`)
-
-		// Assert that sending nil value should't cause panic
-		assertSendReceive(t, m, nil)
-
-		assertSendWithCanceledCtx(t, m)
+		assertSendReceiveAsync(t, m, `🌹`)
+		assertSendReceiveAsync(t, m, nil)
+		assertSendWithCanceledCtx(t, m, false)
 
 		m.Stop()
-
-		// After Mailbox is stopped assert that all channels are closed
 		assertMailboxStopped(t, m)
 	})
 
@@ -295,26 +275,49 @@ func AssertMailboxInvariantsBuffered(t *testing.T, mFact func() Mailbox[any]) {
 		t.Parallel()
 
 		m := mFact()
-		m.Start()
-		m.Start()
 
-		assertSendReceive(t, m, `🌹`)
+		m.Start()
+		m.Start()
+		assertSendReceiveAsync(t, m, `🌹`)
 
 		m.Stop()
 		m.Stop()
-
 		assertMailboxStopped(t, m)
 
 		m.Start() // Should have no effect
 		assertMailboxStopped(t, m)
 	})
+
+	//nolint:testifylint // intentionally using ==
+	t.Run("receive channel is not changed", func(t *testing.T) {
+		t.Parallel()
+
+		m := mFact()
+		initialC := m.ReceiveC()
+
+		// when mailbox is started assert that ReceiveC is the same as initial
+		m.Start()
+		// sending some data to ensure that mbx has fully started
+		assertSendReceiveAsync(t, m, `🌹`)
+		assert.True(t, initialC == m.ReceiveC(), "expecting the same reference for ReceiveC")
+
+		// when mailbox is stopped assert ReceiveC should be the same as initial
+		m.Stop()
+		assert.True(t, initialC == m.ReceiveC(), "expecting the same reference for ReceiveC")
+	})
 }
 
-func assertSendWithCanceledCtx(t *testing.T, m Mailbox[any]) {
+// Asserts that sending with canceled context will end with error.
+func assertSendWithCanceledCtx(t *testing.T, m Mailbox[any], immediate bool) {
 	t.Helper()
 
-	// Assert that sending with canceled context will end with error.
-	// Since sendC has some buffer it is possible that some attempts will succeed.
+	// Because send is blocking, it must return error immediately
+	if immediate {
+		assert.ErrorIs(t, m.Send(ContextEnded(), `🌹`), ContextEnded().Err())
+		return
+	}
+
+	// Since sendC has some buffer it is possible that some attempts will succeed
 	for {
 		err := m.Send(ContextEnded(), `🌹`)
 		if err != nil {
@@ -322,15 +325,23 @@ func assertSendWithCanceledCtx(t *testing.T, m Mailbox[any]) {
 			return
 		}
 
-		// Drain message it went through
-		<-m.ReceiveC()
+		<-m.ReceiveC() // Drain message since it went through
 	}
 }
 
-func assertSendReceive(t *testing.T, m Mailbox[any], val any) {
+func assertSendReceiveAsync(t *testing.T, m Mailbox[any], val any) {
 	t.Helper()
 
 	assert.NoError(t, m.Send(ContextStarted(), val))
+	assert.Equal(t, val, <-m.ReceiveC())
+}
+
+func assertSendReceiveSync(t *testing.T, m Mailbox[any], val any) {
+	t.Helper()
+
+	go func() {
+		assert.NoError(t, m.Send(ContextStarted(), val))
+	}()
 	assert.Equal(t, val, <-m.ReceiveC())
 }
 
@@ -341,6 +352,15 @@ func assertMailboxStopped(t *testing.T, m Mailbox[any]) {
 
 	_, ok := <-m.ReceiveC()
 	assert.False(t, ok)
+}
+
+func assertMailboxNotStarted(t *testing.T, m Mailbox[any]) {
+	t.Helper()
+
+	assert.ErrorIs(t, m.Send(ContextStarted(), `👹`), ErrMailboxNotStarted,
+		"should not be able to send as Mailbox is not started")
+
+	assertReceiveBlocking(t, m)
 }
 
 func assertReceiveBlocking(t *testing.T, m Mailbox[any]) {
