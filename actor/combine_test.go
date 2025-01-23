@@ -78,11 +78,16 @@ func Test_Combine_OptStopTogether(t *testing.T) {
 func Test_Combine_OptOnStopOptOnStart(t *testing.T) {
 	t.Parallel()
 
-	const actorsCount = 5
+	testCombineOptOnStopOptOnStart(t, 1)
+	testCombineOptOnStopOptOnStart(t, 5)
+}
+
+func testCombineOptOnStopOptOnStart(t *testing.T, count int) {
+	t.Helper()
 
 	onStatC, onStartOpt := createCombinedOnStartOption(t, 1)
 	onStopC, onStopOpt := createCombinedOnStopOption(t, 1)
-	actors := createActors(actorsCount)
+	actors := createActors(count)
 
 	a := Combine(actors...).
 		WithOptions(onStopOpt, onStartOpt).
@@ -96,6 +101,8 @@ func Test_Combine_OptOnStopOptOnStart(t *testing.T) {
 	a.Stop() // should have no effect
 	assert.Equal(t, `🌚`, <-onStopC)
 	assert.Equal(t, `🌞`, <-onStatC)
+	assert.Empty(t, onStopC)
+	assert.Empty(t, onStatC)
 }
 
 func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
