@@ -11,21 +11,33 @@ import (
 func Test_Combine_TestSuite(t *testing.T) {
 	t.Parallel()
 
-	const actorsCount = 10
+	TestSuite(t, func() Actor {
+		actors := createActors(0)
+		return Combine(actors...).Build()
+	})
 
 	TestSuite(t, func() Actor {
-		actors := createActors(actorsCount)
+		actors := createActors(1)
+		return Combine(actors...).Build()
+	})
 
+	TestSuite(t, func() Actor {
+		actors := createActors(10)
 		return Combine(actors...).Build()
 	})
 }
 
-// Test asserts that all Start and Stop is
-// delegated to all combined actors.
+// Test asserts that all Start and Stop is delegated to all combined actors.
 func Test_Combine(t *testing.T) {
 	t.Parallel()
 
-	const actorsCount = 5
+	testCombine(t, 0)
+	testCombine(t, 1)
+	testCombine(t, 5)
+}
+
+func testCombine(t *testing.T, actorsCount int) {
+	t.Helper()
 
 	onStartC := make(chan any, actorsCount)
 	onStopC := make(chan any, actorsCount)
@@ -44,35 +56,6 @@ func Test_Combine(t *testing.T) {
 	// it is guarantied that all actors have ended.
 	a.Stop()
 	assert.Len(t, onStopC, actorsCount)
-}
-
-// Test_Combine_OptStopTogether asserts that all actors will end as soon
-// as first actors ends.
-func Test_Combine_OptStopTogether(t *testing.T) {
-	t.Parallel()
-
-	const actorsCount = 5 * 2
-
-	for i := range actorsCount/2 + 1 {
-		onStartC := make(chan any, actorsCount)
-		onStopC := make(chan any, actorsCount)
-		onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
-		onStop := OptOnStop(func() { onStopC <- `🌚` })
-		actors := createActors(actorsCount/2, onStart, onStop)
-
-		// append one more actor to actors list
-		cmb := Combine(createActors(actorsCount/2, onStart, onStop)...).Build()
-		actors = append(actors, cmb)
-
-		a := Combine(actors...).WithOptions(OptStopTogether()).Build()
-
-		a.Start()
-		drainC(onStartC, actorsCount)
-
-		// stop actor and assert that all actors will be stopped
-		actors[i].Stop()
-		drainC(onStopC, actorsCount)
-	}
 }
 
 func Test_Combine_OptOnStopOptOnStart(t *testing.T) {
@@ -104,6 +87,40 @@ func testCombineOptOnStopOptOnStart(t *testing.T, count int) {
 	assert.Equal(t, `🌞`, <-onStatC)
 	assert.Empty(t, onStopC)
 	assert.Empty(t, onStatC)
+}
+
+// Test_Combine_OptStopTogether asserts that all actors will end as soon
+// as first actors ends.
+func Test_Combine_OptStopTogether(t *testing.T) {
+	t.Parallel()
+
+	// no need to test OptStopTogether for actors count < 2
+	// because single actor is always "stopped together"
+
+	testCombineOptStopTogether(t, 1)
+	testCombineOptStopTogether(t, 2)
+	testCombineOptStopTogether(t, 10)
+}
+
+func testCombineOptStopTogether(t *testing.T, actorsCount int) {
+	t.Helper()
+
+	for i := range actorsCount {
+		onStartC := make(chan any, actorsCount)
+		onStopC := make(chan any, actorsCount)
+		onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
+		onStop := OptOnStop(func() { onStopC <- `🌚` })
+		actors := createActors(actorsCount, onStart, onStop)
+
+		a := Combine(actors...).WithOptions(OptStopTogether()).Build()
+
+		a.Start()
+		drainC(onStartC, actorsCount)
+
+		// stop actor and assert that all actors will be stopped
+		actors[i].Stop()
+		drainC(onStopC, actorsCount)
+	}
 }
 
 func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
