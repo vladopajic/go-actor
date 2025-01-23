@@ -78,6 +78,7 @@ func Test_Combine_OptStopTogether(t *testing.T) {
 func Test_Combine_OptOnStopOptOnStart(t *testing.T) {
 	t.Parallel()
 
+	testCombineOptOnStopOptOnStart(t, 0)
 	testCombineOptOnStopOptOnStart(t, 1)
 	testCombineOptOnStopOptOnStart(t, 5)
 }

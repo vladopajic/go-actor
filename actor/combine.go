@@ -30,6 +30,11 @@ type CombineBuilder struct {
 // The returned Actor will manage the lifecycle of each underlying Actor,
 // allowing you to start or stop them collectively.
 func (b *CombineBuilder) Build() Actor {
+	if len(b.actors) == 0 {
+		options := combinedOptionsToRegularList(b.options.Combined)
+		return Idle(options...)
+	}
+
 	a := &combinedActor{
 		actors:       b.actors,
 		onStopFunc:   b.options.Combined.OnStopFunc,
@@ -206,4 +211,18 @@ func (a *wrappedActor) Start() {
 func (a *wrappedActor) Stop() {
 	a.actor.Stop()
 	a.onStopFunc()
+}
+
+func combinedOptionsToRegularList(combined optionsCombined) []Option {
+	var options []Option
+
+	if fn := combined.OnStartFunc; fn != nil {
+		options = append(options, OptOnStart(fn))
+	}
+
+	if fn := combined.OnStopFunc; fn != nil {
+		options = append(options, OptOnStop(fn))
+	}
+
+	return options
 }
