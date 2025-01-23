@@ -108,7 +108,6 @@ func (a *combinedActor) Stop() {
 		a.ctx = nil
 	}
 
-	a.running = false
 	a.runningLock.Unlock()
 
 	for _, actor := range a.actors {
