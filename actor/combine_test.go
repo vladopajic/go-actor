@@ -1,6 +1,7 @@
 package actor_test
 
 import (
+	"fmt"
 	"sync/atomic"
 	"testing"
 
@@ -9,21 +10,33 @@ import (
 	. "github.com/vladopajic/go-actor/actor"
 )
 
+func combineParallel(
+	t *testing.T,
+	actorsCount int,
+	testFn func(*testing.T, int),
+) {
+	t.Helper()
+
+	t.Run(fmt.Sprintf("actors count %v", actorsCount), func(t *testing.T) {
+		t.Parallel()
+		testFn(t, actorsCount)
+	})
+}
+
 func Test_Combine_TestSuite(t *testing.T) {
 	t.Parallel()
 
-	TestSuite(t, func() Actor {
-		actors := createActors(0)
-		return Combine(actors...).Build()
-	})
+	combineParallel(t, 0, testCombineTestSuite)
+	combineParallel(t, 1, testCombineTestSuite)
+	combineParallel(t, 2, testCombineTestSuite)
+	combineParallel(t, 10, testCombineTestSuite)
+}
+
+func testCombineTestSuite(t *testing.T, actorsCount int) {
+	t.Helper()
 
 	TestSuite(t, func() Actor {
-		actors := createActors(1)
-		return Combine(actors...).Build()
-	})
-
-	TestSuite(t, func() Actor {
-		actors := createActors(10)
+		actors := createActors(actorsCount)
 		return Combine(actors...).Build()
 	})
 }
@@ -32,9 +45,10 @@ func Test_Combine_TestSuite(t *testing.T) {
 func Test_Combine(t *testing.T) {
 	t.Parallel()
 
-	testCombine(t, 0)
-	testCombine(t, 1)
-	testCombine(t, 5)
+	combineParallel(t, 0, testCombine)
+	combineParallel(t, 1, testCombine)
+	combineParallel(t, 2, testCombine)
+	combineParallel(t, 10, testCombine)
 }
 
 func testCombine(t *testing.T, actorsCount int) {
@@ -62,9 +76,10 @@ func testCombine(t *testing.T, actorsCount int) {
 func Test_Combine_OptOnStopOptOnStart(t *testing.T) {
 	t.Parallel()
 
-	testCombineOptOnStopOptOnStart(t, 0)
-	testCombineOptOnStopOptOnStart(t, 1)
-	testCombineOptOnStopOptOnStart(t, 5)
+	combineParallel(t, 0, testCombineOptOnStopOptOnStart)
+	combineParallel(t, 1, testCombineOptOnStopOptOnStart)
+	combineParallel(t, 2, testCombineOptOnStopOptOnStart)
+	combineParallel(t, 10, testCombineOptOnStopOptOnStart)
 }
 
 func testCombineOptOnStopOptOnStart(t *testing.T, actorsCount int) {
@@ -93,13 +108,13 @@ func testCombineOptOnStopOptOnStart(t *testing.T, actorsCount int) {
 func Test_Combine_StoppingOnce(t *testing.T) {
 	t.Parallel()
 
-	testCombineStoppingOnce(t, 1)
-	testCombineStoppingOnce(t, 2)
-	testCombineStoppingOnce(t, 10)
-	testCombineStoppingOnce(t, 20)
+	combineParallel(t, 1, testCombineStoppingOnce)
+	combineParallel(t, 2, testCombineStoppingOnce)
+	combineParallel(t, 10, testCombineStoppingOnce)
+	combineParallel(t, 20, testCombineStoppingOnce)
 }
 
-func testCombineStoppingOnce(t *testing.T, actorsCount int32) {
+func testCombineStoppingOnce(t *testing.T, actorsCount int) {
 	t.Helper()
 
 	c := atomic.Int32{}
@@ -130,7 +145,7 @@ func testCombineStoppingOnce(t *testing.T, actorsCount int32) {
 	close(stopConcurrentlyFinishedC)
 	drainC(stopFinsihedC, stopCallsCount)
 
-	assert.Equal(t, actorsCount, c.Load())
+	assert.Equal(t, actorsCount, int(c.Load()))
 }
 
 // Test_Combine_OptStopTogether asserts that all actors will end as soon
@@ -141,9 +156,9 @@ func Test_Combine_OptStopTogether(t *testing.T) {
 	// no need to test OptStopTogether for actors count < 2
 	// because single actor is always "stopped together"
 
-	testCombineOptStopTogether(t, 1)
-	testCombineOptStopTogether(t, 2)
-	testCombineOptStopTogether(t, 10)
+	combineParallel(t, 1, testCombineOptStopTogether)
+	combineParallel(t, 2, testCombineOptStopTogether)
+	combineParallel(t, 10, testCombineOptStopTogether)
 }
 
 func testCombineOptStopTogether(t *testing.T, actorsCount int) {
