@@ -6,6 +6,23 @@ import (
 	"testing"
 )
 
+type delegateActor struct {
+	start func()
+	stop  func()
+}
+
+func (a delegateActor) Start() {
+	if fn := a.start; fn != nil {
+		fn()
+	}
+}
+
+func (a delegateActor) Stop() {
+	if fn := a.stop; fn != nil {
+		fn()
+	}
+}
+
 func drainC(c <-chan any, count int) {
 	for range count {
 		<-c

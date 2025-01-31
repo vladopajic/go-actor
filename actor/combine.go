@@ -87,7 +87,7 @@ func (a *combinedActor) onActorStopped() {
 	}
 
 	// First actor to stop should stop other actors
-	if a.stopTogether && a.stopping.CompareAndSwap(false, true) {
+	if a.stopTogether && !a.stopping.Load() {
 		// Run stop in goroutine because wrapped actor
 		// should not wait for other actors to stop.
 		//
@@ -102,16 +102,12 @@ func (a *combinedActor) onActorStopped() {
 func (a *combinedActor) Stop() {
 	a.runningLock.Lock()
 
-	if !a.running {
+	if !a.running || a.stopping.Swap(true) {
 		a.runningLock.Unlock()
 		return
 	}
 
-	if ctx := a.ctx; ctx != nil {
-		ctx.end()
-
-		a.ctx = nil
-	}
+	a.ctx.end()
 
 	a.runningLock.Unlock()
 
@@ -130,7 +126,6 @@ func (a *combinedActor) Start() {
 
 	ctx := newContext()
 	a.ctx = ctx
-
 	a.stopping.Store(false)
 	a.running = true
 
