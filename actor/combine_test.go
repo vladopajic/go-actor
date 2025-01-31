@@ -1,6 +1,7 @@
 package actor_test
 
 import (
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -66,12 +67,12 @@ func Test_Combine_OptOnStopOptOnStart(t *testing.T) {
 	testCombineOptOnStopOptOnStart(t, 5)
 }
 
-func testCombineOptOnStopOptOnStart(t *testing.T, count int) {
+func testCombineOptOnStopOptOnStart(t *testing.T, actorsCount int) {
 	t.Helper()
 
 	onStatC, onStartOpt := createCombinedOnStartOption(t, 1)
 	onStopC, onStopOpt := createCombinedOnStopOption(t, 1)
-	actors := createActors(count)
+	actors := createActors(actorsCount)
 
 	a := Combine(actors...).
 		WithOptions(onStopOpt, onStartOpt).
@@ -87,6 +88,49 @@ func testCombineOptOnStopOptOnStart(t *testing.T, count int) {
 	assert.Equal(t, `🌞`, <-onStatC)
 	assert.Empty(t, onStopC)
 	assert.Empty(t, onStatC)
+}
+
+func Test_Combine_StoppingOnce(t *testing.T) {
+	t.Parallel()
+
+	testCombineStoppingOnce(t, 1)
+	testCombineStoppingOnce(t, 2)
+	testCombineStoppingOnce(t, 10)
+	testCombineStoppingOnce(t, 20)
+}
+
+func testCombineStoppingOnce(t *testing.T, actorsCount int32) {
+	t.Helper()
+
+	c := atomic.Int32{}
+	stopConcurrentlyFinishedC := make(chan any)
+	actors := make([]Actor, actorsCount)
+
+	for i := range actorsCount {
+		actors[i] = delegateActor{stop: func() {
+			<-stopConcurrentlyFinishedC
+			c.Add(1)
+		}}
+	}
+
+	a := Combine(actors...).Build()
+	a.Start()
+
+	// Call Stop() multiple times in separate goroutine to force concurrency
+	const stopCallsCount = 100
+	stopFinsihedC := make(chan any, stopCallsCount)
+
+	for range stopCallsCount {
+		go func() {
+			a.Stop()
+			stopFinsihedC <- `🛑`
+		}()
+	}
+
+	close(stopConcurrentlyFinishedC)
+	drainC(stopFinsihedC, stopCallsCount)
+
+	assert.Equal(t, actorsCount, c.Load())
 }
 
 // Test_Combine_OptStopTogether asserts that all actors will end as soon
