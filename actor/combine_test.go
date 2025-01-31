@@ -108,6 +108,7 @@ func testCombineOptOnStopOptOnStart(t *testing.T, actorsCount int) {
 func Test_Combine_StoppingOnce(t *testing.T) {
 	t.Parallel()
 
+	combineParallel(t, 0, testCombineStoppingOnce)
 	combineParallel(t, 1, testCombineStoppingOnce)
 	combineParallel(t, 2, testCombineStoppingOnce)
 	combineParallel(t, 10, testCombineStoppingOnce)
