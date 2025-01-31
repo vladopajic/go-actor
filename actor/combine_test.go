@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -180,6 +181,52 @@ func testCombineOptStopTogether(t *testing.T, actorsCount int) {
 		// stop actor and assert that all actors will be stopped
 		actors[i].Stop()
 		drainC(onStopC, actorsCount)
+	}
+}
+
+// Test_Combine_OthersNotStopped asserts that if any of underlaying
+// actors end it wont affect other actors. This is default behavior when
+// `OptStopTogether` is not provided.
+func Test_Combine_OthersNotStopped(t *testing.T) {
+	t.Parallel()
+
+	combineParallel(t, 1, testCombineOthersNotStopped)
+	combineParallel(t, 2, testCombineOthersNotStopped)
+	combineParallel(t, 10, testCombineOthersNotStopped)
+}
+
+func testCombineOthersNotStopped(t *testing.T, actorsCount int) {
+	t.Helper()
+
+	for i := range actorsCount {
+		onStartC := make(chan any, actorsCount)
+		onStopC := make(chan any, actorsCount)
+		onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
+		onStop := OptOnStop(func() { onStopC <- `🌚` })
+		actors := createActors(actorsCount, onStart, onStop)
+
+		a := Combine(actors...).WithOptions().Build()
+
+		a.Start()
+		drainC(onStartC, actorsCount)
+
+		// stop actors indiviually, and expect that after some time
+		// there wont be any other actors stopping.
+		stopCount := i + 1
+		for j := range stopCount {
+			actors[j].Stop()
+		}
+
+		drainC(onStopC, stopCount)
+
+		select {
+		case <-onStartC:
+			t.Fatal("should not have any more stopped actors")
+		case <-time.After(time.Millisecond * 20):
+		}
+
+		a.Stop()
+		drainC(onStopC, actorsCount-stopCount)
 	}
 }
 
