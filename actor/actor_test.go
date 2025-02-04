@@ -42,7 +42,7 @@ func Test_Actor_New(t *testing.T) {
 	a.Start()
 
 	// Asset that worker is going to be executed by actor
-	assertDoWork(t, w.doWorkC, 0)
+	assertDoWork(t, w.doWorkC)
 
 	a.Stop()
 
@@ -59,13 +59,17 @@ func Test_Actor_Restart(t *testing.T) {
 
 	for i := range 20 {
 		a.Start()
-
-		assertDoWork(t, w.doWorkC, i*workIterationsPerAssert)
+		assertDoWorkWithStart(t, w.doWorkC, i*workIterationsPerAssert)
 
 		a.Stop()
+		assertNoWork(t, w.doWorkC)
 	}
+}
 
-	AssertStartStopAtRandom(t, a)
+func Test_Actor_StartStopAtRandom(t *testing.T) {
+	t.Parallel()
+
+	AssertStartStopAtRandom(t, New(newWorker()))
 }
 
 // Test asserts that nothing should happen if
@@ -86,7 +90,7 @@ func Test_Actor_MultipleStartStop(t *testing.T) {
 		a.Start()
 	}
 
-	assertDoWork(t, w.doWorkC, 0)
+	assertDoWork(t, w.doWorkC)
 
 	// Calling Stop() multiple times should have same effect as calling it once
 	for range count {
@@ -103,15 +107,10 @@ func Test_Actor_MultipleStartStop(t *testing.T) {
 func Test_Actor_OnStartOnStop(t *testing.T) {
 	t.Parallel()
 
-	readySigC := make(chan any)
-	onStartC, onStopC := make(chan any, 1), make(chan any, 1)
-	onStartFn := func(_ Context) { <-readySigC; onStartC <- `🌞` }
-	onStopFn := func() { <-readySigC; onStopC <- `🌚` }
-
 	{
 		// Nothing should happen when calling OnStart and OnStop
 		// when callbacks are not defined (no panic should occur)
-		w := NewWorker(func(_ Context) WorkerStatus { return WorkerContinue })
+		w := NewWorker(func(Context) WorkerStatus { return WorkerContinue })
 		a := NewActorImpl(w)
 		a.OnStart()
 		a.OnStop()
@@ -131,27 +130,29 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 	}
 
 	{ // Assert that actor will call callbacks passed by options
-		w := NewWorker(func(_ Context) WorkerStatus { return WorkerContinue })
-		a := NewActorImpl(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
+		onStartC, onStartOpt := createOnStartOption(t, 1)
+		onStopC, onStopOpt := createOnStopOption(t, 1)
+		w := NewWorker(func(Context) WorkerStatus { return WorkerContinue })
+		a := NewActorImpl(w, onStartOpt, onStopOpt)
 
-		go a.OnStart()
-		readySigC <- struct{}{}
-
+		a.OnStart()
 		assert.Equal(t, `🌞`, <-onStartC)
 		assert.Empty(t, onStartC)
 
-		go a.OnStop()
-		readySigC <- struct{}{}
-
+		a.OnStop()
 		assert.Equal(t, `🌚`, <-onStopC)
 		assert.Empty(t, onStopC)
 	}
 
 	{
 		// Assert that actor will call callbacks implemented by worker,
-		// then callbacks passed by options
+		// then callbacks passed by options.
+		readySigC := make(chan any)
+		onStartC, onStopC := make(chan any, 1), make(chan any, 1)
+		onStartOpt := OptOnStart(func(_ Context) { <-readySigC; onStartC <- `🌞` })
+		onStopOpt := OptOnStop(func() { <-readySigC; onStopC <- `🌚` })
 		w := newWorker()
-		a := NewActorImpl(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
+		a := NewActorImpl(w, onStartOpt, onStopOpt)
 
 		go a.OnStart()
 
@@ -224,7 +225,7 @@ func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
 
 	a.Start()
 
-	assertDoWork(t, doWorkC, 0)
+	assertDoWork(t, doWorkC)
 
 	// Closing doWorkC will cause worker to end
 	close(doWorkC)
@@ -261,7 +262,7 @@ func Test_Actor_ContextEndedAfterStop(t *testing.T) {
 
 	a.Start()
 
-	assertDoWork(t, w.doWorkC, 0)
+	assertDoWork(t, w.doWorkC)
 
 	a.Stop()
 
@@ -368,7 +369,7 @@ func (w *worker) OnStop() {
 
 const workIterationsPerAssert = 20
 
-func assertDoWork(t *testing.T, doWorkC chan chan int, start int) {
+func assertDoWorkWithStart(t *testing.T, doWorkC chan chan int, start int) {
 	t.Helper()
 
 	for i := start; i < workIterationsPerAssert; i++ {
@@ -378,14 +379,25 @@ func assertDoWork(t *testing.T, doWorkC chan chan int, start int) {
 	}
 }
 
+func assertDoWork(t *testing.T, doWorkC chan chan int) {
+	t.Helper()
+
+	assertDoWorkWithStart(t, doWorkC, 0)
+}
+
 func assertNoWork(t *testing.T, doWorkC chan chan int) {
 	t.Helper()
 
 	p := make(chan int)
 	doWorkC <- p
+
 	select {
 	case <-p:
 		assert.FailNow(t, "actor should not be running worker")
 	case <-time.After(time.Millisecond * 20):
 	}
+
+	// drain work request in order to make the same state before calling
+	// this helper function
+	<-doWorkC
 }
