@@ -55,11 +55,9 @@ func Test_Combine(t *testing.T) {
 func testCombine(t *testing.T, actorsCount int) {
 	t.Helper()
 
-	onStartC := make(chan any, actorsCount)
-	onStopC := make(chan any, actorsCount)
-	onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
-	onStop := OptOnStop(func() { onStopC <- `🌚` })
-	actors := createActors(actorsCount, onStart, onStop)
+	onStartC, onStartOpt := createOnStartOption(t, actorsCount)
+	onStopC, onStopOpt := createOnStopOption(t, actorsCount)
+	actors := createActors(actorsCount, onStartOpt, onStopOpt)
 
 	a := Combine(actors...).Build()
 
@@ -135,17 +133,17 @@ func testCombineStoppingOnce(t *testing.T, actorsCount int) {
 
 	// Call Stop() multiple times in separate goroutine to force concurrency
 	const stopCallsCount = 100
-	stopFinsihedC := make(chan any, stopCallsCount)
+	stopFinishedC := make(chan any, stopCallsCount)
 
 	for range stopCallsCount {
 		go func() {
 			a.Stop()
-			stopFinsihedC <- `🛑`
+			stopFinishedC <- `🛑`
 		}()
 	}
 
 	close(stopConcurrentlyFinishedC)
-	drainC(stopFinsihedC, stopCallsCount)
+	drainC(stopFinishedC, stopCallsCount)
 
 	assert.Equal(t, actorsCount, int(c.Load()))
 }
@@ -167,11 +165,9 @@ func testCombineOptStopTogether(t *testing.T, actorsCount int) {
 	t.Helper()
 
 	for i := range actorsCount {
-		onStartC := make(chan any, actorsCount)
-		onStopC := make(chan any, actorsCount)
-		onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
-		onStop := OptOnStop(func() { onStopC <- `🌚` })
-		actors := createActors(actorsCount, onStart, onStop)
+		onStartC, onStartOpt := createOnStartOption(t, actorsCount)
+		onStopC, onStopOpt := createOnStopOption(t, actorsCount)
+		actors := createActors(actorsCount, onStartOpt, onStopOpt)
 
 		a := Combine(actors...).WithOptions(OptStopTogether()).Build()
 
@@ -184,7 +180,7 @@ func testCombineOptStopTogether(t *testing.T, actorsCount int) {
 	}
 }
 
-// Test_Combine_OthersNotStopped asserts that if any of underlaying
+// Test_Combine_OthersNotStopped asserts that if any of underlying
 // actors end it wont affect other actors. This is default behavior when
 // `OptStopTogether` is not provided.
 func Test_Combine_OthersNotStopped(t *testing.T) {
@@ -199,18 +195,16 @@ func testCombineOthersNotStopped(t *testing.T, actorsCount int) {
 	t.Helper()
 
 	for i := range actorsCount {
-		onStartC := make(chan any, actorsCount)
-		onStopC := make(chan any, actorsCount)
-		onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
-		onStop := OptOnStop(func() { onStopC <- `🌚` })
-		actors := createActors(actorsCount, onStart, onStop)
+		onStartC, onStartOpt := createOnStartOption(t, actorsCount)
+		onStopC, onStopOpt := createOnStopOption(t, actorsCount)
+		actors := createActors(actorsCount, onStartOpt, onStopOpt)
 
 		a := Combine(actors...).WithOptions().Build()
 
 		a.Start()
 		drainC(onStartC, actorsCount)
 
-		// stop actors indiviually, and expect that after some time
+		// stop actors individually, and expect that after some time
 		// there wont be any other actors stopping.
 		stopCount := i + 1
 		for j := range stopCount {
@@ -272,34 +266,4 @@ func createActor(i int, opts ...Option) Actor {
 	}
 
 	return Idle(opts...)
-}
-
-func createCombinedOnStopOption(t *testing.T, count int) (<-chan any, CombinedOption) {
-	t.Helper()
-
-	c := make(chan any, count)
-	fn := func() {
-		select {
-		case c <- `🌚`:
-		default:
-			t.Fatal("onStopFunc should be called only once")
-		}
-	}
-
-	return c, OptOnStopCombined(fn)
-}
-
-func createCombinedOnStartOption(t *testing.T, count int) (<-chan any, CombinedOption) {
-	t.Helper()
-
-	c := make(chan any, count)
-	fn := func(_ Context) {
-		select {
-		case c <- `🌞`:
-		default:
-			t.Fatal("onStart should be called only once")
-		}
-	}
-
-	return c, OptOnStartCombined(fn)
 }
