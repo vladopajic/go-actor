@@ -78,11 +78,11 @@ func Test_Actor_MultipleStartStop(t *testing.T) {
 
 	const count = 3
 
-	onStartC, onStartOpt := createOnStartOption(t, count)
-	onStopC, onStopOpt := createOnStopOption(t, count)
+	onStartC, onStartFn := createOnStartOption(t, count)
+	onStopC, onStopFn := createOnStopOption(t, count)
 
 	w := newWorker()
-	a := New(w, onStartOpt, onStopOpt)
+	a := New(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
 
 	// Calling Start() multiple times should have same effect as calling it once
 	for range count {
@@ -129,10 +129,10 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 	}
 
 	{ // Assert that actor will call callbacks passed by options
-		onStartC, onStartOpt := createOnStartOption(t, 1)
-		onStopC, onStopOpt := createOnStopOption(t, 1)
+		onStartC, onStartFn := createOnStartOption(t, 1)
+		onStopC, onStopFn := createOnStopOption(t, 1)
 		w := NewWorker(func(Context) WorkerStatus { return WorkerContinue })
-		a := NewActorImpl(w, onStartOpt, onStopOpt)
+		a := NewActorImpl(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
 
 		a.OnStart()
 		assert.Equal(t, `🌞`, <-onStartC)
@@ -148,7 +148,7 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 		// then callbacks passed by options.
 		readySigC := make(chan any)
 		onStartC, onStopC := make(chan any, 1), make(chan any, 1)
-		onStartOpt := OptOnStart(func(_ Context) { <-readySigC; onStartC <- `🌞` })
+		onStartOpt := OptOnStart(func(Context) { <-readySigC; onStartC <- `🌞` })
 		onStopOpt := OptOnStop(func() { <-readySigC; onStopC <- `🌚` })
 		w := newWorker()
 		a := NewActorImpl(w, onStartOpt, onStopOpt)

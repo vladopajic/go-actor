@@ -50,7 +50,7 @@ func (a delegateActor) Stop() {
 	}
 }
 
-func createOnStopOption(t *testing.T, count int) (<-chan any, Option) {
+func createOnStopOption(t *testing.T, count int) (<-chan any, func()) {
 	t.Helper()
 
 	c := make(chan any, count)
@@ -58,18 +58,18 @@ func createOnStopOption(t *testing.T, count int) (<-chan any, Option) {
 		select {
 		case c <- `🌚`:
 		default:
-			t.Fatal("onStopFunc should be called only once")
+			t.Fatal("onStop should be called only once")
 		}
 	}
 
-	return c, OptOnStop(fn)
+	return c, fn
 }
 
-func createOnStartOption(t *testing.T, count int) (<-chan any, Option) {
+func createOnStartOption(t *testing.T, count int) (<-chan any, func(Context)) {
 	t.Helper()
 
 	c := make(chan any, count)
-	fn := func(_ Context) {
+	fn := func(Context) {
 		select {
 		case c <- `🌞`:
 		default:
@@ -77,35 +77,5 @@ func createOnStartOption(t *testing.T, count int) (<-chan any, Option) {
 		}
 	}
 
-	return c, OptOnStart(fn)
-}
-
-func createCombinedOnStopOption(t *testing.T, count int) (<-chan any, CombinedOption) {
-	t.Helper()
-
-	c := make(chan any, count)
-	fn := func() {
-		select {
-		case c <- `🌚`:
-		default:
-			t.Fatal("onStopFunc should be called only once")
-		}
-	}
-
-	return c, OptOnStopCombined(fn)
-}
-
-func createCombinedOnStartOption(t *testing.T, count int) (<-chan any, CombinedOption) {
-	t.Helper()
-
-	c := make(chan any, count)
-	fn := func(_ Context) {
-		select {
-		case c <- `🌞`:
-		default:
-			t.Fatal("onStart should be called only once")
-		}
-	}
-
-	return c, OptOnStartCombined(fn)
+	return c, fn
 }
