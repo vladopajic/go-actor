@@ -75,14 +75,11 @@ func Test_Actor_MultipleStartStop(t *testing.T) {
 
 	const count = 3
 
-	onStartC := make(chan any, count)
-	onStopC := make(chan any, count)
+	onStartC, onStartOpt := createOnStartOption(t, count)
+	onStopC, onStopOpt := createOnStopOption(t, count)
 
 	w := newWorker()
-	a := New(w,
-		OptOnStart(func(Context) { onStartC <- `🌞` }),
-		OptOnStop(func() { onStopC <- `🌚` }),
-	)
+	a := New(w, onStartOpt, onStopOpt)
 
 	// Calling Start() multiple times should have same effect as calling it once
 	for range count {

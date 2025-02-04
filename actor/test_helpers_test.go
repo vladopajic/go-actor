@@ -41,7 +41,7 @@ func Test_AssertWorkerEndSig(t *testing.T) {
 	AssertWorkerEndSig(tw, New(nil))
 	assert.True(t, tw.hadError)
 
-	// Test expected to fail becaue worker didn't return end singal
+	// Test expected to fail because worker didn't return end signal
 	tw = &tWrapper{T: t}
 	AssertWorkerEndSig(tw, NewWorker(func(_ Context) WorkerStatus { return WorkerContinue }))
 	assert.True(t, tw.hadError)
@@ -67,7 +67,7 @@ func Test_RandInt32WithReader(t *testing.T) {
 		v[RandInt32WithReader(t, rand.Reader)] = struct{}{}
 	}
 
-	assert.GreaterOrEqual(t, len(v), 1000) // should have at least 1000 unque elements
+	assert.GreaterOrEqual(t, len(v), 1000) // should have at least 1000 unique elements
 
 	// Test expected to fail because bytes could not be read
 	tw := &tWrapper{T: t}
