@@ -134,6 +134,7 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 		w := NewWorker(func(Context) WorkerStatus { return WorkerContinue })
 		a := NewActorImpl(w, OptOnStart(onStartFn), OptOnStop(onStopFn))
 
+		a.OnStart()
 		assert.Equal(t, `🌞`, <-onStartC)
 		assert.Empty(t, onStartC)
 
