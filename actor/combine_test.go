@@ -55,11 +55,9 @@ func Test_Combine(t *testing.T) {
 func testCombine(t *testing.T, actorsCount int) {
 	t.Helper()
 
-	onStartC := make(chan any, actorsCount)
-	onStopC := make(chan any, actorsCount)
-	onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
-	onStop := OptOnStop(func() { onStopC <- `🌚` })
-	actors := createActors(actorsCount, onStart, onStop)
+	onStartC, onStartFn := createOnStartOption(t, actorsCount)
+	onStopC, onStopFn := createOnStopOption(t, actorsCount)
+	actors := createActors(actorsCount, OptOnStart(onStartFn), OptOnStop(onStopFn))
 
 	a := Combine(actors...).Build()
 
@@ -86,12 +84,12 @@ func Test_Combine_OptOnStopOptOnStart(t *testing.T) {
 func testCombineOptOnStopOptOnStart(t *testing.T, actorsCount int) {
 	t.Helper()
 
-	onStatC, onStartOpt := createCombinedOnStartOption(t, 1)
-	onStopC, onStopOpt := createCombinedOnStopOption(t, 1)
+	onStartC, onStartFn := createOnStartOption(t, 1)
+	onStopC, onStopFn := createOnStopOption(t, 1)
 	actors := createActors(actorsCount)
 
 	a := Combine(actors...).
-		WithOptions(onStopOpt, onStartOpt).
+		WithOptions(OptOnStartCombined(onStartFn), OptOnStopCombined(onStopFn)).
 		Build()
 
 	a.Start()
@@ -101,9 +99,9 @@ func testCombineOptOnStopOptOnStart(t *testing.T, actorsCount int) {
 	a.Stop() // should have no effect
 	a.Stop() // should have no effect
 	assert.Equal(t, `🌚`, <-onStopC)
-	assert.Equal(t, `🌞`, <-onStatC)
+	assert.Equal(t, `🌞`, <-onStartC)
 	assert.Empty(t, onStopC)
-	assert.Empty(t, onStatC)
+	assert.Empty(t, onStartC)
 }
 
 func Test_Combine_StoppingOnce(t *testing.T) {
@@ -167,11 +165,9 @@ func testCombineOptStopTogether(t *testing.T, actorsCount int) {
 	t.Helper()
 
 	for i := range actorsCount {
-		onStartC := make(chan any, actorsCount)
-		onStopC := make(chan any, actorsCount)
-		onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
-		onStop := OptOnStop(func() { onStopC <- `🌚` })
-		actors := createActors(actorsCount, onStart, onStop)
+		onStartC, onStartFn := createOnStartOption(t, actorsCount)
+		onStopC, onStopFn := createOnStopOption(t, actorsCount)
+		actors := createActors(actorsCount, OptOnStart(onStartFn), OptOnStop(onStopFn))
 
 		a := Combine(actors...).WithOptions(OptStopTogether()).Build()
 
@@ -199,11 +195,9 @@ func testCombineOthersNotStopped(t *testing.T, actorsCount int) {
 	t.Helper()
 
 	for i := range actorsCount {
-		onStartC := make(chan any, actorsCount)
-		onStopC := make(chan any, actorsCount)
-		onStart := OptOnStart(func(Context) { onStartC <- `🌞` })
-		onStop := OptOnStop(func() { onStopC <- `🌚` })
-		actors := createActors(actorsCount, onStart, onStop)
+		onStartC, onStartFn := createOnStartOption(t, actorsCount)
+		onStopC, onStopFn := createOnStopOption(t, actorsCount)
+		actors := createActors(actorsCount, OptOnStart(onStartFn), OptOnStop(onStopFn))
 
 		a := Combine(actors...).WithOptions().Build()
 
@@ -236,15 +230,17 @@ func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
 	const actorsCount = 5 * 2
 
 	for i := range actorsCount/2 + 1 {
-		onStopC, onStopOpt := createCombinedOnStopOption(t, 2)
+		onStopC, onStopFn := createOnStopOption(t, 2)
 		actors := createActors(actorsCount / 2)
 
 		// append one more actor to actors list
-		cmb := Combine(createActors(actorsCount / 2)...).WithOptions(onStopOpt).Build()
+		cmb := Combine(createActors(actorsCount / 2)...).
+			WithOptions(OptOnStopCombined(onStopFn)).
+			Build()
 		actors = append(actors, cmb)
 
 		a := Combine(actors...).
-			WithOptions(onStopOpt, OptStopTogether()).
+			WithOptions(OptOnStopCombined(onStopFn), OptStopTogether()).
 			Build()
 
 		a.Start()
@@ -272,34 +268,4 @@ func createActor(i int, opts ...Option) Actor {
 	}
 
 	return Idle(opts...)
-}
-
-func createCombinedOnStopOption(t *testing.T, count int) (<-chan any, CombinedOption) {
-	t.Helper()
-
-	c := make(chan any, count)
-	fn := func() {
-		select {
-		case c <- `🌚`:
-		default:
-			t.Fatal("onStopFunc should be called only once")
-		}
-	}
-
-	return c, OptOnStopCombined(fn)
-}
-
-func createCombinedOnStartOption(t *testing.T, count int) (<-chan any, CombinedOption) {
-	t.Helper()
-
-	c := make(chan any, count)
-	fn := func(_ Context) {
-		select {
-		case c <- `🌞`:
-		default:
-			t.Fatal("onStart should be called only once")
-		}
-	}
-
-	return c, OptOnStartCombined(fn)
 }
