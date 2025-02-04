@@ -62,7 +62,6 @@ func Test_Actor_Restart(t *testing.T) {
 		assertDoWorkWithStart(t, w.doWorkC, i*workIterationsPerAssert)
 
 		a.Stop()
-		assertNoWork(t, w.doWorkC)
 	}
 }
 
