@@ -148,7 +148,7 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 		// then callbacks passed by options.
 		readySigC := make(chan any)
 		onStartC, onStopC := make(chan any, 1), make(chan any, 1)
-		onStartOpt := OptOnStart(func(_ Context) { <-readySigC; onStartC <- `🌞` })
+		onStartOpt := OptOnStart(func(Context) { <-readySigC; onStartC <- `🌞` })
 		onStopOpt := OptOnStop(func() { <-readySigC; onStopC <- `🌚` })
 		w := newWorker()
 		a := NewActorImpl(w, onStartOpt, onStopOpt)
