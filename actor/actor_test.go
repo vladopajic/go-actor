@@ -32,7 +32,7 @@ func Test_NewWorker(t *testing.T) {
 	}
 }
 
-// Test asserts basic Actor functions
+// Test asserts that Actor will execute underlying worker.
 func Test_Actor_New(t *testing.T) {
 	t.Parallel()
 
@@ -50,29 +50,30 @@ func Test_Actor_New(t *testing.T) {
 	assertNoWork(t, w.doWorkC)
 }
 
-// Test asserts that restarting actor will no impact on worker execution.
+// Test asserts that restarting actor will not impact worker's state.
 func Test_Actor_Restart(t *testing.T) {
 	t.Parallel()
 
 	w := newWorker()
 	a := New(w)
 
-	for i := range 20 {
+	for i := range 10 {
 		a.Start()
 		assertDoWorkWithStart(t, w.doWorkC, i*workIterationsPerAssert)
-
 		a.Stop()
+		assertNoWork(t, w.doWorkC)
 	}
 }
 
+// Test with AssertStartStopAtRandom.
 func Test_Actor_StartStopAtRandom(t *testing.T) {
 	t.Parallel()
 
 	AssertStartStopAtRandom(t, New(newWorker()))
 }
 
-// Test asserts that nothing should happen if
-// Start() or Stop() methods are called multiple times.
+// Test asserts that calling Start() and Stop() methods multiple times
+// will not have effect.
 func Test_Actor_MultipleStartStop(t *testing.T) {
 	t.Parallel()
 
@@ -203,7 +204,7 @@ func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
 		select {
 		case p, ok := <-doWorkC:
 			if !ok {
-				defer close(workEndedC)
+				close(workEndedC)
 				return WorkerEnd
 			}
 

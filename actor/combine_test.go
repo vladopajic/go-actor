@@ -42,7 +42,7 @@ func testCombineTestSuite(t *testing.T, actorsCount int) {
 	})
 }
 
-// Test asserts that all Start and Stop is delegated to all combined actors.
+// Test asserts that Start() and Stop() is delegated to all combined actors.
 func Test_Combine(t *testing.T) {
 	t.Parallel()
 
@@ -72,6 +72,7 @@ func testCombine(t *testing.T, actorsCount int) {
 	assert.Len(t, onStopC, actorsCount)
 }
 
+// Test asserts that combined actor will invoke OnStart and OnStop callbacks.
 func Test_Combine_OptOnStopOptOnStart(t *testing.T) {
 	t.Parallel()
 
@@ -104,6 +105,8 @@ func testCombineOptOnStopOptOnStart(t *testing.T, actorsCount int) {
 	assert.Empty(t, onStartC)
 }
 
+// Test asserts that combined actor will call Stop() only once on
+// combined actors even when Stop() is called concurrently.
 func Test_Combine_StoppingOnce(t *testing.T) {
 	t.Parallel()
 
