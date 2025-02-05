@@ -10,6 +10,7 @@ import (
 	. "github.com/vladopajic/go-actor/actor"
 )
 
+// Test asserts that FromMailboxes creates single actor using multiple mailboxes.
 func Test_FromMailboxes(t *testing.T) {
 	t.Parallel()
 
@@ -37,6 +38,7 @@ func Test_FromMailboxes(t *testing.T) {
 	}
 }
 
+// Test asserts correct behavior of FanOut utility.
 func Test_FanOut(t *testing.T) {
 	t.Parallel()
 
@@ -90,6 +92,7 @@ func Test_FanOut(t *testing.T) {
 	}
 }
 
+// Test asserts that MailboxWorker returns `WorkerEnd` when context is canceled.
 func Test_MailboxWorker_EndSignal(t *testing.T) {
 	t.Parallel()
 
@@ -104,6 +107,7 @@ func Test_MailboxWorker_EndSignal(t *testing.T) {
 	assert.Equal(t, WorkerEnd, w.DoWork(ContextEnded()))
 }
 
+// Test which runs tests in AssertMailboxInvariantsAsync helper function.
 func Test_Mailbox_Invariants(t *testing.T) {
 	t.Parallel()
 
@@ -112,6 +116,8 @@ func Test_Mailbox_Invariants(t *testing.T) {
 	})
 }
 
+// Test asserts that mailbox will receive (enqueue)
+// larger number of messages without blocking.
 func Test_Mailbox_MessageQueue(t *testing.T) {
 	t.Parallel()
 
@@ -137,7 +143,7 @@ func Test_Mailbox_MessageQueue(t *testing.T) {
 	assertMailboxStopped(t, m)
 }
 
-// This test asserts that Mailbox will end only after all messages have been received.
+// Test asserts that Mailbox will end only after all messages have been received.
 func Test_Mailbox_OptEndAfterReceivingAll(t *testing.T) {
 	t.Parallel()
 
@@ -197,6 +203,7 @@ func Test_Mailbox_OptEndAfterReceivingAll(t *testing.T) {
 	})
 }
 
+// Test asserts mailbox invariants when `OptAsChan()` option is used.
 func Test_Mailbox_AsChan(t *testing.T) {
 	t.Parallel()
 
@@ -227,6 +234,8 @@ func Test_Mailbox_AsChan(t *testing.T) {
 	})
 }
 
+// Test asserts that mailbox `Send()` returns error when sending data is blocked and
+// Stop() is simultaneously called.
 func Test_Mailbox_AsChan_SendStopped(t *testing.T) {
 	t.Parallel()
 
@@ -253,6 +262,7 @@ func Test_Mailbox_AsChan_SendStopped(t *testing.T) {
 	<-testDoneC
 }
 
+// AssertMailboxInvariantsAsync is helper functions that asserts mailbox invariants.
 func AssertMailboxInvariantsAsync(t *testing.T, mFact func() Mailbox[any]) {
 	t.Helper()
 

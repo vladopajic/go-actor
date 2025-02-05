@@ -42,7 +42,7 @@ func testCombineTestSuite(t *testing.T, actorsCount int) {
 	})
 }
 
-// Test asserts that all Start and Stop is delegated to all combined actors.
+// Test asserts that Start() and Stop() is delegated to all combined actors.
 func Test_Combine(t *testing.T) {
 	t.Parallel()
 
@@ -72,6 +72,7 @@ func testCombine(t *testing.T, actorsCount int) {
 	assert.Len(t, onStopC, actorsCount)
 }
 
+// Test asserts that combined actor will invoke OnStart and OnStop callbacks.
 func Test_Combine_OptOnStopOptOnStart(t *testing.T) {
 	t.Parallel()
 
@@ -104,6 +105,8 @@ func testCombineOptOnStopOptOnStart(t *testing.T, actorsCount int) {
 	assert.Empty(t, onStartC)
 }
 
+// Test asserts that combined actor will call Stop() only once on
+// combined actors even when Stop() is called concurrently.
 func Test_Combine_StoppingOnce(t *testing.T) {
 	t.Parallel()
 
@@ -224,32 +227,40 @@ func testCombineOthersNotStopped(t *testing.T, actorsCount int) {
 	}
 }
 
-func Test_Combine_OptOnStop_AfterActorStops(t *testing.T) {
+// Test asserts that wrapActors is correctly wrapping actors with onStopFunc callback.
+func Test_Combine_WrapActors(t *testing.T) {
 	t.Parallel()
 
-	const actorsCount = 5 * 2
-
-	for i := range actorsCount/2 + 1 {
-		onStopC, onStopFn := createOnStopOption(t, 2)
-		actors := createActors(actorsCount / 2)
-
-		// append one more actor to actors list
-		cmb := Combine(createActors(actorsCount / 2)...).
-			WithOptions(OptOnStopCombined(onStopFn)).
-			Build()
-		actors = append(actors, cmb)
-
-		a := Combine(actors...).
-			WithOptions(OptOnStopCombined(onStopFn), OptStopTogether()).
-			Build()
-
-		a.Start()
-
-		actors[i].Stop()
-		assert.Equal(t, `🌚`, <-onStopC)
-		assert.Equal(t, `🌚`, <-onStopC)
-		a.Stop() // should have no effect
+	stopActorC := make(chan any, 3)
+	actors := []Actor{
+		New(newWorker(), OptOnStop(func() { stopActorC <- "new" })),
+		Idle(OptOnStop(func() { stopActorC <- "idle" })),
+		Combine(createActors(10)...).
+			WithOptions(OptOnStopCombined(func() { stopActorC <- "combine" })).
+			Build(),
 	}
+
+	// onStopFunc will write to stopWrappedC channel and result is asserted at end
+	// of this test. if we assert in this callback then it might be the case that
+	// function is never called so it will always pass.
+	stopWrappedC := make(chan any, 3)
+	onStopFunc := func() { stopWrappedC <- <-stopActorC }
+
+	wActors := WrapActors(actors, onStopFunc)
+
+	// Start then stop wrapped actors
+	for _, a := range wActors {
+		a.Start()
+	}
+
+	for _, a := range wActors {
+		a.Stop()
+	}
+
+	// Expect data on stopWrappedC in order in which actors appeared in this list
+	assert.Equal(t, "new", <-stopWrappedC)
+	assert.Equal(t, "idle", <-stopWrappedC)
+	assert.Equal(t, "combine", <-stopWrappedC)
 }
 
 func createActors(count int, opts ...Option) []Actor {

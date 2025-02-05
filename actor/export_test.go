@@ -27,6 +27,13 @@ func (a *ActorImpl) OnStop() {
 	a.onStop()
 }
 
+func WrapActors(
+	actors []Actor,
+	onStopFunc func(),
+) []Actor {
+	return wrapActors(actors, onStopFunc)
+}
+
 func NewContext() *context {
 	return newContext()
 }
