@@ -22,6 +22,7 @@ linters:
     - errname
     - errorlint
     - exhaustive
+    - exptostd
     - forbidigo
     - forcetypeassert
     - funlen
@@ -45,6 +46,7 @@ linters:
     - gosimple
     - govet
     - grouper
+    - iface
     - importas
     - inamedparam
     - interfacebloat
@@ -58,6 +60,7 @@ linters:
     - nakedret
     - nestif
     - nilerr
+    - nilnesserr
     - nilnil
     - nlreturn
     - noctx
@@ -71,6 +74,7 @@ linters:
     - promlinter
     - protogetter
     - reassign
+    - recvcheck
     - revive
     - sloglint
     - sqlclosecheck
@@ -87,6 +91,7 @@ linters:
     - unconvert
     - unparam
     - unused
+    - usetesting
     - usestdlibvars
     - wastedassign 
     - whitespace
@@ -155,6 +160,10 @@ linters-settings:
     enable-all: true
     disable:
      - fieldalignment
+  iface:
+    enable:
+      - identical
+      - unused 
   lll:
     line-length: 90
     tab-width: 1
