@@ -21,6 +21,7 @@ benchmark:
 # Runs tests on entire repo
 .PHONY: test
 test: 
+	go env -w GOEXPERIMENT=synctest
 	go test -timeout=10s -race -count=10 -shuffle=on -failfast ./...
 
 # Code tidy

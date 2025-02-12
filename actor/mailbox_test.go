@@ -3,6 +3,7 @@ package actor_test
 import (
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -210,19 +211,21 @@ func Test_Mailbox_AsChan(t *testing.T) {
 	t.Run("zero cap", func(t *testing.T) {
 		t.Parallel()
 
-		m := NewMailbox[any](OptAsChan())
-		assertMailboxNotStarted(t, m)
+		synctest.Run(func() {
+			m := NewMailbox[any](OptAsChan())
+			assertMailboxNotStarted(t, m)
 
-		m.Start()
+			m.Start()
 
-		assertSendBlocking(t, m)
-		assertReceiveBlocking(t, m)
-		assertSendWithCanceledCtx(t, m, true)
-		assertSendReceiveSync(t, m, `🌹`)
-		assertSendReceiveSync(t, m, nil)
+			assertSendBlocking(t, m, synctest.Wait)
+			assertReceiveBlocking(t, m)
+			assertSendWithCanceledCtx(t, m, true)
+			assertSendReceiveSync(t, m, `🌹`)
+			assertSendReceiveSync(t, m, nil)
 
-		m.Stop()
-		assertMailboxStopped(t, m)
+			m.Stop()
+			assertMailboxStopped(t, m)
+		})
 	})
 
 	t.Run("non zero cap", func(t *testing.T) {
@@ -383,26 +386,20 @@ func assertReceiveBlocking(t *testing.T, m Mailbox[any]) {
 	}
 }
 
-func assertSendBlocking(t *testing.T, m Mailbox[any]) {
+func assertSendBlocking(t *testing.T, m Mailbox[any], wait func()) {
 	t.Helper()
 
-	testDoneSigC := make(chan struct{})
-
+	sendResultC := make(chan error, 1)
 	ctx := NewContext()
 
 	go func() {
-		err := m.Send(ctx, `🌹`)
-		if err == nil {
-			assert.FailNow(t, "should not be able to send") //nolint:testifylint // relax
-		}
-
-		close(testDoneSigC)
+		sendResultC <- m.Send(ctx, `🌹`)
 	}()
 
-	// This sleep is necessary to give some time goroutine from above
-	// to be started and Send() method to get blocked while sending
-	time.Sleep(time.Millisecond * 10) //nolint:forbidigo // relax
+	wait()
 	ctx.End()
 
-	<-testDoneSigC
+	sendErr := <-sendResultC
+	assert.Error(t, sendErr)
+	assert.ErrorIs(t, sendErr, ctx.Err())
 }

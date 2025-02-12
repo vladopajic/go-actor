@@ -2,6 +2,7 @@ package actor_test
 
 import (
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -185,62 +186,63 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
 	t.Parallel()
 
-	var ctx Context
+	synctest.Run(func() {
+		var ctx Context
 
-	workIteration := 0
-	doWorkC := make(chan chan int)
-	workEndedC := make(chan struct{})
-	workerFunc := func(c Context) WorkerStatus {
-		ctx = c
+		workIteration := 0
+		doWorkC := make(chan chan int)
+		workEndedC := make(chan struct{})
+		workerFunc := func(c Context) WorkerStatus {
+			ctx = c
 
-		// assert that DoWork should not be called
-		// after WorkerEnd signal is returned
-		select {
-		case <-workEndedC:
-			assert.FailNow(t, "worker should be ended")
-		default:
-		}
-
-		select {
-		case p, ok := <-doWorkC:
-			if !ok {
-				close(workEndedC)
-				return WorkerEnd
+			// assert that DoWork should not be called
+			// after WorkerEnd signal is returned
+			select {
+			case <-workEndedC:
+				assert.FailNow(t, "worker should be ended")
+			default:
 			}
 
-			p <- workIteration
+			select {
+			case p, ok := <-doWorkC:
+				if !ok {
+					close(workEndedC)
+					return WorkerEnd
+				}
 
-			workIteration++
+				p <- workIteration
 
-			return WorkerContinue
+				workIteration++
 
-		case <-c.Done():
-			// Test should fail if done signal is received from Actor
-			assert.FailNow(t, "worker should be ended")
-			return WorkerEnd
+				return WorkerContinue
+
+			case <-c.Done():
+				// Test should fail if done signal is received from Actor
+				assert.FailNow(t, "worker should be ended")
+				return WorkerEnd
+			}
 		}
-	}
 
-	a := New(NewWorker(workerFunc))
+		a := New(NewWorker(workerFunc))
 
-	a.Start()
+		a.Start()
 
-	assertDoWork(t, doWorkC)
+		assertDoWork(t, doWorkC)
 
-	// Closing doWorkC will cause worker to end
-	close(doWorkC)
+		// Closing doWorkC will cause worker to end
+		close(doWorkC)
 
-	// Assert that context is ended after worker ends.
-	// Small sleep is needed in order to fix potentially race condition
-	// if actor's goroutine does not finish before this check.
-	<-workEndedC
-	time.Sleep(time.Millisecond * 10) //nolint:forbidigo // explained above
-	assertContextEnded(t, ctx)
+		// Assert that context is ended after worker ends.
+		// We use synctest.Wait() to ensure that actor goroutine has ended.
+		<-workEndedC
+		synctest.Wait()
+		assertContextEnded(t, ctx)
 
-	// Stopping actor should produce no effect (since worker has ended)
-	a.Stop()
+		// Stopping actor should produce no effect (since worker has ended)
+		a.Stop()
 
-	assertContextEnded(t, ctx)
+		assertContextEnded(t, ctx)
+	})
 }
 
 // Test asserts that context supplied to worker will be ended
