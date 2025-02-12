@@ -239,12 +239,12 @@ func Test_Mailbox_AsChan(t *testing.T) {
 func Test_Mailbox_AsChan_SendStopped(t *testing.T) {
 	t.Parallel()
 
-	testDoneC, senderBlockedC := make(chan any), make(chan any)
+	sendResultC, senderBlockedC := make(chan error, 1), make(chan any)
 	m := NewMailbox[any](OptAsChan())
 	m.Start()
 
 	// Start goroutine that will send to mailbox, but since no one is waiting
-	// to receive data from it should receive sopped error after mailbox is stopped.
+	// to receive data from it should receive ErrMailboxStopped after mailbox is stopped.
 	go func() {
 		// This goroutine will notify that goroutine doing m.Send has been blocked.
 		go func() {
@@ -253,13 +253,13 @@ func Test_Mailbox_AsChan_SendStopped(t *testing.T) {
 			close(senderBlockedC)
 		}()
 
-		assert.ErrorIs(t, m.Send(ContextStarted(), `🌹`), ErrMailboxStopped)
-		close(testDoneC)
+		sendResultC <- m.Send(ContextStarted(), `🌹`)
 	}()
 
 	<-senderBlockedC
 	m.Stop() // stopping mailbox wile there is some goroutines trying to send
-	<-testDoneC
+
+	assert.ErrorIs(t, <-sendResultC, ErrMailboxStopped, "Send() should result with error")
 }
 
 // AssertMailboxInvariantsAsync is helper functions that asserts mailbox invariants.
@@ -386,17 +386,11 @@ func assertReceiveBlocking(t *testing.T, m Mailbox[any]) {
 func assertSendBlocking(t *testing.T, m Mailbox[any]) {
 	t.Helper()
 
-	testDoneSigC := make(chan struct{})
-
+	sendResultC := make(chan error, 1)
 	ctx := NewContext()
 
 	go func() {
-		err := m.Send(ctx, `🌹`)
-		if err == nil {
-			assert.FailNow(t, "should not be able to send") //nolint:testifylint // relax
-		}
-
-		close(testDoneSigC)
+		sendResultC <- m.Send(ctx, `🌹`)
 	}()
 
 	// This sleep is necessary to give some time goroutine from above
@@ -404,5 +398,8 @@ func assertSendBlocking(t *testing.T, m Mailbox[any]) {
 	time.Sleep(time.Millisecond * 10) //nolint:forbidigo // relax
 	ctx.End()
 
-	<-testDoneSigC
+	sendErr := <-sendResultC
+	assert.Error(t, sendErr)
+	assert.ErrorIs(t, sendErr, ctx.Err())
+	assert.NotErrorIs(t, sendErr, ErrMailboxStopped)
 }
