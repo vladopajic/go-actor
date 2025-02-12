@@ -4,7 +4,6 @@ import (
 	"sync"
 	"testing"
 	"testing/synctest"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -242,27 +241,26 @@ func Test_Mailbox_AsChan(t *testing.T) {
 func Test_Mailbox_AsChan_SendStopped(t *testing.T) {
 	t.Parallel()
 
-	testDoneC, senderBlockedC := make(chan any), make(chan any)
-	m := NewMailbox[any](OptAsChan())
-	m.Start()
+	synctest.Run(func() {
+		m := NewMailbox[any](OptAsChan())
+		m.Start()
+		sendResultC := make(chan error, 1)
 
-	// Start goroutine that will send to mailbox, but since no one is waiting
-	// to receive data from it should receive sopped error after mailbox is stopped.
-	go func() {
-		// This goroutine will notify that goroutine doing m.Send has been blocked.
+		// Start goroutine that will send to mailbox, but since no one is waiting
+		// to receive data from it should receive stopped error after mailbox is stopped.
 		go func() {
-			// sleeps gives more chance for parent goroutine to continue executing
-			time.Sleep(time.Millisecond) //nolint:forbidigo // explained above
-			close(senderBlockedC)
+			// NOTE: must use NewContext() instead of ContextStarted() because
+			// later creates channels outside of the bubble.
+			sendResultC <- m.Send(NewContext(), `🌹`)
 		}()
 
-		assert.ErrorIs(t, m.Send(ContextStarted(), `🌹`), ErrMailboxStopped)
-		close(testDoneC)
-	}()
+		synctest.Wait()
+		m.Stop() // stopping mailbox while there is some goroutines trying to send
 
-	<-senderBlockedC
-	m.Stop() // stopping mailbox wile there is some goroutines trying to send
-	<-testDoneC
+		sendErr := <-sendResultC
+		assert.Error(t, sendErr)
+		assert.ErrorIs(t, sendErr, ErrMailboxStopped)
+	})
 }
 
 // AssertMailboxInvariantsAsync is helper functions that asserts mailbox invariants.
@@ -386,20 +384,23 @@ func assertReceiveBlocking(t *testing.T, m Mailbox[any]) {
 	}
 }
 
-func assertSendBlocking(t *testing.T, m Mailbox[any], wait func()) {
+func assertSendBlocking(t *testing.T, m Mailbox[any], synctestWait func()) {
 	t.Helper()
 
 	sendResultC := make(chan error, 1)
 	ctx := NewContext()
 
+	// Start goroutine that will send to mailbox, but since no one is waiting
+	// to receive data from it should receive send cancelled error after context is canceled.
 	go func() {
 		sendResultC <- m.Send(ctx, `🌹`)
 	}()
 
-	wait()
+	synctestWait()
 	ctx.End()
 
 	sendErr := <-sendResultC
 	assert.Error(t, sendErr)
 	assert.ErrorIs(t, sendErr, ctx.Err())
+	assert.NotErrorIs(t, sendErr, ErrMailboxStopped)
 }
