@@ -136,6 +136,10 @@ func Test_Mailbox_AsChan_SendCanceled_Experimental(t *testing.T) {
 		assertReceiveBlocking(t, m) // should not have anything to receive
 
 		// sending again with started context should succeed
-		assertSendReceiveSync(t, m, `🌹`)
+		go func() {
+			sendResultC <- m.Send(NewContext(), `🌹`)
+		}()
+		assert.Equal(t, `🌹`, <-m.ReceiveC())
+		assert.NoError(t, <-sendResultC)
 	})
 }
