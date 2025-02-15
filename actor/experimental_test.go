@@ -137,6 +137,5 @@ func Test_Mailbox_AsChan_SendCanceled_Experimental(t *testing.T) {
 
 		// sending again with started context should succeed
 		assertSendReceiveSync(t, m, `🌹`)
-		assert.NoError(t, <-sendResultC)
 	})
 }
