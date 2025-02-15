@@ -59,8 +59,7 @@ jobs:
           body: |
             go-test-coverage report:
             ```
-            ${{ fromJSON(steps.coverage.outputs.report) }}
-            ```
+            ${{ fromJSON(steps.coverage.outputs.report) }}```
           edit-mode: replace
       
       - name: "finally check coverage"
