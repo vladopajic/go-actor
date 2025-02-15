@@ -96,7 +96,7 @@ func Test_Mailbox_AsChan_SendStopped_Experimental(t *testing.T) {
 		go func() {
 			// NOTE: must use NewContext() instead of ContextStarted() because
 			// later creates channels outside of the bubble.
-			sendResultC <- m.Send(NewContext(), `🌹`)
+			sendResultC <- m.Send(ContextStarted(), `🌹`)
 		}()
 
 		synctest.Wait()
