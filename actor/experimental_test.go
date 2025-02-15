@@ -90,13 +90,15 @@ func Test_Mailbox_AsChan_SendStopped_Experimental(t *testing.T) {
 		m.Start()
 		sendResultC := make(chan error, 1)
 
+		// NOTE: must use NewContext() instead of ContextStarted() because
+		// later creates channels outside of the bubble.
+		ctx := NewContext()
+
 		// Start goroutine that will send to mailbox, but since no one is waiting
 		// to receive data from it should receive stopped error after mailbox is stopped.
 
 		go func() {
-			// NOTE: must use NewContext() instead of ContextStarted() because
-			// later creates channels outside of the bubble.
-			sendResultC <- m.Send(NewContext(), `🌹`)
+			sendResultC <- m.Send(ctx, `🌹`)
 		}()
 
 		synctest.Wait()
@@ -104,7 +106,8 @@ func Test_Mailbox_AsChan_SendStopped_Experimental(t *testing.T) {
 
 		assert.ErrorIs(t, <-sendResultC, ErrMailboxStopped, "Send() should result with error")
 
-		assertMailboxStopped(t, m)
+		// sending again should result with stopped
+		assert.ErrorIs(t, m.Send(ctx, `🌹`), ErrMailboxStopped, "Send() should result with error")
 	})
 }
 
