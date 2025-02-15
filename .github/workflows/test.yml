@@ -26,7 +26,6 @@ jobs:
         run: |
           echo "Exiting early..."
           exit 0
-        continue-on-error: true
 
       - name: generate test coverage
         run: make generate-coverage
