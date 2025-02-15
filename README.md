@@ -130,7 +130,7 @@ You can find detailed design decisions [here](./docs/design_decisions.md).
 
 ## Benchmarks
 
-See current library benchmarks [here](./docs/benchmarks.md).
+See library benchmarks [here](./docs/benchmarks.md).
 
 
 ## Versioning
