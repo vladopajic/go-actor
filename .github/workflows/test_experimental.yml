@@ -1,0 +1,24 @@
+name: test
+on: [push]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.24
+    
+      - name: replace go version
+        run: sed -i 's/go 1.22/go 1.24/g' go.mod
+
+      - name: test
+        run: |
+          go env -w GOEXPERIMENT=synctest
+	      go test -timeout=10s -race -count=10 -shuffle=on -failfast ./...
