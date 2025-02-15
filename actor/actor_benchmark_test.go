@@ -6,7 +6,7 @@ import (
 	. "github.com/vladopajic/go-actor/actor"
 )
 
-func BenchmarkActorConsumerToProducer(b *testing.B) {
+func BenchmarkActorProducerToConsumer(b *testing.B) {
 	produceNext := int(0)
 	doneC := make(chan struct{})
 
