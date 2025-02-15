@@ -112,7 +112,6 @@ func (w *consumerWorker) DoWork(ctx actor.Context) actor.WorkerStatus {
 }
 ```
 
-
 ## Add-ons
 
 While `go-actor` is designed to be a minimal library with lean interfaces, developers can extend its functionality with domain-specific add-ons. Some notable add-ons include:
@@ -128,6 +127,10 @@ To enhance code quality in projects that heavily rely on the actor model with `g
 ## Design Decisions
 
 You can find detailed design decisions [here](./docs/design_decisions.md).
+
+## Benchmarks
+
+See current library benchmarks [here](./docs/benchmarks.md).
 
 
 ## Versioning
