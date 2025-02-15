@@ -103,6 +103,8 @@ func Test_Mailbox_AsChan_SendStopped_Experimental(t *testing.T) {
 		m.Stop() // stopping mailbox while there is some goroutines trying to send
 
 		assert.ErrorIs(t, <-sendResultC, ErrMailboxStopped, "Send() should result with error")
+
+		assertMailboxStopped(t, m)
 	})
 }
 
@@ -112,6 +114,8 @@ func Test_Mailbox_AsChan_SendCanceled_Experimental(t *testing.T) {
 	synctest.Run(func() {
 		m := NewMailbox[any](OptAsChan())
 		m.Start()
+		defer m.Stop()
+
 		sendResultC := make(chan error, 1)
 
 		ctx := NewContext()
@@ -129,5 +133,10 @@ func Test_Mailbox_AsChan_SendCanceled_Experimental(t *testing.T) {
 		assert.Error(t, sendErr)
 		assert.ErrorIs(t, sendErr, ctx.Err())
 		assert.NotErrorIs(t, sendErr, ErrMailboxStopped)
+		assertReceiveBlocking(t, m) // should not have anything to receive
+
+		// sending again with started context should succeed
+		assertSendReceiveSync(t, m, `🌹`)
+		assert.NoError(t, <-sendResultC)
 	})
 }
