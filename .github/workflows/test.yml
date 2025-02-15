@@ -23,7 +23,7 @@ jobs:
       
       - name: check coverage only once
         if: ${{ matrix.go-version !=  '1.22'}}
-        run: exit 0
+        run: exit 1
 
       - name: generate test coverage
         run: make generate-coverage
