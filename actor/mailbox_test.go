@@ -200,14 +200,14 @@ func Test_Mailbox_OptEndAfterReceivingAll(t *testing.T) {
 
 	// before Stop is called, we are going to send messages (concurrently with Stop),
 	// because we want to ensure that all those messages will be received as well.
-	for range 20 {
+	for range 100 {
 		go sendMessagesConcurrentlyWithStop(m)
 	}
 
 	go func() {
 		// Small sleep is needed because we want to give goroutine from above
 		// greater chances to be running and sending messages when Stop() is called
-		time.Sleep(time.Millisecond * 100) //nolint:forbidigo // explained
+		time.Sleep(time.Millisecond * 300) //nolint:forbidigo // explained
 		m.Stop()
 	}()
 
