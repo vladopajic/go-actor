@@ -195,6 +195,7 @@ func newMailbox[T any](options optionsMailbox) *mailbox[T] {
 		actor:    New(newMailboxWorker(sendC, receiveC, options)),
 		sendC:    sendC,
 		receiveC: receiveC,
+		stopSigC: make(chan struct{}),
 		state:    &atomic.Int32{},
 	}
 }
@@ -203,6 +204,7 @@ type mailbox[T any] struct {
 	actor    Actor
 	sendC    chan T
 	receiveC <-chan T
+	stopSigC chan struct{}
 	state    *atomic.Int32
 }
 
@@ -214,6 +216,7 @@ func (m *mailbox[T]) Start() {
 
 func (m *mailbox[T]) Stop() {
 	if m.state.CompareAndSwap(mbxStateRunning, mbxStateStopped) {
+		close(m.stopSigC)
 		m.actor.Stop()
 	}
 }
@@ -227,6 +230,8 @@ func (m *mailbox[T]) Send(ctx Context, msg T) error {
 	}
 
 	select {
+	case <-m.stopSigC:
+		return fmt.Errorf("Mailbox.Send canceled: %w", ErrMailboxStopped)
 	case <-ctx.Done():
 		return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
 	case m.sendC <- msg:
@@ -290,16 +295,22 @@ func (w *mailboxWorker[T]) DoWork(ctx Context) WorkerStatus {
 }
 
 func (w *mailboxWorker[T]) OnStop() {
-	close(w.sendC)
-
-	// receiveC channel needs to receive after all data from queue before closing
+	// receiveC channel needs to receive all data before closing
 	if w.options.StopAfterReceivingAll {
+		// first: receive data from queue
 		for !w.queue.IsEmpty() {
 			w.receiveC <- w.queue.PopFront()
 		}
 
-		for msg := range w.sendC {
-			w.receiveC <- msg
+		// second: received data from sendC
+	sendCWriteBack:
+		for {
+			select {
+			case d := <-w.sendC:
+				w.receiveC <- d
+			default:
+				break sendCWriteBack
+			}
 		}
 	}
 
