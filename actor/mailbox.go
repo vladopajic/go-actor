@@ -232,7 +232,7 @@ func (m *mailbox[T]) Send(ctx Context, msg T) error {
 	select {
 	case <-m.stopSigC:
 		// this block can potentially not be covered with tests because of race condition.
-		// it can cause flakiness with this CI.
+		// it can cause flakiness with CI.
 		return fmt.Errorf("Mailbox.Send canceled: %w", ErrMailboxStopped)
 	case <-ctx.Done():
 		return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
