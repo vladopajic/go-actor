@@ -303,13 +303,13 @@ func (w *mailboxWorker[T]) OnStop() {
 		}
 
 		// second: received data from sendC
-	sendCWriteBack:
+	sendCRead:
 		for {
 			select {
 			case d := <-w.sendC:
 				w.receiveC <- d
 			default:
-				break sendCWriteBack
+				break sendCRead
 			}
 		}
 	}
