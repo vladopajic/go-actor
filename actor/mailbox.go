@@ -297,6 +297,11 @@ func (w *mailboxWorker[T]) DoWork(ctx Context) WorkerStatus {
 }
 
 func (w *mailboxWorker[T]) OnStop() {
+	// close receiveC, after receiving all data,
+	// so everyone reading from this mailbox can be
+	// notified that no more messages will ever be received.
+	defer close(w.receiveC)
+
 	// receiveC channel needs to receive all data before closing
 	if w.options.StopAfterReceivingAll {
 		// first: receive data from queue
@@ -315,6 +320,4 @@ func (w *mailboxWorker[T]) OnStop() {
 			}
 		}
 	}
-
-	close(w.receiveC)
 }
