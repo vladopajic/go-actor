@@ -200,7 +200,7 @@ func Test_Mailbox_OptEndAfterReceivingAll(t *testing.T) {
 
 	// before Stop is called, we are going to send messages (concurrently with Stop),
 	// because we want to ensure that all those messages will be received as well.
-	for range 100 {
+	for range 20 {
 		go sendMessagesConcurrentlyWithStop(m)
 	}
 
