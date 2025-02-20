@@ -328,7 +328,7 @@ var (
 type worker struct {
 	workIteration int
 	doWorkC       chan chan int
-	ctx           Context //nolint:containedctx // ctx needed for test case
+	ctx           Context
 	onStartC      chan any
 	onStopC       chan any
 }

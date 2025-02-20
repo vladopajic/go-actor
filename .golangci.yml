@@ -89,7 +89,7 @@ linters:
     - tparallel
     - typecheck
     - unconvert
-    - unparam
+    # - unparam # disabled because of panic
     - unused
     - usestdlibvars
     - usetesting
