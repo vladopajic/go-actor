@@ -6,13 +6,14 @@ linters:
     - bodyclose
     - containedctx
     - contextcheck
-    - cyclop
     - copyloopvar
+    - cyclop
     - decorder
+    - depguard
     - dogsled
     - dupl
-    - durationcheck
     - dupword
+    - durationcheck
     - err113
     - errcheck
     - errchkjson
@@ -20,6 +21,7 @@ linters:
     - errorlint
     - exhaustive
     - exptostd
+    - fatcontext
     - forbidigo
     - forcetypeassert
     - funlen
@@ -46,11 +48,13 @@ linters:
     - iface
     - importas
     - inamedparam
-    - interfacebloat
     - ineffassign
+    - interfacebloat
+    - intrange
     - lll
     - loggercheck
     - maintidx
+    - makezero
     - mirror
     - misspell
     - mnd
@@ -79,17 +83,16 @@ linters:
     - stylecheck
     - tagalign
     - tagliatelle
-    - tenv
     - testifylint
     - testpackage
     - thelper
     - tparallel
     - typecheck
     - unconvert
-    - unparam
+    # - unparam # disabled because of panic
     - unused
-    - usetesting
     - usestdlibvars
+    - usetesting
     - wastedassign 
     - whitespace
     - wrapcheck
@@ -168,8 +171,6 @@ linters-settings:
     block-size: 5
   goimports:
     local-prefixes: github.com/vladopajic/go-actor
-  tenv:
-    all: true
   wsl:
     force-err-cuddling: true
 
