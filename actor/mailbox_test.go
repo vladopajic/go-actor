@@ -2,6 +2,7 @@ package actor_test
 
 import (
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -144,63 +145,78 @@ func Test_Mailbox_MessageQueue(t *testing.T) {
 }
 
 // Test asserts that Mailbox will end only after all messages have been received.
+//
+//nolint:maintidx // relax
 func Test_Mailbox_OptEndAfterReceivingAll(t *testing.T) {
 	t.Parallel()
 
-	const messagesCount = 1000
+	const initialMessagesCount = 1000
 
-	sendMessages := func(m Mailbox[any]) {
+	sentMessages := atomic.Int64{}
+	sendMessages := func(m Mailbox[int64]) {
 		t.Helper()
 
-		for i := range messagesCount {
-			assert.NoError(t, m.Send(ContextStarted(), `🥥`+tostr(i)))
+		for i := range initialMessagesCount {
+			assert.NoError(t, m.Send(ContextStarted(), int64(i)))
 		}
+
+		sentMessages.Add(initialMessagesCount)
 	}
-	assertGotAllMessages := func(m Mailbox[any]) {
+	sendMessagesConcurrentlyWithStop := func(m Mailbox[int64]) {
 		t.Helper()
 
-		gotMessages := 0
+		for {
+			id := sentMessages.Add(1) - 1 // -1 because we need old value
 
-		for msg := range m.ReceiveC() {
-			assert.Equal(t, `🥥`+tostr(gotMessages), msg)
-
-			gotMessages++
+			err := m.Send(ContextStarted(), id)
+			if err != nil {
+				sentMessages.Add(-1) // because msg was not sent
+				return
+			}
 		}
+	}
+	assertGotAllMessages := func(m Mailbox[int64]) <-chan int {
+		t.Helper()
 
-		assert.Equal(t, messagesCount, gotMessages)
+		resultC := make(chan int, 1)
+		allMsgs := make(map[int64]struct{})
+
+		go func() {
+			for msg := range m.ReceiveC() {
+				allMsgs[msg] = struct{}{}
+			}
+
+			resultC <- len(allMsgs)
+		}()
+
+		return resultC
 	}
 
-	t.Run("the-best-way", func(t *testing.T) {
-		t.Parallel()
+	m := NewMailbox[int64](OptStopAfterReceivingAll())
+	m.Start()
 
-		m := NewMailbox[any](OptStopAfterReceivingAll())
-		m.Start()
-		sendMessages(m)
+	// send some messages to fill queue
+	sendMessages(m)
 
-		// Stop has to be called in goroutine because Stop is blocking until
-		// actor (mailbox) has fully ended. And current thread of execution is needed
-		// to read data from mailbox.
-		go m.Stop()
+	// before Stop is called, we are going to send messages (concurrently with Stop),
+	// because we want to ensure that all those messages will be received as well.
+	for range 20 {
+		go sendMessagesConcurrentlyWithStop(m)
+	}
 
-		assertGotAllMessages(m)
-	})
-
-	t.Run("suboptimal-way", func(t *testing.T) {
-		t.Parallel()
-
-		m := NewMailbox[any](OptStopAfterReceivingAll())
-		m.Start()
-		sendMessages(m)
-
-		// This time we start goroutine which will read all messages from mailbox instead of
-		// stopping in separate goroutine.
-		// There are no guaranies that this goroutine will finish after Stop is called, so
-		// it could be the case that this goroutine has received all messages from mailbox,
-		// even before mailbox was stopped. Which wouldn't correctly assert this feature.
-		go assertGotAllMessages(m)
-
+	go func() {
+		// Small sleep is needed because we want to give goroutine from above
+		// greater chances to be running and sending messages when Stop() is called
+		time.Sleep(time.Millisecond * 300) //nolint:forbidigo // explained
 		m.Stop()
-	})
+	}()
+
+	gotMessages := <-assertGotAllMessages(m)
+
+	assert.Equal(t, int(sentMessages.Load()), gotMessages)
+	// must ensure to get more messages then initially sent in order to
+	// be sure that messages have been send concurrently with Stop
+	assert.Greater(t, gotMessages, initialMessagesCount)
 }
 
 // Test asserts mailbox invariants when `OptAsChan()` option is used.

@@ -27,13 +27,10 @@ var (
 	contextStarted = newContext()
 
 	contextEnded = func() *context {
-		doneC := make(chan struct{})
-		close(doneC)
+		ctx := newContext()
+		ctx.end()
 
-		return &context{
-			doneC: doneC,
-			err:   ErrStopped,
-		}
+		return ctx
 	}()
 )
 

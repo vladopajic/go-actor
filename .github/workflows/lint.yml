@@ -14,7 +14,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.63.4
+          version: v1.64.5 # LINT_VERSION: update version in other places
       - id: govulncheck
         uses: golang/govulncheck-action@v1
       - name: go mod tidy check 
