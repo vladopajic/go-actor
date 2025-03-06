@@ -45,3 +45,86 @@ In a system entirely made of actors it makes sense for `Service` interface to im
 - More robust approach would be to move this code inside goroutine which would repeat this operation (establishing database connection) until it succeeds.
  
 Based on previous statements we can see that errorless interfaces are more robust and more natural in the world of actors.
+
+
+## Consecutive Start() or Stop() calls have no effect
+
+Calling `Start()` multiple times on the same actor has no effect after the first call. If an actor is already started, additional calls to `Start()` do nothing.
+
+```go
+a := actor.New(...)
+a.Start() // this call starts the actor
+a.Start() // this call has no effect (actor is already started)
+
+```
+
+Since `Start()` does not return an error, it cannot indicate repeated calls. Panicking in this scenario would be excessive, as the intent of the second call (to start the actor) is already fulfilled.
+
+Similarly, consecutive calls to `Stop()` behave the same way. If an actor is already stopped, additional calls to `Stop()` have no effect.
+
+
+## Stop() blocks the caller
+The `Stop()` function blocks the caller until the goroutine created by `Start()` has fully stopped. For some actors, depending on the logic defined in their worker functions, `Stop()` may take an extended period to complete.
+
+This blocking behavior ensures that all actor-related resources are properly released, allowing programs to gracefully terminate.
+
+```go
+a := actor.New(...)
+a.Start()
+...
+
+a.Stop()
+// at this point all resources occupied by actor have been released
+```
+
+To prevent potential delays, `Stop()` can be called in a separate goroutine and use a timeout to limit the blocking behavior:
+
+```go
+stoppedC := make(chan struct{})
+go func() {
+    a.Stop()
+    close(stoppedC)
+}()
+
+select {
+case <-stoppedC:
+case <-time.After(timeout):
+}
+```
+
+
+## Actor restartability
+Actors created using `New(...)`, `Idle(...)`, and `Noop()` can be restarted, with the only limitations being the logic defined within their `OnStart()`, `OnStop()`, and `DoWork()` functions.
+
+The restart behavior depends on how `OnStart()`, `OnStop()`, and `DoWork()` functions manage the Worker’s state and lifecycle. If these functions properly handle transitions, an actor can stop and start again without issues. However, if these functions introduce constraints, such as preventing reinitialization or maintaining state inconsistencies, restarting may be affected.
+
+Example: The following sunshine actor can be restarted multiple times:
+```go
+a := actor.New(NewWorker(func(c Context) WorkerStatus {
+    select {
+    case <-c.Done():
+        return WorkerEnd
+    default:
+        fmt.Print(`🌞`)
+        return WorkerContinue
+    }
+}))
+a.Start()
+a.Stop()
+
+// Restart the actor after stopping it
+a.Start() 
+a.Stop()
+
+// Restart again
+a.Start() 
+a.Stop()
+```
+
+### NewMailbox(...) is not restartable
+Unlike other actors, an actor created using `NewMailbox(...)` cannot be restarted. This is because its `ReceiverC()` channel is closed when the mailbox is stopped, signaling that no further messages will be received. Restarting the mailbox would require creating a new `ReceiverC()`, which is not supported (more on this below).
+
+## Mailbox.ReceiverC() channel is never changed
+When a mailbox is created using NewMailbox(...), it initializes a ReceiverC() channel that remains unchanged throughout the mailbox's lifecycle. This design provides the following advantages:
+- A reference to the ReceiverC() channel can be passed even before the mailbox is started.
+- Since `ReceiverC()` never changes, users can safely pass it as `<-chan T` without worrying about potential issues caused by channel reassignment. If the channel were mutable, users would have to access it exclusively through the mailbox `mbx.ReceiverC()` to avoid inconsistencies.
