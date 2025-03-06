@@ -215,42 +215,54 @@ func Idle(opt ...Option) Actor {
 }
 
 type idleActor struct {
-	options options
-	ctx     *context
-	lock    sync.Mutex
+	options          options
+	ctx              *context
+	lock             sync.Mutex
+	onStartFinishedC chan struct{}
 }
 
 func (a *idleActor) Start() {
 	a.lock.Lock()
+	defer a.lock.Unlock()
 
 	// early return if this actor is already running
 	if a.ctx != nil {
-		a.lock.Unlock()
 		return
 	}
 
 	a.ctx = newContext()
-	a.lock.Unlock()
+	a.onStartFinishedC = make(chan struct{})
 
 	if fn := a.options.Actor.OnStartFunc; fn != nil {
-		fn(a.ctx)
+		// run onStart in goroutine to keep the same
+		// invariant as actor created with `New`.
+		go func(ctx Context) {
+			fn(ctx)
+			close(a.onStartFinishedC)
+		}(a.ctx)
+	} else {
+		close(a.onStartFinishedC)
 	}
 }
 
 func (a *idleActor) Stop() {
 	a.lock.Lock()
+	defer a.lock.Unlock()
 
 	// early return if this actor is already stopped
 	if a.ctx == nil {
-		a.lock.Unlock()
 		return
 	}
 
 	a.ctx.end()
 	a.ctx = nil
-	a.lock.Unlock()
+
+	// wait for onStart func to finish before calling onStop
+	<-a.onStartFinishedC
 
 	if fn := a.options.Actor.OnStopFunc; fn != nil {
+		// since Stop() needs to wait for onStop to finish execution
+		// there is no need to execute it in separate goroutine.
 		fn()
 	}
 }
