@@ -125,6 +125,6 @@ a.Stop()
 Unlike other actors, an actor created using `NewMailbox(...)` cannot be restarted. This is because its `ReceiverC()` channel is closed when the mailbox is stopped, signaling that no further messages will be received. Restarting the mailbox would require creating a new `ReceiverC()`, which is not supported (more on this below).
 
 ## Mailbox.ReceiverC() channel is never changed
-When a mailbox is created using NewMailbox(...), it initializes a ReceiverC() channel that remains unchanged throughout the mailbox's lifecycle. This design provides the following advantages:
-- A reference to the ReceiverC() channel can be passed even before the mailbox is started.
+When a mailbox is created using `NewMailbox(...)`, it initializes a `ReceiverC()` channel that remains unchanged throughout the mailbox's lifecycle. This design provides the following advantages:
+- A reference to the `ReceiverC()` channel can be passed even before the mailbox is started.
 - Since `ReceiverC()` never changes, users can safely pass it as `<-chan T` without worrying about potential issues caused by channel reassignment. If the channel were mutable, users would have to access it exclusively through the mailbox `mbx.ReceiverC()` to avoid inconsistencies.
