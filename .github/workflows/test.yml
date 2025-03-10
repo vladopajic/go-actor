@@ -16,11 +16,8 @@ jobs:
           go-version-file: go.mod
       
       - name: test
-        run: make test
-      
-      - name: generate test coverage
-        run: make generate-coverage
-      
+        run: go test -timeout=10s -race -count=10 -shuffle=on -failfast -coverprofile=./cover.out -covermode=atomic -coverpkg=./... ./...
+           
       - name: check test coverage
         id: coverage
         uses: vladopajic/go-test-coverage@v2
