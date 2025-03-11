@@ -180,6 +180,43 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 	}
 }
 
+// Test asserts that OnStart is executed in separate goroutine.
+//
+// Note: The same property is not checked for OnStop, because when Stop()
+// is called it blocks until actor finishes - so it may be blocked due to:
+//  1. executing OnStop() in the same goroutine as caller of Stop(),
+//     case of Idle(...) actor, or
+//  2. blocked on waiting for actor goroutine to finish, case of New(...) actor.
+func Test_Actor_OnStartGoroutine(t *testing.T) {
+	t.Parallel()
+
+	assertOnStart := func(fact func(func(Context)) Actor) {
+		c := make(chan any)
+		a := fact(func(Context) { c <- `🌞` })
+
+		a.Start()
+		defer a.Stop()
+
+		// if OnStart is execute is same goroutine, reading from channel <-c
+		// will block, and test will never complete.
+		assert.Equal(t, `🌞`, <-c)
+	}
+
+	t.Run("New", func(t *testing.T) {
+		t.Parallel()
+		assertOnStart(func(onStart func(ctx Context)) Actor {
+			return New(newWorker(), OptOnStart(onStart))
+		})
+	})
+
+	t.Run("Idle", func(t *testing.T) {
+		t.Parallel()
+		assertOnStart(func(onStart func(ctx Context)) Actor {
+			return Idle(OptOnStart(onStart))
+		})
+	})
+}
+
 // Test asserts that actor should stop after worker
 // has signaled that there is no more work via WorkerEnd signal.
 func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
