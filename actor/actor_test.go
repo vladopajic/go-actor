@@ -184,8 +184,9 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 //
 // Note: The same property is not checked for OnStop, because when Stop()
 // is called it blocks until actor finishes - so it may be blocked due to:
-//  1. executing OnStop() in same goroutine as caller of Stop() - case of Idle(...) actor, or
-//  2. blocked on waiting for actor goroutine to finish - case of New(...) actor.
+//  1. executing OnStop() in the same goroutine as caller of Stop(),
+//     case of Idle(...) actor, or
+//  2. blocked on waiting for actor goroutine to finish, case of New(...) actor.
 func Test_Actor_OnStartGoroutine(t *testing.T) {
 	t.Parallel()
 
