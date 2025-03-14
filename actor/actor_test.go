@@ -268,7 +268,7 @@ func Test_Actor_WorkerSkippedIfStoppedEarly(t *testing.T) {
 			close(startedC)
 			select {
 			case <-ctx.Done():
-			case <-time.After(time.Second):
+			case <-time.After(time.Hour):
 			}
 		}))
 
