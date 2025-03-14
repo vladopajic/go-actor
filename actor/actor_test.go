@@ -190,9 +190,9 @@ func Test_Actor_OnStartOnStop(t *testing.T) {
 func Test_Actor_OnStartGoroutine(t *testing.T) {
 	t.Parallel()
 
-	assertOnStart := func(fact func(func(Context)) Actor) {
+	assert := func(fact func(...Option) Actor) {
 		c := make(chan any)
-		a := fact(func(Context) { c <- `🌞` })
+		a := fact(OptOnStart(func(Context) { c <- `🌞` }))
 
 		a.Start()
 		defer a.Stop()
@@ -204,16 +204,53 @@ func Test_Actor_OnStartGoroutine(t *testing.T) {
 
 	t.Run("New", func(t *testing.T) {
 		t.Parallel()
-		assertOnStart(func(onStart func(ctx Context)) Actor {
-			return New(newWorker(), OptOnStart(onStart))
+		assert(func(opt ...Option) Actor {
+			return New(newWorker(), opt...)
 		})
 	})
 
 	t.Run("Idle", func(t *testing.T) {
 		t.Parallel()
-		assertOnStart(func(onStart func(ctx Context)) Actor {
-			return Idle(OptOnStart(onStart))
+		assert(Idle)
+	})
+}
+
+// Test asserts that OnStop is called even if actor is stopped
+// before OnStart finishes.
+func Test_Actor_OnStopCalledIfStoppedEarly(t *testing.T) {
+	t.Parallel()
+
+	assert := func(fact func(...Option) Actor) {
+		startedC := make(chan any)
+		blockingOnStart := func(ctx Context) {
+			close(startedC)
+			select {
+			case <-ctx.Done():
+			case <-time.After(time.Second):
+			}
+		}
+		onStopC := make(chan any, 1)
+		a := fact(
+			OptOnStart(blockingOnStart),
+			OptOnStop(func() { onStopC <- `🌚` }),
+		)
+
+		a.Start()
+		<-startedC
+		a.Stop()
+		assert.Equal(t, `🌚`, <-onStopC)
+	}
+
+	t.Run("New", func(t *testing.T) {
+		t.Parallel()
+		assert(func(opt ...Option) Actor {
+			return New(newWorker(), opt...)
 		})
+	})
+
+	t.Run("Idle", func(t *testing.T) {
+		t.Parallel()
+		assert(Idle)
 	})
 }
 
