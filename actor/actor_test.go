@@ -226,7 +226,7 @@ func Test_Actor_OnStopCalledIfStoppedEarly(t *testing.T) {
 			close(startedC)
 			select {
 			case <-ctx.Done():
-			case <-time.After(time.Second):
+			case <-time.After(time.Hour):
 			}
 		}
 		onStopC := make(chan any, 1)
