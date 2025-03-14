@@ -215,6 +215,8 @@ func Test_Actor_OnStartGoroutine(t *testing.T) {
 	})
 }
 
+// Test asserts that OnStop is called even if actor is stopped
+// before OnStart finishes.
 func Test_Actor_OnStopCalledIfStoppedEarly(t *testing.T) {
 	t.Parallel()
 
