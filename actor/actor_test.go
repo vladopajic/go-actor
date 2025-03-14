@@ -254,6 +254,29 @@ func Test_Actor_OnStopCalledIfStoppedEarly(t *testing.T) {
 	})
 }
 
+// Test asserts that Worker is not called if actor is stopped early.
+func Test_Actor_WorkerSkippedIfStoppedEarly(t *testing.T) {
+	t.Parallel()
+
+	startedC := make(chan any)
+	a := New(
+		NewWorker(func(Context) WorkerStatus {
+			assert.Fail(t, "DoWork should not be called")
+			return WorkerEnd
+		}),
+		OptOnStart(func(ctx Context) {
+			close(startedC)
+			select {
+			case <-ctx.Done():
+			case <-time.After(time.Second):
+			}
+		}))
+	a.Start()
+
+	<-startedC
+	a.Stop()
+}
+
 // Test asserts that actor should stop after worker
 // has signaled that there is no more work via WorkerEnd signal.
 func Test_Actor_StopAfterWorkerEnded(t *testing.T) {
