@@ -271,8 +271,8 @@ func Test_Actor_WorkerSkippedIfStoppedEarly(t *testing.T) {
 			case <-time.After(time.Second):
 			}
 		}))
-	a.Start()
 
+	a.Start()
 	<-startedC
 	a.Stop()
 }
