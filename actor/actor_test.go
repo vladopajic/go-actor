@@ -215,6 +215,33 @@ func Test_Actor_OnStartGoroutine(t *testing.T) {
 	})
 }
 
+// Test asserts that Worker is called if actor is stopped early -
+// before first iteration of worker.
+func Test_Actor_WorkerCalledIfStoppedEarly(t *testing.T) {
+	t.Parallel()
+
+	workerCalled := false
+	a := New(
+		NewWorker(func(Context) WorkerStatus {
+			workerCalled = true
+			return WorkerEnd
+		}),
+		OptOnStart(func(ctx Context) {
+			// OnStart will resemble some long process
+			// that is stopped because context is canceled
+			select {
+			case <-ctx.Done():
+			case <-time.After(time.Hour):
+			}
+		}),
+	)
+
+	a.Start()
+	a.Stop()
+
+	assert.True(t, workerCalled)
+}
+
 // Test asserts that OnStop is called even if actor is stopped
 // before OnStart finishes.
 func Test_Actor_OnStopCalledIfStoppedEarly(t *testing.T) {
