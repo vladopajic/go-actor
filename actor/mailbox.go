@@ -27,6 +27,7 @@ type Mailbox[T any] interface {
 // MailboxSender is an interface that defines the sending capabilities of a Mailbox.
 type MailboxSender[T any] interface {
 	// Send sends a message via the mailbox.
+	// Returns error if message could not be sent.
 	Send(ctx Context, msg T) error
 }
 
@@ -95,13 +96,26 @@ func NewMailboxes[T any](count int, opt ...MailboxOption) []Mailbox[T] {
 // sent to the Mailbox are queued without limitations, ensuring that send
 // operations will never cause the sender to wait.
 //
-// When the `OptAsChan` option is used, the Mailbox can behave identically
+// When the OptAsChan option is used, the Mailbox can behave identically
 // to a native Go channel (buffered or unbuffered) with key exception that
 // sending and receiving from this kind of mailbox will never panic.
 // Sending to it can block only if underlying channel's buffer capacity is reached,
-// as controlled by `OptCapacity`.
-// Alternatively, when `OptCapacity(0)` or this option is not supplied, mailbox will
+// as controlled by OptCapacity(...).
+// Alternatively, when OptCapacity(0) or this option is not supplied, mailbox will
 // behave like unbuffered channel.
+//
+// The Mailbox can send messages only after it has been started.
+// Attempting to send a message before starting will result in an error
+// ErrMailboxNotStarted. If a message is sent after the mailbox has been stopped,
+// ErrMailboxStopped will be returned.
+//
+// A Mailbox can be started and stopped only once. Restarting a stopped mailbox
+// has no effect.
+//
+// Throughout the entire lifecycle of the Mailbox, the reference to ReceiveC remains
+// unchanged. Once the mailbox is stopped, this channel will be closed, signaling that
+// no more messages will be received. Programs can use this as an indicator that
+// the mailbox is no longer active.
 func NewMailbox[T any](opt ...MailboxOption) Mailbox[T] {
 	options := newOptions(opt).Mailbox
 

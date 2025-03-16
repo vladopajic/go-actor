@@ -52,7 +52,7 @@ type Worker interface {
 	//
 	// The method returns a WorkerStatus value, which indicates whether the Actor
 	// should continue running this Worker or stop. If the Worker returns a status
-	// signaling completion `WorkerEnd`, the Actor will terminate the Worker; otherwise,
+	// signaling completion WorkerEnd, the Actor will terminate the Worker; otherwise,
 	// the Actor will continue executing subsequent work.
 	DoWork(ctx Context) WorkerStatus
 }
@@ -99,7 +99,7 @@ type StoppableWorker interface {
 //
 // This function takes a WorkerFunc as an argument, which defines the core logic
 // of the Worker. The returned Worker will delegate its DoWork method to the
-// provided WorkerFunc, allowing the caller to specify the work logic.
+// provided WorkerFunc, allowing the caller to specify the work logic in lambda function.
 func NewWorker(fn WorkerFunc) Worker {
 	return &worker{fn}
 }
@@ -114,6 +114,9 @@ func (w *worker) DoWork(ctx Context) WorkerStatus {
 
 // New creates and returns a new Actor with the specified Worker and
 // optional configuration.
+//
+// Actors created with this method can be restarted, with the only limitations being
+// the logic defined within their OnStart(), OnStop(), and DoWork() functions.
 func New(w Worker, opt ...Option) Actor {
 	return &actor{
 		worker:  w,
@@ -206,10 +209,8 @@ func (a *actor) onStop() {
 
 // Idle creates and returns a new Actor that does not have an associated Worker.
 //
-// This function is useful in scenarios where an Actor is needed solely for its
+// Idle is useful in scenarios where an Actor is needed solely for its
 // OnStart and OnStop functionalities, without executing any actual work.
-// The returned Actor can manage initialization and cleanup logic, allowing for
-// customizable behavior based on the provided options.
 func Idle(opt ...Option) Actor {
 	return &idleActor{
 		options: newOptions(opt),
