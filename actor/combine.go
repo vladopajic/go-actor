@@ -125,6 +125,7 @@ func (a *combinedActor) Stop() {
 func stopAllParallel(actors []Actor) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(actors))
+	defer wg.Wait()
 
 	for _, actor := range actors {
 		go func() {
@@ -132,8 +133,6 @@ func stopAllParallel(actors []Actor) {
 			wg.Done()
 		}()
 	}
-
-	wg.Wait()
 }
 
 func (a *combinedActor) Start() {
