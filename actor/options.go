@@ -103,6 +103,12 @@ func OptStopTogether() CombinedOption {
 	}
 }
 
+func OptStopParallel() CombinedOption {
+	return func(o *options) {
+		o.Combined.StopParallel = true
+	}
+}
+
 // OptOnStopCombined registers a function to be executed after
 // all combined Actors have been stopped.
 //
@@ -151,6 +157,7 @@ type optionsActor struct {
 
 type optionsCombined struct {
 	StopTogether bool
+	StopParallel bool
 	OnStopFunc   func()
 	OnStartFunc  func(Context)
 }

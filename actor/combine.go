@@ -40,6 +40,7 @@ func (b *CombineBuilder) Build() Actor {
 		onStopFunc:   b.options.Combined.OnStopFunc,
 		onStartFunc:  b.options.Combined.OnStartFunc,
 		stopTogether: b.options.Combined.StopTogether,
+		stopParallel: b.options.Combined.StopParallel,
 		stopping:     &atomic.Bool{},
 	}
 
@@ -64,6 +65,7 @@ type combinedActor struct {
 	onStopFunc   func()
 	onStartFunc  func(Context)
 	stopTogether bool
+	stopParallel bool
 
 	ctx          *context
 	runningCount atomic.Int64
@@ -111,9 +113,27 @@ func (a *combinedActor) Stop() {
 
 	a.runningLock.Unlock()
 
-	for _, actor := range a.actors {
-		actor.Stop()
+	if a.stopParallel {
+		stopAllParallel(a.actors)
+	} else {
+		for _, actor := range a.actors {
+			actor.Stop()
+		}
 	}
+}
+
+func stopAllParallel(actors []Actor) {
+	wg := sync.WaitGroup{}
+	wg.Add(len(actors))
+
+	for _, actor := range actors {
+		go func() {
+			actor.Stop()
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
 }
 
 func (a *combinedActor) Start() {
