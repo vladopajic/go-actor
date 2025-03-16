@@ -66,7 +66,7 @@ type combinedActor struct {
 	stopTogether bool
 
 	ctx          *context
-	runningCount atomic.Int32
+	runningCount atomic.Int64
 	running      bool
 	runningLock  sync.Mutex
 	stopping     *atomic.Bool
@@ -128,6 +128,7 @@ func (a *combinedActor) Start() {
 	a.ctx = ctx
 	a.stopping.Store(false)
 	a.running = true
+	a.runningCount.Add(int64(len(a.actors)))
 
 	a.runningLock.Unlock()
 
@@ -136,7 +137,6 @@ func (a *combinedActor) Start() {
 	}
 
 	for _, actor := range a.actors {
-		a.runningCount.Add(1)
 		actor.Start()
 	}
 }
