@@ -36,12 +36,9 @@ func (b *CombineBuilder) Build() Actor {
 	}
 
 	a := &combinedActor{
-		actors:       b.actors,
-		onStopFunc:   b.options.Combined.OnStopFunc,
-		onStartFunc:  b.options.Combined.OnStartFunc,
-		stopTogether: b.options.Combined.StopTogether,
-		stopParallel: b.options.Combined.StopParallel,
-		stopping:     &atomic.Bool{},
+		actors:   b.actors,
+		options:  b.options.Combined,
+		stopping: &atomic.Bool{},
 	}
 
 	a.actors = wrapActors(a.actors, a.onActorStopped)
@@ -61,11 +58,8 @@ func (b *CombineBuilder) WithOptions(opt ...CombinedOption) *CombineBuilder {
 }
 
 type combinedActor struct {
-	actors       []Actor
-	onStopFunc   func()
-	onStartFunc  func(Context)
-	stopTogether bool
-	stopParallel bool
+	actors  []Actor
+	options optionsCombined
 
 	ctx          *context
 	runningCount atomic.Int64
@@ -84,12 +78,12 @@ func (a *combinedActor) onActorStopped() {
 	a.runningLock.Unlock()
 
 	// Last actor to end should call onStopFunc
-	if runningCount == 0 && wasRunning && a.onStopFunc != nil {
-		a.onStopFunc()
+	if runningCount == 0 && wasRunning && a.options.OnStopFunc != nil {
+		a.options.OnStopFunc()
 	}
 
 	// First actor to stop should stop other actors
-	if a.stopTogether && !a.stopping.Load() {
+	if a.options.StopTogether && !a.stopping.Load() {
 		// Run stop in goroutine because wrapped actor
 		// should not wait for other actors to stop.
 		//
@@ -113,7 +107,7 @@ func (a *combinedActor) Stop() {
 
 	a.runningLock.Unlock()
 
-	if a.stopParallel {
+	if a.options.StopParallel {
 		stopAllParallel(a.actors)
 	} else {
 		for _, actor := range a.actors {
@@ -151,7 +145,7 @@ func (a *combinedActor) Start() {
 
 	a.runningLock.Unlock()
 
-	if fn := a.onStartFunc; fn != nil {
+	if fn := a.options.OnStartFunc; fn != nil {
 		fn(ctx)
 	}
 
@@ -179,9 +173,9 @@ func wrapActors(
 	}
 
 	wrapCombinedActorStruct := func(a *combinedActor) *combinedActor {
-		prevOnStopFunc := a.onStopFunc
+		prevOnStopFunc := a.options.OnStopFunc
 
-		a.onStopFunc = func() {
+		a.options.OnStopFunc = func() {
 			if prevOnStopFunc != nil {
 				prevOnStopFunc()
 			}
