@@ -169,12 +169,14 @@ func (a *actor) Start() {
 func (a *actor) doWork() {
 	a.onStart()
 
-	for status := WorkerContinue; status == WorkerContinue; {
-		status = a.worker.DoWork(a.ctx)
+	if ctx := a.ctx; ctx.Err() == nil {
+		for status := WorkerContinue; status == WorkerContinue; {
+			status = a.worker.DoWork(ctx)
+		}
 	}
 
+	// before calling onStop() ensure that context has ended
 	a.ctx.end()
-
 	a.onStop()
 
 	{ // Worker has finished
