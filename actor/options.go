@@ -103,9 +103,14 @@ func OptStopTogether() CombinedOption {
 	}
 }
 
-// OptStopParallel will stop all combined actors simultaneously.
-// By default, actors are stopped sequentially in order in which they are provided
-// to Combine. In both cases Combine actor will block until all actors have stopped.
+// OptStopParallel ensures that all combined actors stop simultaneously.
+//
+// By default, actors are stopped sequentially in the order they were provided to
+// Combine(...). This means that actors later in the list must wait for the
+// preceding actors to stop. With OptStopParallel option enabled, all actors stop
+// simultaneously without waiting for others.
+//
+// In both cases, the Combine actor will block until all actors have stopped.
 func OptStopParallel() CombinedOption {
 	return func(o *options) {
 		o.Combined.StopParallel = true
