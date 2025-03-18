@@ -30,7 +30,7 @@ test-experimental:
 	go mod edit -go 1.24
 	go env -w GOEXPERIMENT=synctest
 	go test -tags "experimental" -run Experimental$$ -timeout=10s -race -count=10 -shuffle=on -failfast -v ./...
-	go env -w GOEXPERIMENT=
+	go env -u GOEXPERIMENT
 	go mod edit -go 1.22
 
 # Code tidy
