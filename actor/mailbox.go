@@ -8,10 +8,6 @@ import (
 )
 
 var (
-	// ErrMailboxNotStarted is an error returned by Mailbox.Send when sending is performed
-	// on a mailbox that has not been started.
-	ErrMailboxNotStarted = errors.New("Mailbox is not started")
-
 	// ErrMailboxStopped is an error returned by Mailbox.Send when sending is performed
 	// on a mailbox that has been stopped.
 	ErrMailboxStopped = errors.New("Mailbox is stopped")
@@ -105,8 +101,8 @@ func NewMailboxes[T any](count int, opt ...MailboxOption) []Mailbox[T] {
 // behave like unbuffered channel.
 //
 // The Mailbox can send messages only after it has been started.
-// Attempting to send a message before starting will result in an error
-// ErrMailboxNotStarted. If a message is sent after the mailbox has been stopped,
+// Attempting to send a message before starting can block the caller .
+// If a message is sent after the mailbox has been stopped,
 // ErrMailboxStopped will be returned.
 //
 // A Mailbox can be started and stopped only once. Restarting a stopped mailbox
@@ -169,9 +165,7 @@ func (m *mailboxChan[T]) Stop() {
 
 func (m *mailboxChan[T]) Send(ctx Context, msg T) error {
 	state := m.state.Load()
-	if state == mbxStateNotStarted {
-		return fmt.Errorf("Mailbox.Send failed: %w", ErrMailboxNotStarted)
-	} else if state == mbxStateStopped {
+	if state == mbxStateStopped {
 		return fmt.Errorf("Mailbox.Send failed: %w", ErrMailboxStopped)
 	}
 
@@ -237,9 +231,7 @@ func (m *mailbox[T]) Stop() {
 
 func (m *mailbox[T]) Send(ctx Context, msg T) error {
 	state := m.state.Load()
-	if state == mbxStateNotStarted {
-		return fmt.Errorf("Mailbox.Send failed: %w", ErrMailboxNotStarted)
-	} else if state == mbxStateStopped {
+	if state == mbxStateStopped {
 		return fmt.Errorf("Mailbox.Send failed: %w", ErrMailboxStopped)
 	}
 
