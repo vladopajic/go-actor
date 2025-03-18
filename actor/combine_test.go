@@ -227,6 +227,69 @@ func testCombineOthersNotStopped(t *testing.T, actorsCount int) {
 	}
 }
 
+//nolint:maintidx // relax
+func Test_Combine_StopParallel(t *testing.T) {
+	t.Parallel()
+
+	const count = 10
+
+	setup := func(isParallel bool) (chan struct{}, chan struct{}) {
+		c1 := make(chan struct{}, count)
+		c2 := make(chan struct{})
+		actors := make([]Actor, count)
+
+		for i := range count {
+			actors[i] = Idle(OptOnStop(func() {
+				c1 <- struct{}{}
+
+				<-c2
+			}))
+		}
+
+		ab := Combine(actors...)
+		if isParallel {
+			ab = ab.WithOptions(OptStopParallel())
+		}
+
+		a := ab.Build()
+
+		a.Start()
+		go a.Stop()
+
+		// give some time for OnStop to be called
+		time.Sleep(time.Millisecond * 100) //nolint:forbidigo // relax
+
+		return c1, c2
+	}
+
+	t.Run("sequential", func(t *testing.T) {
+		t.Parallel()
+
+		c1, c2 := setup(false)
+
+		for range count {
+			c2 <- struct{}{}
+
+			assert.GreaterOrEqual(t, len(c1), 1)
+			assert.LessOrEqual(t, len(c1), 2)
+			<-c1
+		}
+	})
+
+	t.Run("parallel", func(t *testing.T) {
+		t.Parallel()
+
+		c1, c2 := setup(true)
+
+		for i := range count {
+			c2 <- struct{}{}
+
+			assert.Len(t, c1, count-i)
+			<-c1
+		}
+	})
+}
+
 // Test asserts that wrapActors is correctly wrapping actors with onStopFunc callback.
 func Test_Combine_WrapActors(t *testing.T) {
 	t.Parallel()
