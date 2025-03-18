@@ -110,22 +110,7 @@ func (a *combinedActor) Stop() {
 	if a.options.StopParallel {
 		stopAllParallel(a.actors)
 	} else {
-		for _, actor := range a.actors {
-			actor.Stop()
-		}
-	}
-}
-
-func stopAllParallel(actors []Actor) {
-	wg := sync.WaitGroup{}
-	wg.Add(len(actors))
-	defer wg.Wait()
-
-	for _, actor := range actors {
-		go func() {
-			actor.Stop()
-			wg.Done()
-		}()
+		stopAll(a.actors)
 	}
 }
 
@@ -149,8 +134,31 @@ func (a *combinedActor) Start() {
 		fn(ctx)
 	}
 
-	for _, actor := range a.actors {
-		actor.Start()
+	startAll(a.actors)
+}
+
+func startAll(actors []Actor) {
+	for _, a := range actors {
+		a.Start()
+	}
+}
+
+func stopAll(actors []Actor) {
+	for _, a := range actors {
+		a.Stop()
+	}
+}
+
+func stopAllParallel(actors []Actor) {
+	wg := sync.WaitGroup{}
+	wg.Add(len(actors))
+	defer wg.Wait()
+
+	for _, a := range actors {
+		go func() {
+			a.Stop()
+			wg.Done()
+		}()
 	}
 }
 
