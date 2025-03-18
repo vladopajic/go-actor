@@ -80,6 +80,71 @@ func Test_Actor_StopAfterWorkerEnded_Experimental(t *testing.T) {
 	})
 }
 
+func Test_Combine_StopParallel_Experimental(t *testing.T) {
+	t.Parallel()
+
+	const count = 10
+
+	setup := func(isParallel bool) (chan struct{}, chan struct{}) {
+		c1 := make(chan struct{}, count)
+		c2 := make(chan struct{})
+		actors := make([]Actor, count)
+
+		for i := range count {
+			actors[i] = Idle(OptOnStop(func() {
+				c1 <- struct{}{}
+
+				<-c2
+			}))
+		}
+
+		ab := Combine(actors...)
+		if isParallel {
+			ab = ab.WithOptions(OptStopParallel())
+		}
+
+		a := ab.Build()
+
+		a.Start()
+		go a.Stop()
+
+		synctest.Wait() // wait for stop to get blocked on c1
+
+		return c1, c2
+	}
+
+	t.Run("sequential", func(t *testing.T) {
+		t.Parallel()
+
+		synctest.Run(func() {
+			c1, c2 := setup(false)
+
+			for range count {
+				c2 <- struct{}{}
+
+				assert.GreaterOrEqual(t, len(c1), 1)
+				assert.LessOrEqual(t, len(c1), 2)
+				<-c1
+			}
+		})
+	})
+
+	t.Run("parallel", func(t *testing.T) {
+		t.Parallel()
+
+		synctest.Run(func() {
+			c1, c2 := setup(true)
+
+			for i := range count {
+				c2 <- struct{}{}
+
+				assert.Len(t, c1, count-i)
+				<-c1
+			}
+		})
+	})
+}
+
 // Test asserts that mailbox `Send()` returns error when sending data is blocked and
 // Stop() is simultaneously called.
 func Test_Mailbox_AsChan_SendStopped_Experimental(t *testing.T) {
