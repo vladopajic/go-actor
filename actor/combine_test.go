@@ -246,12 +246,9 @@ func Test_Combine_StopParallel(t *testing.T) {
 			}))
 		}
 
-		ab := Combine(actors...)
-		if isParallel {
-			ab = ab.WithOptions(OptStopParallel())
-		}
-
-		a := ab.Build()
+		a := Combine(actors...).
+			WithOptions(OptStopParallelWith(isParallel)).
+			Build()
 
 		a.Start()
 		go a.Stop()

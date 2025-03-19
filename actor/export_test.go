@@ -50,6 +50,14 @@ func NewZeroOptions() options {
 	return options{}
 }
 
+func OptStopParallelWith(isParallel bool) CombinedOption {
+	if isParallel {
+		return OptStopParallel()
+	}
+
+	return func(o *options) {}
+}
+
 func NewMailboxWorker[T any](
 	sendC,
 	receiveC chan T,

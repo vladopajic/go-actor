@@ -89,6 +89,33 @@ func OptStopAfterReceivingAll() MailboxOption {
 	}
 }
 
+// OptOnStartCombined registers a function to be executed before
+// the start of all combined Actors.
+//
+// This option allows you to specify an initialization function
+// that will be called prior to the execution of any combined
+// Actors. This is useful for performing any necessary setup,
+// such as resource allocation before the Actors begin their work.
+func OptOnStartCombined(f func(Context)) CombinedOption {
+	return func(o *options) {
+		o.Combined.OnStartFunc = f
+	}
+}
+
+// OptOnStopCombined registers a function to be executed after
+// all combined Actors have been stopped.
+//
+// This option allows you to specify a cleanup or finalization
+// function that will be called once the stop process for
+// all Actors in the combination is complete. This is useful
+// for performing any necessary resource cleanup, logging, or
+// final state updates after the Actors have ceased execution.
+func OptOnStopCombined(f func()) CombinedOption {
+	return func(o *options) {
+		o.Combined.OnStopFunc = f
+	}
+}
+
 // OptStopTogether ensures that all combined Actors are stopped
 // when any single Actor within the group is stopped.
 //
@@ -114,33 +141,6 @@ func OptStopTogether() CombinedOption {
 func OptStopParallel() CombinedOption {
 	return func(o *options) {
 		o.Combined.StopParallel = true
-	}
-}
-
-// OptOnStopCombined registers a function to be executed after
-// all combined Actors have been stopped.
-//
-// This option allows you to specify a cleanup or finalization
-// function that will be called once the stop process for
-// all Actors in the combination is complete. This is useful
-// for performing any necessary resource cleanup, logging, or
-// final state updates after the Actors have ceased execution.
-func OptOnStopCombined(f func()) CombinedOption {
-	return func(o *options) {
-		o.Combined.OnStopFunc = f
-	}
-}
-
-// OptOnStartCombined registers a function to be executed before
-// the start of all combined Actors.
-//
-// This option allows you to specify an initialization function
-// that will be called prior to the execution of any combined
-// Actors. This is useful for performing any necessary setup,
-// such as resource allocation before the Actors begin their work.
-func OptOnStartCombined(f func(Context)) CombinedOption {
-	return func(o *options) {
-		o.Combined.OnStartFunc = f
 	}
 }
 
