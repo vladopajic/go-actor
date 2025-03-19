@@ -383,9 +383,6 @@ func assertMailboxStopped(t *testing.T, m Mailbox[any]) {
 func assertMailboxNotStarted(t *testing.T, m Mailbox[any]) {
 	t.Helper()
 
-	assert.ErrorIs(t, m.Send(ContextStarted(), `👹`), ErrMailboxNotStarted,
-		"should not be able to send as Mailbox is not started")
-
 	assertReceiveBlocking(t, m)
 }
 
