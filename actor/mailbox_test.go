@@ -383,11 +383,6 @@ func assertMailboxStopped(t *testing.T, m Mailbox[any]) {
 func assertMailboxNotStarted(t *testing.T, m Mailbox[any]) {
 	t.Helper()
 
-	// ctx, cancel := context.WithTimeout(ContextStarted(), time.Millisecond*10)
-	// defer cancel()
-	// assert.ErrorIs(t, m.Send(ctx, `👹`), context.DeadlineExceeded,
-	// 	"should not be able to send as Mailbox is not started")
-
 	assertReceiveBlocking(t, m)
 }
 

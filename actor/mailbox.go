@@ -7,11 +7,9 @@ import (
 	"sync/atomic"
 )
 
-var (
-	// ErrMailboxStopped is an error returned by Mailbox.Send when sending is performed
-	// on a mailbox that has been stopped.
-	ErrMailboxStopped = errors.New("Mailbox is stopped")
-)
+// ErrMailboxStopped is an error returned by Mailbox.Send when sending is performed
+// on a mailbox that has been stopped.
+var ErrMailboxStopped = errors.New("Mailbox is stopped")
 
 // Mailbox is interface for message transport mechanism between Actors.
 type Mailbox[T any] interface {
@@ -101,9 +99,8 @@ func NewMailboxes[T any](count int, opt ...MailboxOption) []Mailbox[T] {
 // behave like unbuffered channel.
 //
 // The Mailbox can send messages only after it has been started.
-// Attempting to send a message before starting can block the caller .
-// If a message is sent after the mailbox has been stopped,
-// ErrMailboxStopped will be returned.
+// Attempting to send a message before starting can block the caller. If a message is sent
+// after the mailbox has been stopped,ErrMailboxStopped will be returned.
 //
 // A Mailbox can be started and stopped only once. Restarting a stopped mailbox
 // has no effect.
