@@ -1,3 +1,4 @@
+version: "2"
 linters:
   enable:
     - asasalint
@@ -15,7 +16,6 @@ linters:
     - dupword
     - durationcheck
     - err113
-    - errcheck
     - errchkjson
     - errname
     - errorlint
@@ -34,21 +34,15 @@ linters:
     - gocritic
     - gocyclo
     - godox
-    - gofmt
-    - gofumpt
     - goheader
-    - goimports
     - gomoddirectives
     - gomodguard
     - goprintffuncname
     - gosec
-    - gosimple
-    - govet
     - grouper
     - iface
     - importas
     - inamedparam
-    - ineffassign
     - interfacebloat
     - intrange
     - lll
@@ -80,116 +74,131 @@ linters:
     - sloglint
     - sqlclosecheck
     - staticcheck
-    - stylecheck
     - tagalign
     - tagliatelle
     - testifylint
     - testpackage
     - thelper
     - tparallel
-    - typecheck
     - unconvert
-    # - unparam # disabled because of panic
-    - unused
+    - unparam
     - usestdlibvars
     - usetesting
-    - wastedassign 
+    - wastedassign
     - whitespace
     - wrapcheck
     - wsl
     - zerologlint
-
-linters-settings:
-  errcheck:
-    check-blank: true
-    disable-default-exclusions: true
-  errchkjson:
-    report-no-exported: true
-  dupl:
-    threshold: 120
-  tagliatelle:
-    case:
-      use-field-name: true
-      rules:
-        yaml: kebab
-  testifylint: 
-    enable-all: true
-  depguard:
+  settings:
+    depguard:
       rules:
         main:
           files:
             - $all
-            - "!$test"
+            - '!$test'
           allow:
             - $gostd
-            - github.com/gammazero/deque      ## needed for queue implementation
-            - github.com/stretchr             ## needed for test helpers
+            - github.com/gammazero/deque
         test:
           files:
-            - "$test"
+            - $test
           allow:
             - $gostd
             - github.com/stretchr
+            - go.uber.org/goleak
             - github.com/vladopajic/go-actor
-  forbidigo:
+    dupl:
+      threshold: 120
+    errcheck:
+      disable-default-exclusions: true
+      check-blank: true
+    errchkjson:
+      report-no-exported: true
+    forbidigo:
       forbid:
-        - 'time\.Sleep*(# Do not sleep)?'
-        - 'panic*(# Do not panic)?'
-        - 'os\.Exit*(# Do not exit)?'
-        - p: ^fmt\.Print*$
+        - pattern: time\.Sleep*(# Do not sleep)?
+        - pattern: panic*(# Do not panic)?
+        - pattern: os\.Exit*(# Do not exit)?
+        - pattern: ^fmt\.Print*$
           msg: Do not commit print statements.
-  funlen:
-    ignore-comments: true
-  gocognit:
-    min-complexity: 20
-  gocyclo:
-    min-complexity: 20
-  goconst:
-    numbers: true
-  grouper:
-    import-require-single-import: true
-  unparam:
-    check-exported: true
-  nolintlint:
-    require-explanation: true
-  maintidx:
-    under: 40
-  misspell:
-    locale: US
-  govet:
-    enable-all: true
-    disable:
-     - fieldalignment
-  iface:
-    enable:
-      - identical
-      - unused 
-  lll:
-    line-length: 90
-    tab-width: 1
-  nlreturn:
-    block-size: 5
-  goimports:
-    local-prefixes: github.com/vladopajic/go-actor
-  wsl:
-    force-err-cuddling: true
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - funlen        ## Function length is okay due to many tests cases
-        - wrapcheck     ## No need to check wrapping errors in tests
-
-    - path: _test\.go   ## Enable dot-imports in tests
-      text: "dot-imports"
-      linters:
-        - revive
-    
-    - text: "require-error" ## Option to disable this error does not work
-      linters:
-        - testifylint
-
-    - path: export_test\.go
-      linters:
-        - revive      ## Disabling linter because we intentionally want to use unexported types in tests
+    funlen:
+      ignore-comments: true
+    gocognit:
+      min-complexity: 20
+    goconst:
+      numbers: true
+    gocyclo:
+      min-complexity: 20
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+    grouper:
+      import-require-single-import: true
+    iface:
+      enable:
+        - identical
+        - unused
+    lll:
+      line-length: 90
+      tab-width: 1
+    maintidx:
+      under: 40
+    misspell:
+      locale: US
+    nlreturn:
+      block-size: 5
+    nolintlint:
+      require-explanation: true
+    tagliatelle:
+      case:
+        rules:
+          yaml: kebab
+        use-field-name: true
+    testifylint:
+      enable-all: true
+    unparam:
+      check-exported: true
+    wsl:
+      force-err-cuddling: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - funlen          ## Function length is okay due to many tests cases
+          - wrapcheck       ## No need to check wrapping errors in tests
+        path: _test\.go
+      - linters:            ## Enable dot-imports in tests
+          - revive
+        path: _test\.go
+        text: dot-imports
+      - linters:            ## Option to disable this error does not work
+          - testifylint
+        text: require-error
+      - linters:            ## Disabling linter because we intentionally want to use unexported types in tests
+          - revive
+        path: export_test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/vladopajic/go-actor
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
