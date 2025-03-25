@@ -1,7 +1,7 @@
 GO ?= go
 GOBIN ?= $$($(GO) env GOPATH)/bin
 GOLANGCI_LINT ?= $(GOBIN)/golangci-lint
-GOLANGCI_LINT_VERSION ?= v1.64.5 # LINT_VERSION: update version in other places
+GOLANGCI_LINT_VERSION ?= v2.0.1 # LINT_VERSION: update version in other places
 TEST_COVERAGE ?= $(GOBIN)/go-test-coverage
 
 .PHONY: install-golangcilint
