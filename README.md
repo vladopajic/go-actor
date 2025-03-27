@@ -14,9 +14,9 @@
 
 ## Motivation
 
-The goal of go-actor is to bring the [actor model](https://en.wikipedia.org/wiki/Actor_model) closer to Go developers by providing a design pattern that facilitates the development of scalable and high-performance concurrent applications.
+Without reusable design principles, maintaining a complex codebase can be challenging, as developers implement logic differently when no common practice is defined.
 
-Without reusable design principles, maintaining a complex codebase can be challenging. Golang's unique concurrency model, based on goroutines and channels, naturally aligns with the actor model, making it an ideal fit for building actor-based programs.
+**go-actor** aims to provide a pattern for building highly efficient programs, giving developers a straightforward approach to designing components, the building blocks of programs, using a pattern based on the **Actor Model** and **Communicating Sequential Processes (CSP)**.
 
 ## Advantage
 
