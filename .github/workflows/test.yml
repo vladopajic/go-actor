@@ -20,7 +20,7 @@ jobs:
            
       - name: check test coverage
         id: coverage
-        uses: vladopajic/go-test-coverage@v2/actions
+        uses: vladopajic/go-test-coverage/action@v2
         continue-on-error: true # Should fail after coverage comment is posted
         with:
           config: ./.testcoverage.yml
