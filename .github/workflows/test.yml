@@ -23,6 +23,7 @@ jobs:
         uses: vladopajic/go-test-coverage/action@7bd2078a792533f17f72b2728664744c4bd2aaf8
         continue-on-error: true # Should fail after coverage comment is posted
         with:
+          version: 7bd2078a792533f17f72b2728664744c4bd2aaf8
           config: ./.testcoverage.yml
           git-branch: badges
           git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
