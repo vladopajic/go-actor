@@ -1,9 +1,9 @@
 module github.com/vladopajic/go-actor
 
-go 1.22
+go 1.23
 
 require (
-	github.com/gammazero/deque v1.0.0
+	github.com/gammazero/deque v1.1.0
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/goleak v1.3.0
 )
