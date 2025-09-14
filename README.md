@@ -133,13 +133,6 @@ You can find detailed design decisions [here](./docs/design_decisions.md).
 See library benchmarks [here](./docs/benchmarks.md).
 
 
-## Versioning
-
-The `go-actor` library adopts a versioning scheme structured as `x.y.z`.
-
-Initially, the library will utilize the format `0.y.z` as it undergoes refinement until it attains a level of stability where fundamental interfaces and core principles no longer necessitate significant alterations. Within this semantic, the `y` component signifies a version that is not backward-compatible. It is advisable for developers to review the release notes carefully to gain insight into these modifications. Furthermore, the final component, `z`, denotes releases incorporating changes that are backward-compatible. 
-
-
 ## Contribution
 
 All contributions are useful, whether it is a simple typo, a more complex change, or just pointing out an issue. We welcome any contribution so feel free to open PR or issue. 
