@@ -20,6 +20,7 @@ jobs:
       - id: govulncheck
         uses: golang/govulncheck-action@v1
         with:
+          repo-checkout: false
           go-package: ./...
       
       - name: go mod tidy check 
