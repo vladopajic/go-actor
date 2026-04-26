@@ -71,8 +71,8 @@ type combinedActor struct {
 func (a *combinedActor) onActorStopped() {
 	a.runningLock.Lock()
 
-	a.runningCount -= 1
-	runningCount := a.runningCount
+	a.runningCount--
+	noRunningActors := a.runningCount == 0
 
 	wasRunning := a.running
 	a.running = a.runningCount != 0
@@ -80,7 +80,7 @@ func (a *combinedActor) onActorStopped() {
 	a.runningLock.Unlock()
 
 	// Last actor to end should call onStopFunc
-	if runningCount == 0 && wasRunning && a.options.OnStopFunc != nil {
+	if noRunningActors && wasRunning && a.options.OnStopFunc != nil {
 		a.options.OnStopFunc()
 	}
 
