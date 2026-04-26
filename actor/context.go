@@ -4,6 +4,7 @@ import (
 	gocontext "context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -55,9 +56,9 @@ func ContextEnded() Context {
 }
 
 type context struct {
-	mu    sync.Mutex
-	err   error
-	doneC chan struct{}
+	stopped atomic.Bool
+	once    sync.Once
+	doneC   chan struct{}
 }
 
 func newContext() *context {
@@ -71,12 +72,10 @@ func (c *context) Deadline() (time.Time, bool) {
 }
 
 func (c *context) end() {
-	c.mu.Lock()
-	if c.err == nil {
-		c.err = ErrStopped
+	c.once.Do(func() {
+		c.stopped.Store(true)
 		close(c.doneC)
-	}
-	c.mu.Unlock()
+	})
 }
 
 func (c *context) Done() <-chan struct{} {
@@ -84,11 +83,11 @@ func (c *context) Done() <-chan struct{} {
 }
 
 func (c *context) Err() error {
-	c.mu.Lock()
-	err := c.err
-	c.mu.Unlock()
+	if c.stopped.Load() {
+		return ErrStopped
+	}
 
-	return err
+	return nil
 }
 
 //nolint:revive // needed to satisfy context.Context interface
