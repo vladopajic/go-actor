@@ -173,6 +173,7 @@ func (m *mailboxChan[T]) Send(ctx Context, msg T) error {
 		if m.ongoingSend.Add(-1) == 0 {
 			m.closeOnce.Do(func() { close(m.c) })
 		}
+
 		return fmt.Errorf("Mailbox.Send canceled: %w", ErrMailboxStopped)
 	case <-ctx.Done():
 		m.ongoingSend.Add(-1)
