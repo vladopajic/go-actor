@@ -278,6 +278,47 @@ func Test_Mailbox_AsChan_SendStopped(t *testing.T) {
 	assert.ErrorIs(t, <-sendResultC, ErrMailboxStopped, "Send() should result with error")
 }
 
+// Test asserts that ReceiveC() is closed after Stop() is called while one or more
+// Send() calls are concurrently blocked. This covers the defer-ordering race where
+// closeReceiveC() ran before ongoingSend.Add(-1), leaving the channel permanently open.
+func Test_Mailbox_AsChan_ReceiveCClosedAfterStopDuringSend(t *testing.T) {
+	t.Parallel()
+
+	const senderCount = 10
+
+	m := NewMailbox[any](OptAsChan())
+	m.Start()
+
+	allBlockedC := make(chan struct{})
+	sendResultC := make(chan error, senderCount)
+
+	for range senderCount {
+		go func() {
+			sendResultC <- m.Send(ContextStarted(), `🌹`)
+		}()
+	}
+
+	// Give goroutines time to block inside Send before calling Stop.
+	go func() {
+		time.Sleep(time.Millisecond * 100) //nolint:forbidigo // explained above
+		close(allBlockedC)
+	}()
+
+	<-allBlockedC
+	m.Stop()
+
+	for range senderCount {
+		assert.ErrorIs(t, <-sendResultC, ErrMailboxStopped)
+	}
+
+	select {
+	case _, ok := <-m.ReceiveC():
+		assert.False(t, ok, "ReceiveC should be closed after Stop with concurrent senders")
+	case <-time.After(time.Second):
+		assert.Fail(t, "ReceiveC was not closed")
+	}
+}
+
 // AssertMailboxInvariantsAsync is helper functions that asserts mailbox invariants.
 func AssertMailboxInvariantsAsync(t *testing.T, mFact func() Mailbox[any]) {
 	t.Helper()
