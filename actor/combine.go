@@ -62,7 +62,7 @@ type combinedActor struct {
 	options optionsCombined
 
 	ctx          *context
-	runningCount atomic.Int64
+	runningCount int
 	running      bool
 	runningLock  sync.Mutex
 	stopping     *atomic.Bool
@@ -71,14 +71,16 @@ type combinedActor struct {
 func (a *combinedActor) onActorStopped() {
 	a.runningLock.Lock()
 
-	runningCount := a.runningCount.Add(-1)
+	a.runningCount--
+	noRunningActors := a.runningCount == 0
+
 	wasRunning := a.running
-	a.running = runningCount != 0
+	a.running = a.runningCount != 0
 
 	a.runningLock.Unlock()
 
 	// Last actor to end should call onStopFunc
-	if runningCount == 0 && wasRunning && a.options.OnStopFunc != nil {
+	if noRunningActors && wasRunning && a.options.OnStopFunc != nil {
 		a.options.OnStopFunc()
 	}
 
@@ -126,7 +128,7 @@ func (a *combinedActor) Start() {
 	a.ctx = ctx
 	a.stopping.Store(false)
 	a.running = true
-	a.runningCount.Add(int64(len(a.actors)))
+	a.runningCount += len(a.actors)
 
 	a.runningLock.Unlock()
 
