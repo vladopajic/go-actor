@@ -54,6 +54,7 @@ func Test_Actor_New_NilOption(t *testing.T) {
 	t.Parallel()
 
 	var opt Option
+
 	w := NewWorker(func(Context) WorkerStatus {
 		return WorkerEnd
 	})
