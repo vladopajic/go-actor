@@ -50,6 +50,19 @@ func Test_Actor_New(t *testing.T) {
 	assertNoWork(t, w.doWorkC)
 }
 
+func Test_Actor_New_NilOption(t *testing.T) {
+	t.Parallel()
+
+	var opt Option
+	w := NewWorker(func(Context) WorkerStatus {
+		return WorkerEnd
+	})
+
+	assert.NotPanics(t, func() {
+		_ = New(w, opt)
+	})
+}
+
 // Test asserts that restarting actor will not impact worker's state.
 func Test_Actor_Restart(t *testing.T) {
 	t.Parallel()

@@ -180,6 +180,10 @@ func newOptions[T ~func(o *options)](opts []T) options {
 	o := &options{}
 
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+
 		opt(o)
 	}
 

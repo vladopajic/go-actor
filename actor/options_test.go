@@ -17,6 +17,7 @@ func TestOptions(t *testing.T) {
 	testActorOptions(t)
 	testMailboxOptions(t)
 	testCombinedOptions(t)
+	testNilOptions(t)
 }
 
 func testActorOptions(t *testing.T) {
@@ -100,6 +101,41 @@ func testCombinedOptions(t *testing.T) {
 	{ // Assert that OnStopCombined will be set
 		opts := NewOptions(OptOnStopCombined(func() {}))
 		assert.NotNil(t, opts.Combined.OnStopFunc)
+
+		assert.Empty(t, opts.Actor)
+		assert.Empty(t, opts.Mailbox)
+	}
+}
+
+func testNilOptions(t *testing.T) {
+	t.Helper()
+
+	{ // Assert that nil actor options will be ignored
+		var opt Option
+		opts := NewOptions(opt, OptOnStart(func(Context) {}))
+
+		assert.NotNil(t, opts.Actor.OnStartFunc)
+		assert.Nil(t, opts.Actor.OnStopFunc)
+
+		assert.Empty(t, opts.Mailbox)
+		assert.Empty(t, opts.Combined)
+	}
+
+	{ // Assert that nil mailbox options will be ignored
+		var opt MailboxOption
+		opts := NewOptions(opt, OptCapacity(16))
+
+		assert.Equal(t, 16, opts.Mailbox.Capacity)
+
+		assert.Empty(t, opts.Actor)
+		assert.Empty(t, opts.Combined)
+	}
+
+	{ // Assert that nil combined options will be ignored
+		var opt CombinedOption
+		opts := NewOptions(opt, OptStopTogether())
+
+		assert.True(t, opts.Combined.StopTogether)
 
 		assert.Empty(t, opts.Actor)
 		assert.Empty(t, opts.Mailbox)
