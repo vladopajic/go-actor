@@ -29,6 +29,14 @@ func TestAssertWorkerEndSigAfterIterations(t *testing.T) {
 	t.Parallel()
 
 	actortest.AssertWorkerEndSigAfterIterations(t, delayedEndWorker(3), 3)
+
+	tb := &tbWrapper{T: t}
+	actortest.AssertWorkerEndSigAfterIterations(tb, delayedEndWorker(3), 0)
+	assert.True(t, tb.hadError)
+
+	tb = &tbWrapper{T: t}
+	actortest.AssertWorkerEndSigAfterIterations(tb, delayedEndWorker(3), -1)
+	assert.True(t, tb.hadError)
 }
 
 func delayedEndWorker(iterations int) actor.Worker {

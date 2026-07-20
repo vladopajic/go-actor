@@ -23,6 +23,11 @@ func AssertWorkerEndSigAfterIterations(tb testing.TB, w actor.Worker, iterations
 		return
 	}
 
+	if iterations < 1 {
+		tb.Error("iterations should be >= 1")
+		return
+	}
+
 	for range iterations {
 		status := w.DoWork(actor.ContextEnded())
 		if status == actor.WorkerEnd {

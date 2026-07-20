@@ -1,3 +1,4 @@
+// Package actortest provides testing helpers for actors.
 package actortest
 
 import (
@@ -63,9 +64,9 @@ func randInt32WithReader(tb testing.TB, randReader io.Reader) int32 {
 	const byteSize = 4
 	b := make([]byte, byteSize)
 
-	_, err := randReader.Read(b)
-	if err != nil { // coverage-ignore
+	if _, err := io.ReadFull(randReader, b); err != nil { // coverage-ignore
 		tb.Error("failed to read random bytes")
+		return 0
 	}
 
 	result := int32(0)
