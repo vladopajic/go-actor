@@ -183,6 +183,9 @@ linters:
       - linters:            ## Disabling linter because we intentionally want to use unexported types in tests
           - revive
         path: export_test\.go
+      - linters:            ## actortest is a testing helper package that wraps the actor API
+          - depguard
+        path: ^actor/actortest/
     paths:
       - third_party$
       - builtin$
