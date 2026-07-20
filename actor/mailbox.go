@@ -161,22 +161,20 @@ func (m *mailboxChan[T]) Stop() {
 }
 
 func (m *mailboxChan[T]) Send(ctx Context, msg T) error {
+	m.ongoingSend.Add(1)
+	defer m.finishSend()
+
 	state := m.state.Load()
 	if state == mbxStateStopped {
 		return fmt.Errorf("Mailbox.Send failed: %w", ErrMailboxStopped)
 	}
 
-	m.ongoingSend.Add(1)
-
 	select {
 	case <-m.stopSigC:
-		m.finishSend()
 		return fmt.Errorf("Mailbox.Send canceled: %w", ErrMailboxStopped)
 	case <-ctx.Done():
-		m.finishSend()
 		return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
 	case m.c <- msg:
-		m.finishSend()
 		return nil
 	}
 }
