@@ -170,17 +170,20 @@ func (m *mailboxChan[T]) Send(ctx Context, msg T) error {
 
 	select {
 	case <-m.stopSigC:
-		if m.ongoingSend.Add(-1) == 0 {
-			m.closeOnce.Do(func() { close(m.c) })
-		}
-
+		m.finishSend()
 		return fmt.Errorf("Mailbox.Send canceled: %w", ErrMailboxStopped)
 	case <-ctx.Done():
-		m.ongoingSend.Add(-1)
+		m.finishSend()
 		return fmt.Errorf("Mailbox.Send canceled: %w", ctx.Err())
 	case m.c <- msg:
-		m.ongoingSend.Add(-1)
+		m.finishSend()
 		return nil
+	}
+}
+
+func (m *mailboxChan[T]) finishSend() {
+	if m.ongoingSend.Add(-1) == 0 && m.state.Load() == mbxStateStopped {
+		m.closeOnce.Do(func() { close(m.c) })
 	}
 }
 
