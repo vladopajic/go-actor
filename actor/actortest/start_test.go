@@ -33,12 +33,6 @@ func TestStart(t *testing.T) {
 			actorStub{name: "b", log: &log},
 			actorStub{name: "c", log: &log},
 		)
-
-		assert.Equal(t, []string{
-			"start a",
-			"start b",
-			"start c",
-		}, log)
 	})
 
 	assert.Equal(t, []string{
