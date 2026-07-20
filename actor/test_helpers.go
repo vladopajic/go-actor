@@ -8,6 +8,9 @@ import (
 
 // TestSuite is test helper function that tests all basic actor functionality.
 //
+// Deprecated: use actortest.AssertStartStopAtRandom or actortest.AssertWorkerEndSig from
+// github.com/vladopajic/go-actor/actor/actortest.
+//
 //nolint:tparallel // this is helper to test case (lint fake positive)
 func TestSuite(t *testing.T, fact func() Actor) {
 	t.Helper()
@@ -27,6 +30,9 @@ func TestSuite(t *testing.T, fact func() Actor) {
 
 // AssertStartStopAtRandom is test helper that starts and stops actor repeatedly, which
 // will catch potential panic, race conditions, or some other issues.
+//
+// Deprecated: use actortest.AssertStartStopAtRandom from
+// github.com/vladopajic/go-actor/actor/actortest.
 func AssertStartStopAtRandom(tb testing.TB, a Actor) {
 	tb.Helper()
 
@@ -48,6 +54,9 @@ func AssertStartStopAtRandom(tb testing.TB, a Actor) {
 }
 
 // AssertWorkerEndSig test asserts that worker will respond to context.Done() signal.
+//
+// Deprecated: use actortest.AssertWorkerEndSig from
+// github.com/vladopajic/go-actor/actor/actortest.
 func AssertWorkerEndSig(tb testing.TB, aw any) {
 	tb.Helper()
 
@@ -56,6 +65,9 @@ func AssertWorkerEndSig(tb testing.TB, aw any) {
 
 // AssertWorkerEndSigAfterIterations test asserts that worker will respond
 // to context.Done() signal after specified iterations count.
+//
+// Deprecated: use actortest.AssertWorkerEndSigAfterIterations from
+// github.com/vladopajic/go-actor/actor/actortest.
 func AssertWorkerEndSigAfterIterations(tb testing.TB, aw any, iterations int) {
 	tb.Helper()
 

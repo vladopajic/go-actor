@@ -5,36 +5,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/vladopajic/go-actor/actor"
 	"github.com/vladopajic/go-actor/actor/actortest"
 )
-
-type actorStub struct {
-	name string
-	log  *[]string
-}
-
-func (a actorStub) Start() {
-	*a.log = append(*a.log, "start "+a.name)
-}
-
-func (a actorStub) Stop() {
-	*a.log = append(*a.log, "stop "+a.name)
-}
-
-type tbWrapper struct {
-	*testing.T
-	hadFatal  bool
-	fatalArgs []any
-}
-
-type fatalCalled struct{}
-
-func (tb *tbWrapper) Fatal(args ...any) {
-	tb.hadFatal = true
-	tb.fatalArgs = args
-
-	panic(fatalCalled{}) //nolint:forbidigo // test double for Fatal must not return
-}
 
 //nolint:tparallel // subtest is used in order to see how actors are closed
 func TestStart(t *testing.T) {
@@ -74,4 +47,15 @@ func TestStart_NilActor(t *testing.T) {
 
 	assert.True(t, tb.hadFatal)
 	assert.Equal(t, []any{"actor should not be nil"}, tb.fatalArgs)
+}
+
+func TestAssertStartStopAtRandom(t *testing.T) {
+	t.Parallel()
+
+	actortest.AssertStartStopAtRandom(t, actor.New(newWorker()))
+	actortest.AssertStartStopAtRandom(t, actor.Noop())
+
+	tb := &tbWrapper{T: t}
+	actortest.AssertStartStopAtRandom(tb, nil)
+	assert.True(t, tb.hadError)
 }
