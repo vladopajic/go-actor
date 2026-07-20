@@ -319,6 +319,73 @@ func Test_Mailbox_AsChan_ReceiveCClosedAfterStopDuringSend(t *testing.T) {
 	}
 }
 
+// Test stresses the race where Send() has passed the stopped-state check while
+// Stop() concurrently closes ReceiveC.
+func Test_Mailbox_AsChan_SendStopRace_NoPanic(t *testing.T) {
+	t.Parallel()
+
+	const (
+		iterations  = 200
+		senderCount = 32
+	)
+
+	for range iterations {
+		m := NewMailbox[any](OptAsChan())
+		m.Start()
+
+		startC := make(chan struct{})
+		doneC := make(chan struct{})
+		panicC := make(chan any, senderCount)
+
+		wg := sync.WaitGroup{}
+		wg.Add(senderCount)
+
+		for range senderCount {
+			go func() {
+				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						panicC <- r
+					}
+				}()
+
+				// all sender goroutines are blocked here and released all at once
+				<-startC
+				_ = m.Send(ContextStarted(), `🌹`)
+			}()
+		}
+
+		// at this point all sender goroutines are blocked right before m.Send().
+		// closing startC releases them all at once, and the next instruction, m.Stop(),
+		// races with those Send calls.
+		//
+		// the test asserts that none of those sends panic. in particular, Send must
+		// never write to the underlying mailbox channel after it has been closed.
+		close(startC)
+		m.Stop()
+
+		go func() {
+			wg.Wait()
+			close(doneC)
+		}()
+
+		select {
+		case <-doneC:
+		case <-time.After(time.Second):
+			assert.FailNow(t, "Send goroutines did not finish")
+		}
+
+		select {
+		case p := <-panicC:
+			assert.FailNowf(t, "Send panicked", "%v", p)
+		default:
+		}
+
+		_, ok := <-m.ReceiveC()
+		assert.False(t, ok)
+	}
+}
+
 // AssertMailboxInvariantsAsync is helper functions that asserts mailbox invariants.
 func AssertMailboxInvariantsAsync(t *testing.T, mFact func() Mailbox[any]) {
 	t.Helper()
