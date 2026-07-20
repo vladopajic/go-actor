@@ -9,15 +9,6 @@ import (
 	"github.com/vladopajic/go-actor/actor/actortest"
 )
 
-func TestSuite(t *testing.T) {
-	t.Parallel()
-
-	actortest.TestSuite(t, actor.Noop)
-	actortest.TestSuite(t, func() actor.Actor {
-		return actor.New(newWorker())
-	})
-}
-
 func TestAssertStartStopAtRandom(t *testing.T) {
 	t.Parallel()
 
@@ -33,7 +24,6 @@ func TestAssertWorkerEndSig(t *testing.T) {
 	t.Parallel()
 
 	actortest.AssertWorkerEndSig(t, newWorker())
-	actortest.AssertWorkerEndSig(t, actor.New(newWorker()))
 
 	tb := &tbWrapper{T: t}
 	actortest.AssertWorkerEndSig(tb, nil)
@@ -44,6 +34,25 @@ func TestAssertWorkerEndSig(t *testing.T) {
 		return actor.WorkerContinue
 	}))
 	assert.True(t, tb.hadError)
+}
+
+func TestAssertWorkerEndSigAfterIterations(t *testing.T) {
+	t.Parallel()
+
+	actortest.AssertWorkerEndSigAfterIterations(t, delayedEndWorker(3), 3)
+}
+
+func delayedEndWorker(iterations int) actor.Worker {
+	i := 0
+
+	return actor.NewWorker(func(actor.Context) actor.WorkerStatus {
+		i++
+		if i >= iterations {
+			return actor.WorkerEnd
+		}
+
+		return actor.WorkerContinue
+	})
 }
 
 func newWorker() actor.Worker {

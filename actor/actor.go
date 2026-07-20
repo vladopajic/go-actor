@@ -133,10 +133,6 @@ type actor struct {
 	workerRunningLock sync.Mutex
 }
 
-func (a *actor) Worker() Worker {
-	return a.worker
-}
-
 func (a *actor) Stop() {
 	a.workerRunningLock.Lock()
 	if !a.workerRunning {

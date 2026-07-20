@@ -82,8 +82,6 @@ func AssertWorkerEndSigAfterIterations(tb testing.TB, aw any, iterations int) {
 		w = a.worker
 	} else if ww, ok := aw.(Worker); ok {
 		w = ww
-	} else if wg, ok := aw.(workerGetter); ok {
-		w = wg.Worker()
 	} else {
 		tb.Skip("couldn't test worker end sig")
 		return
@@ -102,10 +100,6 @@ func AssertWorkerEndSigAfterIterations(tb testing.TB, aw any, iterations int) {
 	}
 
 	tb.Error("worker should end when context has ended")
-}
-
-type workerGetter interface {
-	Worker() Worker
 }
 
 func randInt32(tb testing.TB) int32 {

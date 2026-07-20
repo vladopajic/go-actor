@@ -25,11 +25,16 @@ type tbWrapper struct {
 	*testing.T
 	hadError  bool
 	hadFatal  bool
+	hadSkip   bool
 	fatalArgs []any
 }
 
 func (tb *tbWrapper) Error(...any) {
 	tb.hadError = true
+}
+
+func (tb *tbWrapper) Skip(...any) {
+	tb.hadSkip = true
 }
 
 type fatalCalled struct{}

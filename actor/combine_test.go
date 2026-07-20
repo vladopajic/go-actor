@@ -37,10 +37,12 @@ func Test_Combine_TestSuite(t *testing.T) {
 func testCombineTestSuite(t *testing.T, actorsCount int) {
 	t.Helper()
 
-	actortest.TestSuite(t, func() Actor {
+	fact := func() Actor {
 		actors := createActors(actorsCount)
 		return Combine(actors...).Build()
-	})
+	}
+
+	actortest.AssertStartStopAtRandom(t, fact())
 }
 
 // Test asserts that Start() and Stop() is delegated to all combined actors.

@@ -8,31 +8,6 @@ import (
 	"github.com/vladopajic/go-actor/actor"
 )
 
-// TestSuite is test helper function that tests all basic actor functionality.
-//
-//nolint:tparallel // this is helper to test case (lint fake positive)
-func TestSuite(t *testing.T, fact func() actor.Actor) {
-	t.Helper()
-
-	t.Run("start stop", func(t *testing.T) {
-		t.Parallel()
-
-		AssertStartStopAtRandom(t, fact())
-	})
-
-	t.Run("worker end signal", func(t *testing.T) {
-		t.Parallel()
-
-		w, ok := workerFrom(fact())
-		if !ok {
-			t.Skip("worker end signal skipped - could not get Worker")
-			return
-		}
-
-		AssertWorkerEndSig(t, w)
-	})
-}
-
 // AssertStartStopAtRandom is test helper that starts and stops actor repeatedly, which
 // will catch potential panic, race conditions, or some other issues.
 func AssertStartStopAtRandom(tb testing.TB, a actor.Actor) {
@@ -56,27 +31,16 @@ func AssertStartStopAtRandom(tb testing.TB, a actor.Actor) {
 }
 
 // AssertWorkerEndSig test asserts that worker will respond to context.Done() signal.
-func AssertWorkerEndSig(tb testing.TB, aw any) {
+func AssertWorkerEndSig(tb testing.TB, w actor.Worker) {
 	tb.Helper()
 
-	AssertWorkerEndSigAfterIterations(tb, aw, 1)
+	AssertWorkerEndSigAfterIterations(tb, w, 1)
 }
 
 // AssertWorkerEndSigAfterIterations test asserts that worker will respond
 // to context.Done() signal after specified iterations count.
-func AssertWorkerEndSigAfterIterations(tb testing.TB, aw any, iterations int) {
+func AssertWorkerEndSigAfterIterations(tb testing.TB, w actor.Worker, iterations int) {
 	tb.Helper()
-
-	if aw == nil {
-		tb.Error("actor or worker should not be nil")
-		return
-	}
-
-	w, ok := workerFrom(aw)
-	if !ok {
-		tb.Error("couldn't test worker end sig")
-		return
-	}
 
 	if w == nil {
 		tb.Error("worker should be initialized")
@@ -91,22 +55,6 @@ func AssertWorkerEndSigAfterIterations(tb testing.TB, aw any, iterations int) {
 	}
 
 	tb.Error("worker should end when context has ended")
-}
-
-type workerGetter interface {
-	Worker() actor.Worker
-}
-
-func workerFrom(aw any) (actor.Worker, bool) {
-	if w, ok := aw.(actor.Worker); ok {
-		return w, true
-	}
-
-	if wg, ok := aw.(workerGetter); ok {
-		return wg.Worker(), true
-	}
-
-	return nil, false
 }
 
 func randInt32(tb testing.TB) int32 {
