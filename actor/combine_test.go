@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	. "github.com/vladopajic/go-actor/actor"
+	"github.com/vladopajic/go-actor/actor/actortest"
 )
 
 func combineParallel(
@@ -36,7 +37,7 @@ func Test_Combine_TestSuite(t *testing.T) {
 func testCombineTestSuite(t *testing.T, actorsCount int) {
 	t.Helper()
 
-	TestSuite(t, func() Actor {
+	actortest.TestSuite(t, func() Actor {
 		actors := createActors(actorsCount)
 		return Combine(actors...).Build()
 	})

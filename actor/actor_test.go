@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	. "github.com/vladopajic/go-actor/actor"
+	"github.com/vladopajic/go-actor/actor/actortest"
 )
 
 // Test asserts that worker created with NewWorker utility
@@ -83,7 +84,7 @@ func Test_Actor_Restart(t *testing.T) {
 func Test_Actor_StartStopAtRandom(t *testing.T) {
 	t.Parallel()
 
-	AssertStartStopAtRandom(t, New(newWorker()))
+	actortest.AssertStartStopAtRandom(t, New(newWorker()))
 }
 
 // Test asserts that calling Start() and Stop() methods multiple times
@@ -388,7 +389,7 @@ func Test_Actor_ContextEndedAfterStop(t *testing.T) {
 func Test_Noop(t *testing.T) {
 	t.Parallel()
 
-	AssertStartStopAtRandom(t, Noop())
+	actortest.AssertStartStopAtRandom(t, Noop())
 }
 
 // This test could not assert much, except that test
@@ -396,7 +397,7 @@ func Test_Noop(t *testing.T) {
 func Test_Idle(t *testing.T) {
 	t.Parallel()
 
-	AssertStartStopAtRandom(t, Idle())
+	actortest.AssertStartStopAtRandom(t, Idle())
 }
 
 // Test asserts that OnStart and OnStop callbacks

@@ -1,18 +1,17 @@
-package actor
+package actortest
 
 import (
 	"crypto/rand"
 	"io"
 	"testing"
+
+	"github.com/vladopajic/go-actor/actor"
 )
 
 // TestSuite is test helper function that tests all basic actor functionality.
 //
-// Deprecated: use actortest.TestSuite from
-// github.com/vladopajic/go-actor/actor/actortest.
-//
 //nolint:tparallel // this is helper to test case (lint fake positive)
-func TestSuite(t *testing.T, fact func() Actor) {
+func TestSuite(t *testing.T, fact func() actor.Actor) {
 	t.Helper()
 
 	t.Run("start stop", func(t *testing.T) {
@@ -24,16 +23,19 @@ func TestSuite(t *testing.T, fact func() Actor) {
 	t.Run("worker end signal", func(t *testing.T) {
 		t.Parallel()
 
-		AssertWorkerEndSig(t, fact())
+		w, ok := workerFrom(fact())
+		if !ok {
+			t.Skip("worker end signal skipped - could not get Worker")
+			return
+		}
+
+		AssertWorkerEndSig(t, w)
 	})
 }
 
 // AssertStartStopAtRandom is test helper that starts and stops actor repeatedly, which
 // will catch potential panic, race conditions, or some other issues.
-//
-// Deprecated: use actortest.AssertStartStopAtRandom from
-// github.com/vladopajic/go-actor/actor/actortest.
-func AssertStartStopAtRandom(tb testing.TB, a Actor) {
+func AssertStartStopAtRandom(tb testing.TB, a actor.Actor) {
 	tb.Helper()
 
 	if a == nil {
@@ -54,9 +56,6 @@ func AssertStartStopAtRandom(tb testing.TB, a Actor) {
 }
 
 // AssertWorkerEndSig test asserts that worker will respond to context.Done() signal.
-//
-// Deprecated: use actortest.AssertWorkerEndSig from
-// github.com/vladopajic/go-actor/actor/actortest.
 func AssertWorkerEndSig(tb testing.TB, aw any) {
 	tb.Helper()
 
@@ -65,9 +64,6 @@ func AssertWorkerEndSig(tb testing.TB, aw any) {
 
 // AssertWorkerEndSigAfterIterations test asserts that worker will respond
 // to context.Done() signal after specified iterations count.
-//
-// Deprecated: use actortest.AssertWorkerEndSigAfterIterations from
-// github.com/vladopajic/go-actor/actor/actortest.
 func AssertWorkerEndSigAfterIterations(tb testing.TB, aw any, iterations int) {
 	tb.Helper()
 
@@ -76,16 +72,9 @@ func AssertWorkerEndSigAfterIterations(tb testing.TB, aw any, iterations int) {
 		return
 	}
 
-	var w Worker
-
-	if a, ok := aw.(*actor); ok {
-		w = a.worker
-	} else if ww, ok := aw.(Worker); ok {
-		w = ww
-	} else if wg, ok := aw.(workerGetter); ok {
-		w = wg.Worker()
-	} else {
-		tb.Skip("couldn't test worker end sig")
+	w, ok := workerFrom(aw)
+	if !ok {
+		tb.Error("couldn't test worker end sig")
 		return
 	}
 
@@ -95,8 +84,8 @@ func AssertWorkerEndSigAfterIterations(tb testing.TB, aw any, iterations int) {
 	}
 
 	for range iterations {
-		status := w.DoWork(ContextEnded())
-		if status == WorkerEnd {
+		status := w.DoWork(actor.ContextEnded())
+		if status == actor.WorkerEnd {
 			return
 		}
 	}
@@ -105,7 +94,19 @@ func AssertWorkerEndSigAfterIterations(tb testing.TB, aw any, iterations int) {
 }
 
 type workerGetter interface {
-	Worker() Worker
+	Worker() actor.Worker
+}
+
+func workerFrom(aw any) (actor.Worker, bool) {
+	if w, ok := aw.(actor.Worker); ok {
+		return w, true
+	}
+
+	if wg, ok := aw.(workerGetter); ok {
+		return wg.Worker(), true
+	}
+
+	return nil, false
 }
 
 func randInt32(tb testing.TB) int32 {

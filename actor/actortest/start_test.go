@@ -23,8 +23,13 @@ func (a actorStub) Stop() {
 
 type tbWrapper struct {
 	*testing.T
+	hadError  bool
 	hadFatal  bool
 	fatalArgs []any
+}
+
+func (tb *tbWrapper) Error(...any) {
+	tb.hadError = true
 }
 
 type fatalCalled struct{}

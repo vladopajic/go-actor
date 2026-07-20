@@ -7,55 +7,58 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	. "github.com/vladopajic/go-actor/actor"
+	"github.com/vladopajic/go-actor/actor/actortest"
 )
 
 func Test_Suite(t *testing.T) {
 	t.Parallel()
 
 	// Test when actor is created with default constructor (New)
-	TestSuite(t, func() Actor { return New(newWorker()) })
+	actortest.TestSuite(t, func() Actor { return New(newWorker()) })
 
 	// Test when actor is not created with default constructor
-	TestSuite(t, func() Actor { return Idle() })
+	actortest.TestSuite(t, func() Actor { return Idle() })
 
 	// Test when actor is not created with default constructor
-	TestSuite(t, Noop)
+	actortest.TestSuite(t, Noop)
 }
 
 func Test_AssertWorkerEndSig(t *testing.T) {
 	t.Parallel()
 
 	// Test with worker
-	AssertWorkerEndSig(t, newWorker())
+	actortest.AssertWorkerEndSig(t, newWorker())
 
 	// Test with actor
-	AssertWorkerEndSig(t, New(newWorker()))
+	actortest.AssertWorkerEndSig(t, New(newWorker()))
 
 	// Test expected to fail because argument nil
 	tw := &tWrapper{T: t}
-	AssertWorkerEndSig(tw, nil)
+	actortest.AssertWorkerEndSig(tw, nil)
 	assert.True(t, tw.hadError)
 
 	// Test expected to fail because worker is nil
 	tw = &tWrapper{T: t}
-	AssertWorkerEndSig(tw, New(nil))
+	actortest.AssertWorkerEndSig(tw, New(nil))
 	assert.True(t, tw.hadError)
 
 	// Test expected to fail because worker didn't return end signal
 	tw = &tWrapper{T: t}
-	AssertWorkerEndSig(tw, NewWorker(func(Context) WorkerStatus { return WorkerContinue }))
+	actortest.AssertWorkerEndSig(tw, NewWorker(func(Context) WorkerStatus {
+		return WorkerContinue
+	}))
 	assert.True(t, tw.hadError)
 }
 
 func Test_AssertStartStopAtRandom(t *testing.T) {
 	t.Parallel()
 
-	AssertStartStopAtRandom(t, New(newWorker()))
-	AssertStartStopAtRandom(t, Noop())
+	actortest.AssertStartStopAtRandom(t, New(newWorker()))
+	actortest.AssertStartStopAtRandom(t, Noop())
 
 	// Test expected to fail because actor is nil
 	tw := &tWrapper{T: t}
-	AssertStartStopAtRandom(tw, nil)
+	actortest.AssertStartStopAtRandom(tw, nil)
 	assert.True(t, tw.hadError)
 }
 
