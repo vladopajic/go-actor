@@ -8,7 +8,7 @@ import (
 
 // TestSuite is test helper function that tests all basic actor functionality.
 //
-// Deprecated: use actortest.TestSuite from
+// Deprecated: use actortest.AssertStartStopAtRandom or actortest.AssertWorkerEndSig from
 // github.com/vladopajic/go-actor/actor/actortest.
 //
 //nolint:tparallel // this is helper to test case (lint fake positive)
