@@ -321,6 +321,8 @@ func Test_Mailbox_AsChan_ReceiveCClosedAfterStopDuringSend(t *testing.T) {
 
 // Test stresses the race where Send() has passed the stopped-state check while
 // Stop() concurrently closes ReceiveC.
+//
+//nolint:maintidx // cant help it's big test
 func Test_Mailbox_AsChan_SendStopRace_NoPanic(t *testing.T) {
 	t.Parallel()
 
@@ -351,6 +353,7 @@ func Test_Mailbox_AsChan_SendStopRace_NoPanic(t *testing.T) {
 
 				// all sender goroutines are blocked here and released all at once
 				<-startC
+				//nolint:errcheck // ignored because some calls could return error
 				_ = m.Send(ContextStarted(), `🌹`)
 			}()
 		}

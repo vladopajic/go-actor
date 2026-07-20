@@ -118,7 +118,7 @@ linters:
     forbidigo:
       forbid:
         - pattern: time\.Sleep*(# Do not sleep)?
-        - pattern: panic*(# Do not panic)?
+        - pattern: ^panic$(# Do not panic)?
         - pattern: os\.Exit*(# Do not exit)?
         - pattern: ^fmt\.Print*$
           msg: Do not commit print statements.
