@@ -21,6 +21,21 @@ func (a actorStub) Stop() {
 	*a.log = append(*a.log, "stop "+a.name)
 }
 
+type tbWrapper struct {
+	*testing.T
+	hadFatal  bool
+	fatalArgs []any
+}
+
+type fatalCalled struct{}
+
+func (tb *tbWrapper) Fatal(args ...any) {
+	tb.hadFatal = true
+	tb.fatalArgs = args
+
+	panic(fatalCalled{}) //nolint:forbidigo // test double for Fatal must not return
+}
+
 //nolint:tparallel // subtest is used in order to see how actors are closed
 func TestStart(t *testing.T) {
 	t.Parallel()
@@ -43,4 +58,20 @@ func TestStart(t *testing.T) {
 		"stop b",
 		"stop a",
 	}, log)
+}
+
+func TestStart_NilActor(t *testing.T) {
+	t.Parallel()
+
+	tb := &tbWrapper{T: t}
+
+	func() {
+		defer func() {
+			assert.IsType(t, fatalCalled{}, recover())
+		}()
+		actortest.Start(tb, nil)
+	}()
+
+	assert.True(t, tb.hadFatal)
+	assert.Equal(t, []any{"actor should not be nil"}, tb.fatalArgs)
 }
