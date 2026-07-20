@@ -96,7 +96,7 @@ linters:
           files:
             - $all
             - '!$test'
-            - '!actor/actortest/**'
+            - '!**/actor/actortest/*.go'
           allow:
             - $gostd
             - github.com/gammazero/deque
