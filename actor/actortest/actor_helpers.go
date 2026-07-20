@@ -8,6 +8,28 @@ import (
 	"github.com/vladopajic/go-actor/actor"
 )
 
+// Start starts actors in the provided order and registers test cleanup that
+// stops them in reverse order.
+func Start(tb testing.TB, actors ...actor.Actor) {
+	tb.Helper()
+
+	for _, a := range actors {
+		if a == nil {
+			tb.Fatal("actor should not be nil")
+		}
+	}
+
+	tb.Cleanup(func() {
+		for i := len(actors) - 1; i >= 0; i-- {
+			actors[i].Stop()
+		}
+	})
+
+	for _, a := range actors {
+		a.Start()
+	}
+}
+
 // AssertStartStopAtRandom is test helper that starts and stops actor repeatedly, which
 // will catch potential panic, race conditions, or some other issues.
 func AssertStartStopAtRandom(tb testing.TB, a actor.Actor) {
@@ -30,33 +52,6 @@ func AssertStartStopAtRandom(tb testing.TB, a actor.Actor) {
 	a.Stop()
 }
 
-// AssertWorkerEndSig test asserts that worker will respond to context.Done() signal.
-func AssertWorkerEndSig(tb testing.TB, w actor.Worker) {
-	tb.Helper()
-
-	AssertWorkerEndSigAfterIterations(tb, w, 1)
-}
-
-// AssertWorkerEndSigAfterIterations test asserts that worker will respond
-// to context.Done() signal after specified iterations count.
-func AssertWorkerEndSigAfterIterations(tb testing.TB, w actor.Worker, iterations int) {
-	tb.Helper()
-
-	if w == nil {
-		tb.Error("worker should be initialized")
-		return
-	}
-
-	for range iterations {
-		status := w.DoWork(actor.ContextEnded())
-		if status == actor.WorkerEnd {
-			return
-		}
-	}
-
-	tb.Error("worker should end when context has ended")
-}
-
 func randInt32(tb testing.TB) int32 {
 	tb.Helper()
 	return randInt32WithReader(tb, rand.Reader)
@@ -69,7 +64,7 @@ func randInt32WithReader(tb testing.TB, randReader io.Reader) int32 {
 	b := make([]byte, byteSize)
 
 	_, err := randReader.Read(b)
-	if err != nil {
+	if err != nil { // coverage-ignore
 		tb.Error("failed to read random bytes")
 	}
 

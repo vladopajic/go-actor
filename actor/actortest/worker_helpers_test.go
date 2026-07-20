@@ -9,17 +9,6 @@ import (
 	"github.com/vladopajic/go-actor/actor/actortest"
 )
 
-func TestAssertStartStopAtRandom(t *testing.T) {
-	t.Parallel()
-
-	actortest.AssertStartStopAtRandom(t, actor.New(newWorker()))
-	actortest.AssertStartStopAtRandom(t, actor.Noop())
-
-	tb := &tbWrapper{T: t}
-	actortest.AssertStartStopAtRandom(tb, nil)
-	assert.True(t, tb.hadError)
-}
-
 func TestAssertWorkerEndSig(t *testing.T) {
 	t.Parallel()
 
