@@ -19,6 +19,7 @@ func Test_NewWorker(t *testing.T) {
 	workC := make(chan any, 1)
 	workerFunc := func(c Context) WorkerStatus {
 		assert.Equal(t, ctx, c)
+
 		workC <- `🛠️`
 
 		return WorkerContinue
@@ -239,6 +240,7 @@ func Test_Actor_OnStopCalledIfStoppedEarly(t *testing.T) {
 		startedC := make(chan any)
 		blockingOnStart := func(ctx Context) {
 			close(startedC)
+
 			select {
 			case <-ctx.Done():
 			case <-time.After(time.Hour):
@@ -490,6 +492,7 @@ func assertDoWorkWithStart(t *testing.T, doWorkC chan chan int, start int) {
 	for i := start; i < workIterationsPerAssert; i++ {
 		p := make(chan int)
 		doWorkC <- p
+
 		assert.Equal(t, i, <-p)
 	}
 }

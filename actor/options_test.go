@@ -112,6 +112,7 @@ func testNilOptions(t *testing.T) {
 
 	{ // Assert that nil actor options will be ignored
 		var opt Option
+
 		opts := NewOptions(opt, OptOnStart(func(Context) {}))
 
 		assert.NotNil(t, opts.Actor.OnStartFunc)
@@ -123,6 +124,7 @@ func testNilOptions(t *testing.T) {
 
 	{ // Assert that nil mailbox options will be ignored
 		var opt MailboxOption
+
 		opts := NewOptions(opt, OptCapacity(16))
 
 		assert.Equal(t, 16, opts.Mailbox.Capacity)
@@ -133,6 +135,7 @@ func testNilOptions(t *testing.T) {
 
 	{ // Assert that nil combined options will be ignored
 		var opt CombinedOption
+
 		opts := NewOptions(opt, OptStopTogether())
 
 		assert.True(t, opts.Combined.StopTogether)

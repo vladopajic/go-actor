@@ -58,7 +58,7 @@ func Test_FanOut(t *testing.T) {
 	a := Combine(inMbx, FromMailboxes(fanMbxx)).Build()
 
 	a.Start()
-	defer a.Stop()
+	t.Cleanup(a.Stop)
 
 	wg.Add(fanOutCount)
 
@@ -479,6 +479,7 @@ func assertSendReceiveSync(t *testing.T, m Mailbox[any], val any) {
 	go func() {
 		assert.NoError(t, m.Send(ContextStarted(), val))
 	}()
+
 	assert.Equal(t, val, <-m.ReceiveC())
 }
 

@@ -139,11 +139,13 @@ func testCombineStoppingOnce(t *testing.T, actorsCount int) {
 
 	// Call Stop() multiple times in separate goroutine to force concurrency
 	const stopCallsCount = 100
+
 	stopFinishedC := make(chan any, stopCallsCount)
 
 	for range stopCallsCount {
 		go func() {
 			a.Stop()
+
 			stopFinishedC <- `🛑`
 		}()
 	}

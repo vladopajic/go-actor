@@ -42,6 +42,7 @@ func TestStart_NilActor(t *testing.T) {
 		defer func() {
 			assert.IsType(t, fatalCalled{}, recover())
 		}()
+
 		actortest.Start(tb, nil)
 	}()
 

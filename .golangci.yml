@@ -1,5 +1,7 @@
 version: "2"
 linters:
+  # Preserve golangci-lint's maintained baseline alongside these project checks.
+  default: standard
   enable:
     - asasalint
     - asciicheck
@@ -33,10 +35,11 @@ linters:
     - goconst
     - gocritic
     - gocyclo
+    - godoclint
     - godox
     - goheader
     - gomoddirectives
-    - gomodguard
+    - gomodguard_v2
     - goprintffuncname
     - gosec
     - grouper
@@ -46,12 +49,12 @@ linters:
     - interfacebloat
     - intrange
     - lll
-    - loggercheck
     - maintidx
     - makezero
     - mirror
     - misspell
     - mnd
+    - modernize
     - nakedret
     - nestif
     - nilerr
@@ -66,16 +69,13 @@ linters:
     - perfsprint
     - prealloc
     - predeclared
-    - promlinter
-    - protogetter
     - reassign
     - recvcheck
     - revive
-    - sloglint
-    - sqlclosecheck
     - staticcheck
     - tagalign
     - tagliatelle
+    - testableexamples
     - testifylint
     - testpackage
     - thelper
@@ -87,8 +87,7 @@ linters:
     - wastedassign
     - whitespace
     - wrapcheck
-    - wsl
-    - zerologlint
+    - wsl_v5
   settings:
     depguard:
       rules:
@@ -126,6 +125,9 @@ linters:
       ignore-comments: true
     gocognit:
       min-complexity: 20
+    gochecksumtype:
+      # A default case must not hide newly added members of a sum type.
+      default-signifies-exhaustive: false
     goconst:
       numbers: true
     gocyclo:
@@ -151,6 +153,9 @@ linters:
       block-size: 5
     nolintlint:
       require-explanation: true
+    paralleltest:
+      # t.Cleanup is safe with parallel subtests; defer is not.
+      check-cleanup: true
     tagliatelle:
       case:
         rules:
@@ -160,8 +165,6 @@ linters:
       enable-all: true
     unparam:
       check-exported: true
-    wsl:
-      force-err-cuddling: true
   exclusions:
     generated: lax
     presets:
@@ -173,6 +176,9 @@ linters:
       - linters:
           - funlen          ## Function length is okay due to many tests cases
           - wrapcheck       ## No need to check wrapping errors in tests
+        path: _test\.go
+      - linters:
+          - godoclint
         path: _test\.go
       - linters:            ## Enable dot-imports in tests
           - revive
@@ -190,7 +196,6 @@ linters:
       - examples$
 formatters:
   enable:
-    - gofmt
     - gofumpt
     - goimports
   settings:
