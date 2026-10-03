@@ -1,11 +1,9 @@
-//go:build experimental
-// +build experimental
+//go:build synctest
+// +build synctest
 
 package actor_test
 
-// This file contains experimental tests which utilize "testing/synctest"
-// package that elegantly solve race issues which have been previously
-// hacked with time.Sleep()
+// This file contains deterministic concurrency tests using testing/synctest.
 
 import (
 	"testing"
@@ -18,10 +16,10 @@ import (
 
 // Test asserts that actor should stop after worker
 // has signaled that there is no more work via WorkerEnd signal.
-func Test_Actor_StopAfterWorkerEnded_Experimental(t *testing.T) {
+func Test_Actor_StopAfterWorkerEnded_Synctest(t *testing.T) {
 	t.Parallel()
 
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		var ctx Context
 
 		workIteration := 0
@@ -80,7 +78,7 @@ func Test_Actor_StopAfterWorkerEnded_Experimental(t *testing.T) {
 	})
 }
 
-func Test_Combine_StopParallel_Experimental(t *testing.T) {
+func Test_Combine_StopParallel_Synctest(t *testing.T) {
 	t.Parallel()
 
 	const count = 10
@@ -113,7 +111,7 @@ func Test_Combine_StopParallel_Experimental(t *testing.T) {
 	t.Run("sequential", func(t *testing.T) {
 		t.Parallel()
 
-		synctest.Run(func() {
+		synctest.Test(t, func(t *testing.T) {
 			c1, c2 := setup(false)
 
 			for range count {
@@ -129,7 +127,7 @@ func Test_Combine_StopParallel_Experimental(t *testing.T) {
 	t.Run("parallel", func(t *testing.T) {
 		t.Parallel()
 
-		synctest.Run(func() {
+		synctest.Test(t, func(t *testing.T) {
 			c1, c2 := setup(true)
 
 			for i := range count {
@@ -144,10 +142,10 @@ func Test_Combine_StopParallel_Experimental(t *testing.T) {
 
 // Test asserts that mailbox `Send()` returns error when sending data is blocked and
 // Stop() is simultaneously called.
-func Test_Mailbox_AsChan_SendStopped_Experimental(t *testing.T) {
+func Test_Mailbox_AsChan_SendStopped_Synctest(t *testing.T) {
 	t.Parallel()
 
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		m := NewMailbox[any](OptAsChan())
 		m.Start()
 		sendResultC := make(chan error, 1)
@@ -173,10 +171,10 @@ func Test_Mailbox_AsChan_SendStopped_Experimental(t *testing.T) {
 	})
 }
 
-func Test_Mailbox_AsChan_SendCanceled_Experimental(t *testing.T) {
+func Test_Mailbox_AsChan_SendCanceled_Synctest(t *testing.T) {
 	t.Parallel()
 
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		m := NewMailbox[any](OptAsChan())
 		m.Start()
 		defer m.Stop()

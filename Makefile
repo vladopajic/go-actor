@@ -24,13 +24,11 @@ benchmark:
 test: 
 	go test -timeout=10s -race -count=10 -shuffle=on -failfast ./...
 
-# Runs experimental tests
-.PHONY: test-experimental
-test-experimental:
-	go mod edit -go 1.24
-	go env -w GOEXPERIMENT=synctest
-	go test -tags "experimental" -run Experimental$$ -timeout=10s -race -count=10 -shuffle=on -failfast -v ./...
-	go env -u GOEXPERIMENT
+# Runs deterministic concurrency tests (requires Go 1.25+)
+.PHONY: test-synctest
+test-synctest:
+	go mod edit -go 1.27
+	go test -tags "synctest" -run Synctest$$ -timeout=10s -race -count=10 -shuffle=on -failfast -v ./...
 	go mod edit -go 1.22
 
 # Code tidy

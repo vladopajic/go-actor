@@ -1,11 +1,11 @@
-name: test experimental
+name: test synctest
 on: [push]
 permissions:
   contents: write
   pull-requests: write
 jobs:
-  experimental:
-    name: experimental
+  synctest:
+    name: synctest
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -13,12 +13,11 @@ jobs:
       - name: setup go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.24
+          go-version: 1.27
     
       - name: replace go version
-        run: sed -i 's/go 1.22/go 1.24/g' go.mod
+        run: sed -i 's/go 1.22/go 1.27/g' go.mod
 
       - name: test
         run: |
-          go env -w GOEXPERIMENT=synctest
-          go test -tags "experimental" -run Experimental$ -timeout=10s -race -count=10 -shuffle=on -failfast -v ./...
+          go test -tags "synctest" -run Synctest$ -timeout=10s -race -count=10 -shuffle=on -failfast -v ./...
