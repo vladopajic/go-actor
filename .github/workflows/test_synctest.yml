@@ -1,11 +1,11 @@
-name: test experimental
+name: test synctest
 on: [push]
 permissions:
   contents: write
   pull-requests: write
 jobs:
-  experimental:
-    name: experimental
+  synctest:
+    name: synctest
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -20,4 +20,4 @@ jobs:
 
       - name: test
         run: |
-          go test -tags "experimental" -run Experimental$ -timeout=10s -race -count=10 -shuffle=on -failfast -v ./...
+          go test -tags "synctest" -run Synctest$ -timeout=10s -race -count=10 -shuffle=on -failfast -v ./...
