@@ -21,7 +21,7 @@ import (
 func Test_Actor_StopAfterWorkerEnded_Experimental(t *testing.T) {
 	t.Parallel()
 
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		var ctx Context
 
 		workIteration := 0
@@ -113,7 +113,7 @@ func Test_Combine_StopParallel_Experimental(t *testing.T) {
 	t.Run("sequential", func(t *testing.T) {
 		t.Parallel()
 
-		synctest.Run(func() {
+		synctest.Test(t, func(t *testing.T) {
 			c1, c2 := setup(false)
 
 			for range count {
@@ -129,7 +129,7 @@ func Test_Combine_StopParallel_Experimental(t *testing.T) {
 	t.Run("parallel", func(t *testing.T) {
 		t.Parallel()
 
-		synctest.Run(func() {
+		synctest.Test(t, func(t *testing.T) {
 			c1, c2 := setup(true)
 
 			for i := range count {
@@ -147,7 +147,7 @@ func Test_Combine_StopParallel_Experimental(t *testing.T) {
 func Test_Mailbox_AsChan_SendStopped_Experimental(t *testing.T) {
 	t.Parallel()
 
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		m := NewMailbox[any](OptAsChan())
 		m.Start()
 		sendResultC := make(chan error, 1)
@@ -176,7 +176,7 @@ func Test_Mailbox_AsChan_SendStopped_Experimental(t *testing.T) {
 func Test_Mailbox_AsChan_SendCanceled_Experimental(t *testing.T) {
 	t.Parallel()
 
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		m := NewMailbox[any](OptAsChan())
 		m.Start()
 		defer m.Stop()
