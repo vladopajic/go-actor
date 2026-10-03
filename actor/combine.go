@@ -153,6 +153,7 @@ func stopAll(actors []Actor) {
 
 func stopAllParallel(actors []Actor) {
 	wg := sync.WaitGroup{}
+
 	wg.Add(len(actors))
 	defer wg.Wait()
 

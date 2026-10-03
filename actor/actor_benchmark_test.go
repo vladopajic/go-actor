@@ -36,6 +36,7 @@ func BenchmarkActorProducerToConsumerMailbox(b *testing.B) {
 	}))
 
 	a := Combine(mbx, producer, consumer).Build()
+
 	a.Start()
 	defer a.Stop()
 
@@ -70,6 +71,7 @@ func BenchmarkActorProducerToConsumerChannel(b *testing.B) {
 	}))
 
 	a := Combine(producer, consumer).Build()
+
 	a.Start()
 	defer a.Stop()
 

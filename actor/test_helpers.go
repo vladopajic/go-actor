@@ -111,6 +111,7 @@ func randInt32WithReader(tb testing.TB, randReader io.Reader) int32 {
 	tb.Helper()
 
 	const byteSize = 4
+
 	b := make([]byte, byteSize)
 
 	_, err := randReader.Read(b)
