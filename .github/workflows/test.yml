@@ -6,6 +6,7 @@ permissions:
 jobs:
   test:
     name: test
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -28,10 +29,28 @@ jobs:
           git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
       
       - name: find pull request ID
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.repository_owner }}:${{ github.ref_name }}
         run: |
-          PR_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:${{ github.ref_name }}&state=open")
-          PR_ID=$(echo "$PR_DATA" | jq -r '.[0].number')
+          if ! PR_DATA=$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/$REPO/pulls?head=$HEAD_REF&state=open"); then
+            echo "::warning::Unable to fetch open pull requests from GitHub; skipping coverage comment."
+            exit 0
+          fi
+
+          if ! PR_ID=$(jq -er '
+            if type != "array" then error("expected an array response")
+            elif length == 0 then "null"
+            elif length == 1 and .[0].number != null then .[0].number
+            else error("expected at most one open pull request for this branch")
+            end
+          ' <<<"$PR_DATA"); then
+            echo "::warning::GitHub returned an invalid or ambiguous pull-request response; skipping coverage comment."
+            exit 0
+          fi
           
           if [ "$PR_ID" != "null" ]; then
             echo "pull_request_id=$PR_ID" >> $GITHUB_ENV
@@ -41,6 +60,7 @@ jobs:
       - name: post coverage report
         if: env.pull_request_id
         uses: thollander/actions-comment-pull-request@v3
+        continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           comment-tag: coverage-report
@@ -48,7 +68,7 @@ jobs:
           message: |
             go-test-coverage report:
             ``` 
-            ${{ fromJSON(steps.coverage.outputs.report) }}```
+            ${{ fromJSON(steps.coverage.outputs.report || '"(no coverage report)"') }}```
       
       - name: "finally check coverage"
         if: steps.coverage.outcome == 'failure'

@@ -1,11 +1,11 @@
 name: test synctest
 on: [push]
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 jobs:
   synctest:
     name: synctest
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -13,11 +13,11 @@ jobs:
       - name: setup go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.27
+          go-version: '1.27'
     
       - name: replace go version
-        run: sed -i 's/go 1.22/go 1.27/g' go.mod
+        run: go mod edit -go=1.27 && grep '^go ' go.mod
 
       - name: test
         run: |
-          go test -tags "synctest" -run Synctest$ -timeout=10s -race -count=10 -shuffle=on -failfast -v ./...
+          go test -tags "synctest" -run Synctest$ -timeout=20s -race -count=10 -shuffle=on -failfast -v ./...

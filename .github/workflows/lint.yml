@@ -1,8 +1,11 @@
 name: lint
 on: [push]
+permissions:
+  contents: read
 jobs:
   lint:
     name: lint
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -17,7 +20,8 @@ jobs:
         with:
           version: v2.14.0 # LINT_VERSION: update version in other places
       
-      - id: govulncheck
+      - name: govulncheck
+        id: govulncheck
         uses: golang/govulncheck-action@v1
         with:
           repo-checkout: false

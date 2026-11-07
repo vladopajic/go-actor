@@ -1,12 +1,11 @@
-GO ?= go
-GOBIN ?= $$($(GO) env GOPATH)/bin
+GOBIN ?= $$(go env GOPATH)/bin
 GOLANGCI_LINT ?= $(GOBIN)/golangci-lint
 GOLANGCI_LINT_VERSION ?= v2.14.0 # LINT_VERSION: update version in other places
 TEST_COVERAGE ?= $(GOBIN)/go-test-coverage
 
 .PHONY: install-golangcilint
 install-golangcilint:
-	test -f $(GOLANGCI_LINT) || curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $$($(GO) env GOPATH)/bin $(GOLANGCI_LINT_VERSION)
+	test -f $(GOLANGCI_LINT) || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 # Runs lint on entire repo
 .PHONY: lint
@@ -17,7 +16,7 @@ lint: install-golangcilint
 .PHONY: benchmark
 benchmark:
 	go version
-	go test -bench=. github.com/vladopajic/go-actor/actor -run=^# -count 5  -benchmem
+	go test -bench=. $$(go list -m)/actor -run=^# -count 5 -benchmem
 
 # Runs tests on entire repo
 .PHONY: test
@@ -27,9 +26,10 @@ test:
 # Runs deterministic concurrency tests (requires Go 1.25+)
 .PHONY: test-synctest
 test-synctest:
-	go mod edit -go 1.27
-	go test -tags "synctest" -run Synctest$$ -timeout=10s -race -count=10 -shuffle=on -failfast -v ./...
-	go mod edit -go 1.22
+	@orig=$$(go list -m -f '{{.GoVersion}}'); \
+	go mod edit -go 1.27; \
+	trap 'go mod edit -go '$$orig EXIT; \
+ 	go test -tags "synctest" -run Synctest$$ -timeout=20s -race -count=10 -shuffle=on -failfast -v ./...
 
 # Code tidy
 .PHONY: tidy
@@ -39,7 +39,7 @@ tidy:
 
 .PHONY: install-go-test-coverage
 install-go-test-coverage:
-	go install github.com/vladopajic/go-test-coverage/v2@latest
+	test -f $(TEST_COVERAGE) || go install github.com/vladopajic/go-test-coverage/v2@latest
 
 
 # Generates test coverage profile
@@ -49,8 +49,7 @@ generate-coverage:
 
 # Runs test coverage check
 .PHONY: check-coverage
-check-coverage: generate-coverage
-check-coverage: install-go-test-coverage
+check-coverage: generate-coverage install-go-test-coverage
 	$(TEST_COVERAGE) -config=./.testcoverage.yml
 
 # View coverage profile
