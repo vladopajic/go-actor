@@ -29,14 +29,19 @@ jobs:
           git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
       
       - name: find pull request ID
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           HEAD_REF: ${{ github.repository_owner }}:${{ github.ref_name }}
         run: |
-          if ! PR_DATA=$(curl --fail --silent --show-error \
+          if ! PR_DATA=$(curl --fail --silent --show-error -G \
             -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/$REPO/pulls?head=$HEAD_REF&state=open"); then
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            --data-urlencode "head=$HEAD_REF" \
+            --data-urlencode "state=open" \
+            "https://api.github.com/repos/$REPO/pulls"); then
             echo "::warning::Unable to fetch open pull requests from GitHub; skipping coverage comment."
             exit 0
           fi
@@ -44,11 +49,16 @@ jobs:
           if ! PR_ID=$(jq -er '
             if type != "array" then error("expected an array response")
             elif length == 0 then "null"
-            elif length == 1 and .[0].number != null then .[0].number
-            else error("expected at most one open pull request for this branch")
+            else
+              # A branch can have PRs targeting more than one base branch.
+              # Prefer the repository default branch, then retain the API
+              # response order as a fallback.
+              (map(select(.base.repo.default_branch == .base.ref)) + .)
+              | first
+              | .number // error("missing pull request number")
             end
           ' <<<"$PR_DATA"); then
-            echo "::warning::GitHub returned an invalid or ambiguous pull-request response; skipping coverage comment."
+            echo "::warning::GitHub returned an invalid pull-request response; skipping coverage comment."
             exit 0
           fi
           
