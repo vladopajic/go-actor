@@ -1,6 +1,7 @@
 GOBIN ?= $$(go env GOPATH)/bin
 GOLANGCI_LINT ?= $(GOBIN)/golangci-lint
 GOLANGCI_LINT_VERSION ?= v2.14.0 # LINT_VERSION: update version in other places
+SYNCTEST_GO_VERSION ?= 1.27 # SYNCTEST_GO_VERSION: must match test_synctest.yml
 TEST_COVERAGE ?= $(GOBIN)/go-test-coverage
 
 .PHONY: install-golangcilint
@@ -28,8 +29,8 @@ test:
 .PHONY: test-synctest
 test-synctest:
 	@orig=$$(go list -m -f '{{.GoVersion}}'); \
-	go mod edit -go 1.27; \
-	trap 'go mod edit -go '$$orig EXIT; \
+	trap 'go mod edit -go "$$orig"' EXIT INT TERM HUP; \
+	go mod edit -go $(SYNCTEST_GO_VERSION); \
 	go test -tags "synctest" -run Synctest$$ -timeout=20s -race -count=10 -shuffle=on -failfast -v ./...
 
 # Code tidy
