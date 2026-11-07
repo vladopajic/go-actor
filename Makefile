@@ -5,7 +5,8 @@ TEST_COVERAGE ?= $(GOBIN)/go-test-coverage
 
 .PHONY: install-golangcilint
 install-golangcilint:
-	test -f $(GOLANGCI_LINT) || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	test -f "$(GOLANGCI_LINT)" || curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b "$(GOBIN)" $(GOLANGCI_LINT_VERSION)
+	test -x "$(GOLANGCI_LINT)"
 
 # Runs lint on entire repo
 .PHONY: lint
@@ -16,7 +17,7 @@ lint: install-golangcilint
 .PHONY: benchmark
 benchmark:
 	go version
-	go test -bench=. $$(go list -m)/actor -run=^# -count 5 -benchmem
+	go test -bench=. ./actor -run=^# -count 5 -benchmem
 
 # Runs tests on entire repo
 .PHONY: test
@@ -29,7 +30,7 @@ test-synctest:
 	@orig=$$(go list -m -f '{{.GoVersion}}'); \
 	go mod edit -go 1.27; \
 	trap 'go mod edit -go '$$orig EXIT; \
- 	go test -tags "synctest" -run Synctest$$ -timeout=20s -race -count=10 -shuffle=on -failfast -v ./...
+	go test -tags "synctest" -run Synctest$$ -timeout=20s -race -count=10 -shuffle=on -failfast -v ./...
 
 # Code tidy
 .PHONY: tidy

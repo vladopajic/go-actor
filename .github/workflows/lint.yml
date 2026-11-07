@@ -21,7 +21,6 @@ jobs:
           version: v2.14.0 # LINT_VERSION: update version in other places
       
       - name: govulncheck
-        id: govulncheck
         uses: golang/govulncheck-action@v1
         with:
           repo-checkout: false
