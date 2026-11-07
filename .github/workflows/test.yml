@@ -20,67 +20,10 @@ jobs:
         run: go test -timeout=10s -race -count=10 -shuffle=on -failfast -coverprofile=./cover.out -covermode=atomic -coverpkg=./... ./...
            
       - name: check test coverage
-        id: coverage
         uses: vladopajic/go-test-coverage@v2
-        continue-on-error: true # Should fail after coverage comment is posted
         with:
           config: ./.testcoverage.yml
           git-branch: badges
           git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
-      
-      - name: find pull request ID
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          HEAD_REF: ${{ github.repository_owner }}:${{ github.ref_name }}
-        run: |
-          if ! PR_DATA=$(curl --fail --silent --show-error -G \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            --data-urlencode "head=$HEAD_REF" \
-            --data-urlencode "state=open" \
-            "https://api.github.com/repos/$REPO/pulls"); then
-            echo "::warning::Unable to fetch open pull requests from GitHub; skipping coverage comment."
-            exit 0
-          fi
+          comment-report: true
 
-          if ! PR_ID=$(jq -er '
-            if type != "array" then error("expected an array response")
-            elif length == 0 then "null"
-            else
-              # A branch can have PRs targeting more than one base branch.
-              # Prefer the repository default branch, then retain the API
-              # response order as a fallback.
-              (map(select(.base.repo.default_branch == .base.ref)) + .)
-              | first
-              | .number // error("missing pull request number")
-            end
-          ' <<<"$PR_DATA"); then
-            echo "::warning::GitHub returned an invalid pull-request response; skipping coverage comment."
-            exit 0
-          fi
-          
-          if [ "$PR_ID" != "null" ]; then
-            echo "pull_request_id=$PR_ID" >> $GITHUB_ENV
-          else
-            echo "No open pull request found for this branch."
-          fi
-      - name: post coverage report
-        if: env.pull_request_id
-        uses: thollander/actions-comment-pull-request@v3
-        continue-on-error: true
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          comment-tag: coverage-report
-          pr-number: ${{ env.pull_request_id }}
-          message: |
-            go-test-coverage report:
-            ``` 
-            ${{ fromJSON(steps.coverage.outputs.report || '"(no coverage report)"') }}```
-      
-      - name: "finally check coverage"
-        if: steps.coverage.outcome == 'failure'
-        shell: bash
-        run: echo "coverage check failed" && exit 1
