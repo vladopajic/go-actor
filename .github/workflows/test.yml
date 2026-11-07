@@ -51,7 +51,7 @@ jobs:
             elif length == 0 then "null"
             else
               # A branch can have PRs targeting more than one base branch.
-              # Prefer the repository's default branch, then retain GitHub's
+              # Prefer the repository default branch, then retain the API
               # response order as a fallback.
               (map(select(.base.repo.default_branch == .base.ref)) + .)
               | first
